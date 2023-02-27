@@ -19,7 +19,7 @@ There is an expectation that each file of this repository template is concise an
 
 ## Installation
 
-By including preferably a one-liner or if necessary a set of clear CLI instructions we increase user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
+By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
 
 ```
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
@@ -33,7 +33,7 @@ After a successful installation, provide an informative example of how this proj
 
 ### Diagrams
 
-The [C4 model](https://c4model.com/) is a simple and intuitive way to create software architecture diagrams that are clear, consistent, scalable and most importantly collaborative This should result in documenting all the system interfaces, external dependencies and integration points.
+The [C4 model](https://c4model.com/) is a simple and intuitive way to create software architecture diagrams that are clear, consistent, scalable and most importantly collaborative. This should result in documenting all the system interfaces, external dependencies and integration points.
 
 ### Configuration
 
