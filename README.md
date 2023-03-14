@@ -55,7 +55,7 @@ Provide a way to contact the owners of this project. It can be a team, an indivi
 
 ## Licence
 
-> The [LICENCE](./LICENCE) file will need to be updated with the correct year and owner
+> The [LICENCE.md](./LICENCE.md) file will need to be updated with the correct year and owner
 
 Unless stated otherwise, the codebase is released under the MIT License. This covers both the codebase and any sample code in the documentation.
 
