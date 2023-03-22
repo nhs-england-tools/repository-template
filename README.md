@@ -21,7 +21,7 @@ There is an expectation that each file of this repository template is concise an
 
 By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
 
-```
+```shell
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
 ```
 
@@ -37,7 +37,7 @@ The [C4 model](https://c4model.com/) is a simple and intuitive way to create sof
 
 ### Configuration
 
-Most of the projects are built with customisability and extendability in mind. At a minimum, this can be achieved by implementing a service level configuration options and settings. The intention of this section is to show how this can be used. If the system processes data, you could mention here for example how the input is prepared for testing - anonymised, synthetic or live data.
+Most of the projects are built with customisability and extendability in mind. At a minimum, this can be achieved by implementing service level configuration options and settings. The intention of this section is to show how this can be used. If the system processes data, you could mention here for example how the input is prepared for testing - anonymised, synthetic or live data.
 
 ## Contributing
 
