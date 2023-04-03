@@ -1,0 +1,9 @@
+#!/bin/bash
+
+project_dir=$(git rev-parse --show-toplevel)
+cd $project_dir
+
+for script in $(ls -1 $project_dir/scripts/githooks/*-pre-commit.sh 2> /dev/null); do
+  printf "Running githook: $(echo $script | sed "s;$project_dir/;;g")\n"
+  $script "$@"
+done
