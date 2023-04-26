@@ -9,6 +9,7 @@ There is an expectation that each file of this repository template is concise an
 - [Repository Template](#repository-template)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
+    - [Prerequisites](#prerequisites)
   - [Usage](#usage)
   - [Architecture](#architecture)
     - [Diagrams](#diagrams)
@@ -24,6 +25,10 @@ By including preferably a one-liner or if necessary a set of clear CLI instructi
 ```shell
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
 ```
+
+### Prerequisites
+
+- Docker
 
 ## Usage
 
