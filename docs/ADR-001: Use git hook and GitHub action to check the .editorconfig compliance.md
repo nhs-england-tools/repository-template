@@ -19,7 +19,7 @@
       - [Options 1: The pre-commit project](#options-1-the-pre-commit-project)
       - [Options 2a: Custom shell script](#options-2a-custom-shell-script)
       - [Options 2b: Docker-based custom shell script](#options-2b-docker-based-custom-shell-script)
-    - [Option 3: A GitHub Action from the Marketplace](#option-3-a-github-action-from-the-marketplace)
+      - [Option 3: A GitHub Action from the Marketplace](#option-3-a-github-action-from-the-marketplace)
     - [Outcome](#outcome)
     - [Rationale](#rationale)
   - [Consequences](#consequences)
@@ -51,7 +51,7 @@ Implementation of this compliance check will help with any potential debate or d
 
 ### Options
 
-#### Options 1: The [pre-commit](pre-commit) project
+#### Options 1: The [pre-commit](https://pre-commit.com/) project
 
 - Pros
   - Python is installed on most if not all platforms
@@ -85,7 +85,7 @@ This option is an extension built upon option 2a.
   - Requires Docker as a preinstalled dependency
   - Requires basic Docker skills
 
-### Option 3: A GitHub Action from the Marketplace
+#### Option 3: A GitHub Action from the Marketplace
 
 - Pros
   - Usage of a GitHub native functionality
