@@ -1,4 +1,4 @@
-# ADR-001: Use git hook and GitHub action to check the `.editorconfig` compliance
+# ADR-001: Use git hook and GitHub Action to check the `.editorconfig` compliance
 
 >|              | |
 >| ------------ | --- |
@@ -6,42 +6,46 @@
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
->| Owners       | `Daniel Stefaniuk`, `Amaan Ibn-Nasar` |
+>| Owners       | `Dan Stefaniuk, Amaan Ibn-Nasar` |
 
 ---
 
-- [ADR-001: Use git hook and GitHub action to check the `.editorconfig` compliance](#adr-001-use-git-hook-and-github-action-to-check-the-editorconfig-compliance)
+- [ADR-001: Use git hook and GitHub Action to check the `.editorconfig` compliance](#adr-001-use-git-hook-and-github-action-to-check-the-editorconfig-compliance)
   - [Context](#context)
   - [Decision](#decision)
     - [Assumptions](#assumptions)
     - [Drivers](#drivers)
     - [Options](#options)
       - [Options 1: The pre-commit project](#options-1-the-pre-commit-project)
-      - [Options 2: A shell script](#options-2-a-shell-script)
+      - [Options 2a: Custom shell script](#options-2a-custom-shell-script)
+      - [Options 2b: Docker-based custom shell script](#options-2b-docker-based-custom-shell-script)
+    - [Option 3: A GitHub Action from the Marketplace](#option-3-a-github-action-from-the-marketplace)
     - [Outcome](#outcome)
-- [How?](#how)
-  - [GitHub actions](#github-actions)
+    - [Rationale](#rationale)
+  - [Consequences](#consequences)
 
 ## Context
 
-A need for a simple and generic text formatting feature has been identified that would make a part of the Repository Template project.
+As part of the Repository Template project a need for a simple text formatting feature using the [EditorConfig](https://editorconfig.org/) rules has been identified that is accessible and consistent for all the contributors.
 
 ## Decision
 
 ### Assumptions
 
-This decision is made base on the following assumptions that would be used to form a set of general requirements.
+This decision is based on the following assumptions that are used to form a set of generic requirements for the implantation as a guide. A solution should be
 
-- Cross-platform and portable, i.e. supporting systems like macOS, Windows WSL (Ubuntu), Linux (Ubuntu) and potentially other compatible *NIX distributions
-- Runs only on changed files
-- With option to
-  - run it on a case by case basis - e.g. a file or a directory
-  - turn it off completely
-- It is well document it, e.g. in the [CONTRIBUTING.md](./CONTRIBUTING.md) file
+- Cross-platform and portable, supporting systems like
+  - macOS
+  - Windows WSL (Ubuntu)
+  - Linux (Ubuntu) and potentially other distributions
+- Configurable
+  - can run on a file or a directory
+  - can be turned on/off entirely
+- Reusable and avoid code duplication
 
 ### Drivers
 
-This should help with any potential debate or discussion, removing personal preferences and opinions from it and enabling teams instead to focus on delivering value to the product they work on.
+Implementation of this compliance check will help with any potential debate or discussion, removing personal preferences and opinions, enabling teams to focus on delivering value to the product they work on.
 
 ### Options
 
@@ -51,62 +55,56 @@ This should help with any potential debate or discussion, removing personal pref
   - Python is installed on most if not all platforms
   - A pythonist friendly tool
   - Well-documented
-  - Can pass git diff files only
 - Cons
-  - Dependency on Python even for non-Python tech stack
-  - Versioning issue, python runtime and libraries compatibility
-  - Lack of process isolation
-  - Cannot execute code outside of the framework
-  - dependency on multipel parties
+  - Dependency on Python even for a non-Python project
+  - Potential versioning issues with Python runtime and dependencies compatibility
+  - Lack of process isolation, access to resources with user-level privileges
+  - Dependency on multiple parties and plugins
 
-#### Options 2: A shell script
+#### Options 2a: Custom shell script
 
 - Pros
-  - installed everywhere, multiplatform, no setup
-  - simple
-  - easy to maintain
+  - Execution environment is installed everywhere, no setup required
+  - Ease of maintainability and testability
+  - It is a simple solution
 - Cons
-  - more coding in shell potentially
-  - testing that code
+  - May potentially require more coding in Bash
+  - Requires shell scripting skills
+
+#### Options 2b: Docker-based custom shell script
+
+This option is an extension built upon option 2a.
+
+- Pros
+  - Cross-platform compatibility
+  - Isolation of the process dependencies and runtime
+  - Docker is an expected dependency for most/all projects
+- Cons
+  - Requires Docker as a preinstalled dependency
+  - Requires basic Docker skills
+
+### Option 3: A GitHub Action from the Marketplace
+
+- Pros
+  - Usage of a GitHub native functionality
+- Cons
+  - Reliance on the GitHub DSL (coding in yaml) may lead to less portable solution
+  - Implementation of the functionality has to be duplicated for the git hook
 
 ### Outcome
 
-The decision is to implement Option 2.
+The decision is to implement Option 2b.
 
-How to run `editorconfi` without dependency on platform?
-We will go with Docker
-Why?
+### Rationale
 
-- docker is crossplatofrm
-- strategic aligment (this dependency is ok)
-- CONS: layers of abstraction is the downside - not everyone is confident with docker
+A choice of shell scripting along with Docker offers a good support for simplicity, process isolation, portability across the operating systems and reuse of the same code and its configuration. This approach makes it consistent for a local environment and the CI/CD pipeline, where the process can be gated and compliance enforced.
 
-# How?
+## Consequences
 
-- bash script
-  - where should it live - `scripts/githooks`
-    - Makefile - config -> githooks-install
-  - what's the name (naming convention)
-    - `pre-commit` runner
-    - `editorconfig-pre-commit.sh` our script
-- Docker
+As a result of the above decision
 
-## GitHub actions
-
-do stuff for GitHub in yml
-
-1. same as for the githook
-2. proper github action
-
-What is the purpouse? Whet else do we want from it on top of githook?
-
-- stoping point if someone did not have githook
-- same gate
-- therefore we want to run exactly the same thing
-- they must not differ in configuration
-
-Option 1
-
-- no effort duplication
-- reuse
-- future -> github action implementation should be portable e.g. can we be certain that it will run on our configuration
+- a single Bash script will be implemented
+- it will be placed in the `scripts/githooks` directory
+- the name of the file will be `editorconfig-pre-commit.sh`
+- there will be a `pre-commit` runner included
+- and a couple of `Makefile` targets like `config`, `githooks-install`

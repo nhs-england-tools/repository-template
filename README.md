@@ -28,7 +28,10 @@ By including preferably a one-liner or if necessary a set of clear CLI instructi
 
 ### Prerequisites
 
-- Docker
+The following software packages or their equivalents are expected to be installed
+
+- [GNU make](https://www.gnu.org/software/make/)
+- [Docker](https://www.docker.com/)
 
 ## Usage
 
