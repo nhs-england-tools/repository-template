@@ -23,6 +23,8 @@
     - [Outcome](#outcome)
     - [Rationale](#rationale)
   - [Consequences](#consequences)
+  - [Compliance](#compliance)
+  - [Tags](#tags)
 
 ## Context
 
@@ -37,7 +39,7 @@ This decision is based on the following assumptions that are used to form a set 
 - Cross-platform and portable, supporting systems like
   - macOS
   - Windows WSL (Ubuntu)
-  - Linux (Ubuntu) and potentially other distributions
+  - Ubuntu and potentially other Linux distributions like Alpine
 - Configurable
   - can run on a file or a directory
   - can be turned on/off entirely
@@ -107,4 +109,15 @@ As a result of the above decision
 - it will be placed in the `scripts/githooks` directory
 - the name of the file will be `editorconfig-pre-commit.sh`
 - there will be a `pre-commit` runner included
-- and a couple of `Makefile` targets like `config`, `githooks-install`
+- the GitHub Action will call the git hook `editorconfig-pre-commit.sh` script directly
+- and a couple of `Makefile` targets like `config`, `githooks-install` will be implemented to bootstrap the project
+
+The intention of this decision is to guide any other git hook and GitHub Action implementations.
+
+## Compliance
+
+Both, the git hook and the GitHub Action should be executed automatically as part of the developer workflow.
+
+## Tags
+
+`#maintainability, #testability, #simplicity, #security`

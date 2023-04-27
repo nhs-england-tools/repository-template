@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Pre-commit git hook to check EditorConfig rules complience over changed files
+# Pre-commit git hook to check the EditorConfig rules complience over changed files
 #
 # Usage:
 #   $ ./editorconfig-pre-commit.sh

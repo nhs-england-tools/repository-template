@@ -1,5 +1,8 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
+
+# Pre-commit git hook runner
+
+# ==============================================================================
 
 project_dir=$(git rev-parse --show-toplevel)
 cd $project_dir
