@@ -24,6 +24,7 @@
     - [Rationale](#rationale)
   - [Consequences](#consequences)
   - [Compliance](#compliance)
+  - [Notes](#notes)
   - [Tags](#tags)
 
 ## Context
@@ -117,6 +118,10 @@ The intention of this decision is to guide any other git hook and GitHub Action 
 ## Compliance
 
 Both, the git hook and the GitHub Action should be executed automatically as part of the developer workflow.
+
+## Notes
+
+There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub actions even more portable. The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.
 
 ## Tags
 
