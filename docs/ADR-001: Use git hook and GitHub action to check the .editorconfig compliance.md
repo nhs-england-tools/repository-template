@@ -29,13 +29,13 @@
 
 ## Context
 
-As part of the Repository Template project a need for a simple text formatting feature using the [EditorConfig](https://editorconfig.org/) rules has been identified that is accessible and consistent for all the contributors.
+As part of the Repository Template project a need for a simple text formatting feature using the [EditorConfig](https://editorconfig.org/) rules was identified that is accessible and consistent for all contributors. To ensure that formatting rules are applied, a compliance check has to be implemented on a developer workstation and as a part of the CI/CD pipeline. This will establish a fast feedback loop and a fallback option, if the former has not worked.
 
 ## Decision
 
 ### Assumptions
 
-This decision is based on the following assumptions that are used to form a set of generic requirements for the implantation as a guide. A solution should be
+This decision is based on the following assumptions that are used to form a set of generic requirements for the implementation as a guide. A solution should be
 
 - Cross-platform and portable, supporting systems like
   - macOS
@@ -44,6 +44,7 @@ This decision is based on the following assumptions that are used to form a set 
 - Configurable
   - can run on a file or a directory
   - can be turned on/off entirely
+- Run locally (aka developer workstation) and remotely (aka CI/CD pipeline)
 - Reusable and avoid code duplication
 
 ### Drivers
