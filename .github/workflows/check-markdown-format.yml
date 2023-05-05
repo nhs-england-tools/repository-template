@@ -1,0 +1,14 @@
+name: Check Markdown Format
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  check-file-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: ./scripts/githooks/markdown-pre-commit.sh
