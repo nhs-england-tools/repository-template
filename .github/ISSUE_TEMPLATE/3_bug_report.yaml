@@ -21,13 +21,13 @@ body:
   - type: textarea
     attributes:
       label: Current Behavior
-      description: A concise description of what you are experiencing
+      description: A concise description of what you are experiencing.
     validations:
       required: true
   - type: textarea
     attributes:
       label: Expected Behavior
-      description: A concise description of what you expected to happen
+      description: A concise description of what you expect to happen.
     validations:
       required: true
   - type: textarea
@@ -44,7 +44,7 @@ body:
     id: output
     attributes:
       label: Output
-      description: Please copy and paste any relevant output. This will be automatically formatted into code, so no need for backticks.
+      description: Please copy and paste any relevant output. This will be automatically formatted into codeblock.
       render: Shell
     validations:
       required: false
