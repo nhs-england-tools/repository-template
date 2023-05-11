@@ -27,10 +27,6 @@ body:
   - type: textarea
     attributes:
       label: Where else have you checked for a solution?
-      placeholder: |
-        * [ ] I have read [user guide](./user-guide.md), and not found the answer.
-        * [ ] I have searched [project documentation](./project-documentation.html), and not found the answer.
-        * [ ] Other, please give details.
     validations:
       required: false
   - type: textarea
@@ -45,4 +41,12 @@ body:
       label: Additional context
       description: Add any other context about the problem here.
     validations:
-      required: true
+      required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
