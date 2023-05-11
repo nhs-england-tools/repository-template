@@ -26,11 +26,6 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Where else have you checked for a solution?
-    validations:
-      required: false
-  - type: textarea
-    attributes:
       label: Output of any commands you have tried
       description: Please copy and paste any relevant output. This will be automatically formatted into codeblock.
       render: Shell
