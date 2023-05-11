@@ -10,15 +10,17 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this form.
+        Thanks for taking the time to file a feature request. Please fill out this form as completely as possible.
   - type: textarea
     attributes:
       label: What is the problem this feature will solve?
+      description: Tell us why this change is needed or helpful, and what problems it may help solve.
     validations:
       required: true
   - type: textarea
     attributes:
       label: What is the feature you are proposing to solve the problem?
+      description: Provide detailed information for what we should add.
     validations:
       required: true
   - type: textarea
