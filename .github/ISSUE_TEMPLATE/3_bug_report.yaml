@@ -56,7 +56,7 @@ body:
           required: true
   - type: checkboxes
     attributes:
-      label: Sensitive Data Declaration
+      label: Sensitive Information Declaration
       description: To ensure the utmost confidentiality and protect your privacy, we kindly ask you to NOT including any PII or sensitive data in this form. We appreciate your cooperation in maintaining the security of your information.
       options:
         - label: I confirm that neither PII nor sensitive data are included in this form
