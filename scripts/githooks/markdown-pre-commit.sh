@@ -14,9 +14,11 @@
 
 # ==============================================================================
 
+image_digest=3e42db866de0fc813f74450f1065eab9066607fed34eb119d0db6f4e640e6b8d # v0.34.0
+
 files=$((git diff --diff-filter=ACMRT --name-only origin/${BRANCH_NAME:-main}.. "*.md"; git diff --name-only "*.md") | sort | uniq)
 if [ -n "$files" ]; then
-  image=ghcr.io/igorshubovych/markdownlint-cli@sha256:3e42db866de0fc813f74450f1065eab9066607fed34eb119d0db6f4e640e6b8d # v0.34.0
+  image=ghcr.io/igorshubovych/markdownlint-cli@sha256:$image_digest
   docker run --rm \
     -v $PWD:/workdir \
     $image \
