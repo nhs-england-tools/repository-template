@@ -41,7 +41,6 @@ body:
     validations:
       required: false
   - type: textarea
-    id: output
     attributes:
       label: Output
       description: Please copy and paste any relevant output. This will be automatically formatted into codeblock.
@@ -49,7 +48,6 @@ body:
     validations:
       required: false
   - type: checkboxes
-    id: terms
     attributes:
       label: Code of Conduct
       description: By submitting this issue you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
@@ -57,7 +55,6 @@ body:
         - label: I agree to follow this project's Code of Conduct
           required: true
   - type: checkboxes
-    id: terms
     attributes:
       label: Sensitive Data Declaration
       description: To ensure the utmost confidentiality and protect your privacy, we kindly ask you to NOT including any PII or sensitive data in this form. We appreciate your cooperation in maintaining the security of your information.
