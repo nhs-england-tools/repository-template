@@ -14,9 +14,9 @@ body:
   - type: checkboxes
     attributes:
       label: Is there an existing issue for this?
-      description: Please, search to see if an issue already exists for the bug you have encountered.
+      description: Please, search the Issues to see if an issue already exists for the bug you have encountered.
       options:
-      - label: I have searched the existing issues
+      - label: I have searched the existing Issues
         required: true
   - type: textarea
     attributes:
@@ -52,7 +52,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      description: By submitting this issue you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true

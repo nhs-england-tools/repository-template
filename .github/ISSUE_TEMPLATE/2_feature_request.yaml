@@ -14,12 +14,12 @@ body:
   - type: textarea
     attributes:
       label: What is the problem this feature will solve?
-      description: Tell us why this change is needed or helpful, and what problems it may help solve.
+      description: Tell us why this change is needed or helpful and what problems it may help solve.
     validations:
       required: true
   - type: textarea
     attributes:
-      label: What is the feature you are proposing to solve the problem?
+      label: What is the feature that you are proposing to solve the problem?
       description: Provide detailed information for what we should add.
     validations:
       required: true
@@ -30,7 +30,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      description: By submitting this issue you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
