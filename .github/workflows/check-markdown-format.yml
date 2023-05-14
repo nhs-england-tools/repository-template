@@ -1,4 +1,5 @@
 name: Check Markdown Format
+
 on:
   push:
     branches:
@@ -6,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   check-markdown-format:
     runs-on: ubuntu-latest
