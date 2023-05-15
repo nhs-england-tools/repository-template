@@ -37,14 +37,14 @@ function main() {
     files="*.md"
   else
     # Check changed files only
-    files=$(git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main} "*.md")
+    files="$(git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main} "*.md")"
   fi
 
   if [ -n "$files" ]; then
     docker run --rm --platform linux/amd64 \
       --volume=$PWD:/workdir \
       ghcr.io/igorshubovych/markdownlint-cli@sha256:$image_digest \
-        $files \
+        "$files" \
         --disable MD013 MD033
   fi
 }
