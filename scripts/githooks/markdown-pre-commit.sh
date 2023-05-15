@@ -2,8 +2,8 @@
 
 set -e
 
-# Pre-commit git hook to check the Markdown rules complience over changed
-# files.
+# Pre-commit git hook to check the Markdown file formatting rules compliance
+# over changed files.
 #
 # Usage:
 #   $ ./markdown-pre-commit.sh
@@ -33,26 +33,19 @@ image_digest=3e42db866de0fc813f74450f1065eab9066607fed34eb119d0db6f4e640e6b8d # 
 function main() {
 
   if is_arg_true "$ALL_FILES"; then
-
     # Check all files
+    files="*.md"
+  else
+    # Check changed files only
+    files=$(git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main} "*.md")
+  fi
+
+  if [ -n "$files" ]; then
     docker run --rm --platform linux/amd64 \
       --volume=$PWD:/workdir \
       ghcr.io/igorshubovych/markdownlint-cli@sha256:$image_digest \
-        "*.md" \
+        $files \
         --disable MD013 MD033
-
-  else
-
-    # Check changed files only
-    changed_files=$(git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main} "*.md")
-    if [ -n "$changed_files" ]; then
-      docker run --rm --platform linux/amd64 \
-        --volume=$PWD:/workdir \
-        ghcr.io/igorshubovych/markdownlint-cli@sha256:$image_digest \
-          $changed_files \
-          --disable MD013 MD033
-    fi
-
   fi
 }
 

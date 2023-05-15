@@ -2,7 +2,7 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `26/04/2023` |
+>| Date         | `15/05/2023` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
@@ -49,7 +49,7 @@ This decision is based on the following assumptions that are used to form a set 
 
 ### Drivers
 
-Implementation of this compliance check will help with any potential debate or discussion, removing personal preferences and opinions, enabling teams to focus on delivering value to the product they work on.
+Implementation of this compliance check (like text encoding, line endings, tabs vs. spaces etc.) will help with any potential debate or discussion, removing personal preferences and opinions, enabling teams to focus on delivering value to the product they work on. Other linting tools like for example [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) are not considered here as they are code formatting tools dedicated to specific technologies and languages. The main driver for this decision is consistency. EditorConfig rules are recognised and supported by most if not all major editors and IDEs.
 
 ### Options
 

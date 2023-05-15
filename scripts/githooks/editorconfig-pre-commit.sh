@@ -2,8 +2,9 @@
 
 set +e
 
-# Pre-commit git hook to check the EditorConfig rules complience over changed
-# files.
+# Pre-commit git hook to check the EditorConfig rules compliance over changed
+# files. It ensures all non-binary files across the codebase are formatted
+# according to the style defined in the `.editorconfig` file.
 #
 # Usage:
 #   $ ./editorconfig-pre-commit.sh
