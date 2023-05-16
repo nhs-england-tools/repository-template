@@ -23,5 +23,6 @@ if [ -n "$files" ]; then
     -v $PWD:/workdir \
     $image \
       $files \
-      --disable MD013 MD033
+      --disable MD013 MD033 \
+      --ignore .github/PULL_REQUEST_TEMPLATE.md
 fi
