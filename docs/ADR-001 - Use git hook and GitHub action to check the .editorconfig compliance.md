@@ -51,7 +51,7 @@ This decision is based on the following assumptions that are used to form a set 
 
 Implementation of this compliance check (like text encoding, line endings, tabs vs. spaces etc.) will help with any potential debate or discussion, removing personal preferences and opinions, enabling teams to focus on delivering value to the product they work on.
 
-Other linting tools like for example [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) are not considered here as they are code formatting tools dedicated to specific technologies and languages. The main driver for this decision is consistency across all files in a repository. EditorConfig rules are recognised and supported by most if not all major editors and IDEs.
+Other linting tools like for example [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) are not considered here as they are code formatting tools dedicated to specific technologies and languages. The main drivers for this decision are the style consistency across all files in the codebase and to eliminate any disruptive changes introduced based on preferences. EditorConfig rules are recognised and supported by most if not all major editors and IDEs.
 
 ### Options
 
