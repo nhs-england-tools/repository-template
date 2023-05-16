@@ -28,8 +28,6 @@ set -e
 
 image_digest=3e42db866de0fc813f74450f1065eab9066607fed34eb119d0db6f4e640e6b8d # v0.34.0
 
-# ==============================================================================
-
 function main() {
 
   if is_arg_true "$ALL_FILES"; then
@@ -45,7 +43,8 @@ function main() {
       --volume=$PWD:/workdir \
       ghcr.io/igorshubovych/markdownlint-cli@sha256:$image_digest \
         "$files" \
-        --disable MD013 MD033
+        --disable MD013 MD033 \
+        --ignore .github/PULL_REQUEST_TEMPLATE.md
   fi
 }
 
@@ -57,8 +56,6 @@ function is_arg_true() {
     return 1
   fi
 }
-
-# ==============================================================================
 
 is_arg_true "$VERBOSE" && set -x
 
