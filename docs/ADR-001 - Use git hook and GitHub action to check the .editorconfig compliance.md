@@ -53,6 +53,17 @@ Implementation of this compliance check (like text encoding, line endings, tabs 
 
 Other linting tools like for example [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) are not considered here as they are code formatting tools dedicated to specific technologies and languages. The main drivers for this decision are the style consistency across all files in the codebase and to eliminate any disruptive changes introduced based on preferences. EditorConfig rules are recognised and supported by most if not all major editors and IDEs.
 
+Here is the recommended ruleset:
+
+```console
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+```
+
 ### Options
 
 #### Options 1: The [pre-commit](https://pre-commit.com/) project
