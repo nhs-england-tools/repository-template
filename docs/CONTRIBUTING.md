@@ -11,6 +11,7 @@
     - [Git configuration](#git-configuration)
     - [Signing commits](#signing-commits)
       - [Troubleshooting](#troubleshooting)
+  - [Additional settings](#additional-settings)
     - [Usage](#usage)
     - [Commit message](#commit-message)
     - [Hooks](#hooks)
@@ -31,9 +32,9 @@
 
 The following software packages must be installed on your laptop before proceeding
 
-- [GNU make](https://formulae.brew.sh/formula/make)
 - [GitHub CLI](https://cli.github.com/)
-- ...
+- [GNU make](https://formulae.brew.sh/formula/make)
+- [Docker](https://www.docker.com/)
 
 To ensure all the prerequisite are installed and configured correctly, please follow the [nhs-england-tools/dotfiles](https://github.com/nhs-england-tools/dotfiles) installation process.
 
@@ -55,8 +56,8 @@ The commands below will configure your Git command-line client globally. Please,
 This configuration is to support trunk-based development and git linear history.
 
 ```shell
-git config --global user.name "Your Name" # Use your full name here
-git config --global user.email "youremail@domain" # Use your email address here
+git config user.name "Your Name" # Use your full name here
+git config user.email "youremail@domain" # Use your email address here
 git config branch.autosetupmerge false
 git config branch.autosetuprebase always
 git config commit.gpgsign true
@@ -64,6 +65,7 @@ git config core.autocrlf input
 git config core.filemode true
 git config core.hidedotfiles false
 git config core.ignorecase false
+git config credential.helper cache
 git config pull.rebase true
 git config push.default current
 git config push.followTags true
@@ -78,14 +80,17 @@ More information on the git settings can be found in the [Git Reference document
 Signing Git commits is a good practice and ensures the correct web of trust has been established for the distributed version control management.
 
 <!-- markdownlint-disable-next-line no-inline-html -->
-Generate a new pair of GPG keys. Please, change the passphrase (<span style="color:red">pleaseChooseYourKeyPassphrase</span>) below and save it in your password manager.
+If you do not have it already generate a new pair of GPG keys. Please, change the passphrase (<span style="color:red">pleaseChooseYourKeyPassphrase</span>) below and save it in your password manager.
 
 ```shell
 USER_NAME="Your Name"
-USER_EMAIL="your.name@nhs.net"
+USER_EMAIL="your.name@email"
 file=$(echo $USER_EMAIL | sed "s/[^[:alpha:]]/-/g")
 
-cat > $file.gpg-key.script <<EOF
+mkdir -p "$HOME/.gnupg"
+chmod 0700 "$HOME/.gnupg"
+cd "$HOME/.gnupg"
+cat > "$file.gpg-key.script" <<EOF
   %echo Generating a GPG key
   Key-Type: ECDSA
   Key-Curve: nistp256
@@ -98,7 +103,8 @@ cat > $file.gpg-key.script <<EOF
   %commit
   %echo done
 EOF
-gpg --batch --generate-key $file.gpg-key.script && rm $file.gpg-key.script
+gpg --batch --generate-key "$file.gpg-key.script"
+rm "$file.gpg-key.script"
 # or do it manually by running `gpg --full-gen-key`
 ```
 
@@ -108,12 +114,12 @@ Make note of the ID and save the keys.
 gpg --list-secret-keys --keyid-format LONG $USER_EMAIL
 ```
 
-You should see a similar output to this:
+You should see a similar output to this
 
 ```shell
 sec   nistp256/AAAAAAAAAAAAAAAA 2023-01-01 [SCA]
       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-uid                 [ultimate] Your Name <your.name@nhs.net>
+uid                 [ultimate] Your Name <your.name@email>
 ssb   nistp256/BBBBBBBBBBBBBBBB 2023-01-01 [E]
 ```
 
@@ -141,41 +147,75 @@ gpg --delete-keys $ID
 Configure Git to use the new key.
 
 ```shell
-git config --global user.signingkey $ID
-git config --global commit.gpgsign true
+git config user.signingkey $ID
 ```
 
-Upload the public key to your GitHub profile in the [GPG keys](https://github.com/settings/keys) section. After doing so, please make sure your email address appears as verified against the commits pushed to the remote.
+Upload the public key to your GitHub profile into the [GPG keys](https://github.com/settings/keys) section. After doing so, please make sure your email address appears as verified against the commits pushed to the remote.
+
+```shell
+cat $file.gpg-key.pub
+```
 
 #### Troubleshooting
 
 If you receive the error message "error: gpg failed to sign the data", make sure you added `export GPG_TTY=$(tty)` to your `~/.zshrc` and restarted your terminal.
 
 ```shell
-sed -i '' '/^export GPG_TTY/d' ~/.zshrc
-echo export GPG_TTY=\$\(tty\) >> ~/.zshrc
+sed -i '/^export GPG_TTY/d' ~/.exports
+echo "export GPG_TTY=\$TTY" >> ~/.exports
 ```
 
-Additional useful settings and commands
+## Additional settings
+
+Configure caching git commit signature passphrase for 3 hours
 
 ```shell
 source ~/.zshrc
-sed -i '' '/^pinentry-program/d' ~/.gnupg/gpg-agent.conf
+mkdir -p ~/.gnupg
+sed -i '/^pinentry-program/d' ~/.gnupg/gpg-agent.conf 2>/dev/null ||:
 echo "pinentry-program $(whereis -q pinentry)" >> ~/.gnupg/gpg-agent.conf
-sed -i '' '/^default-cache-ttl/d' ~/.gnupg/gpg-agent.conf
+sed -i '/^default-cache-ttl/d' ~/.gnupg/gpg-agent.conf
 echo "default-cache-ttl 10800" >> ~/.gnupg/gpg-agent.conf
-sed -i '' '/^max-cache-ttl/d' ~/.gnupg/gpg-agent.conf
+sed -i '/^max-cache-ttl/d' ~/.gnupg/gpg-agent.conf
 echo "max-cache-ttl 10800" >> ~/.gnupg/gpg-agent.conf
 gpgconf --kill gpg-agent
-```
-
-```shell
 git config --global credential.helper cache
 #git config --global --unset credential.helper
 ```
 
+Authenticate to GitHub and set up your authorisation token
+
 ```shell
-gh auth login
+$ gh auth login
+? What account do you want to log into? GitHub.com
+? What is your preferred protocol for Git operations? HTTPS
+? Authenticate Git with your GitHub credentials? No
+? How would you like to authenticate GitHub CLI? Paste an authentication token
+Tip: you can generate a Personal Access Token here https://github.com/settings/tokens
+The minimum required scopes are 'repo', 'read:org'.
+? Paste your authentication token: github_pat_**********************************************************************************
+- gh config set -h github.com git_protocol https
+✓ Configured git protocol
+✓ Logged in as your-github-handle
+```
+
+Add your changes, create a signed commit, update from and push to remote
+
+```shell
+git add .
+git commit -S -m "Create a signed commit"
+git pull
+git push
+```
+
+Squash all commits on branch as one
+
+```shell
+git checkout your-branch-name
+git reset $(git merge-base main $(git branch --show-current))
+git add .
+git commit -S -m "Create just one commit instead"
+git push --force-with-lease
 ```
 
 ### Usage
@@ -197,7 +237,7 @@ There are a couple of good cheatsheets by [GitHub](https://training.github.com/d
 
 Working on a new task
 
-```console
+```shell
 git checkout -b task/REF-XXX_Descriptive_branch_name
 # Make your changes here...
 git add .
@@ -207,7 +247,7 @@ git push --set-upstream origin task/REF-XXX_Descriptive_branch_name
 
 Contributing to an already existing branch
 
-```console
+```shell
 git checkout task/REF-XXX_Descriptive_branch_name
 git pull
 # Make your changes here...
@@ -218,7 +258,7 @@ git push
 
 Squashing commits within a branch
 
-```console
+```shell
 git checkout task/REF-XXX_Descriptive_branch_name
 git rebase -i HEAD~X # Squash X number of commits into one
 # When prompted change commit type to `squash` for all the commits except the top one
@@ -228,7 +268,7 @@ git push --force-with-lease
 
 Rebasing a branch onto main
 
-```console
+```shell
 git checkout main
 git pull
 git checkout task/REF-XXX_Descriptive_branch_name
@@ -241,7 +281,7 @@ git push --force-with-lease
 
 Merging a branch to main - this should be done only in an exceptional circumstance as the proper process is to raise a Pull Request
 
-```console
+```shell
 git checkout main
 git pull --prune                                    # Make sure main is up-to-date
 git checkout task/REF-XXX_Descriptive_branch_name
@@ -271,9 +311,11 @@ If REF is currently not in use to track project changes, please drop any referen
 - Wrap lines at 72 characters
 - Use the body to explain what and why you have done something, which should be done as part of a Pull Request description
 
+*(Please, bear in mind that a need for this might be superseded by the GitHub Pull Request setting in your respoitory `Settings > General > Pull Requests > Allow squash merging > Default to pull request title and description` which is a recommended configuration.)*
+
 Example:
 
-```console
+```shell
 Short (72 chars or less) summary in the imperative mood
 
 More detailed explanatory text. Wrap it to 72 characters. The blank
@@ -347,7 +389,7 @@ Read the [Code of Conduct](../docs/CODE_OF_CONDUCT.md) to keep the community app
 
 When writing or updating unit tests (whether you use Python, Java, Go or shell), please always structure them using the 3 A's approach of 'Arrange', 'Act', and 'Assert'. For example:
 
-```console
+```java
 @Test
 public listServicesNullReturn() {
 
@@ -363,8 +405,6 @@ public listServicesNullReturn() {
   assertEquals(0, list.size());
 }
 ```
-
-TDD ?
 
 ### Code review
 
