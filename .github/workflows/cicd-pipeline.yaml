@@ -14,7 +14,6 @@ jobs:
       build_datetime: ${{ steps.metadata.outputs.build_datetime }}
       build_timestamp: ${{ steps.metadata.outputs.build_timestamp }}
       build_epoch: ${{ steps.metadata.outputs.build_epoch }}
-      git_commit_hash: ${{ steps.metadata.outputs.git_commit_hash }}
     steps:
       - id: metadata
         run: |
@@ -22,7 +21,6 @@ jobs:
           echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
           echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
-          echo "git_commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
   scan-secrets:
     uses: ./.github/workflows/scan-secrets.yaml
   check-file-format:
@@ -41,7 +39,6 @@ jobs:
           export BUILD_DATETIME="${{ needs.get-metadata.outputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ needs.get-metadata.outputs.build_timestamp }}"
           export BUILD_EPOCH="${{ needs.get-metadata.outputs.build_epoch }}"
-          export GIT_COMMIT_HASH="${{ needs.get-metadata.outputs.git_commit_hash }}"
           make list-variables
       # - name: Run Tests ...
       #   run: |
