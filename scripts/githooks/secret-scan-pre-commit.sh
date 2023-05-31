@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set +e
+set -e
 
 # Pre-commit git hook to scan for secrets hardcoded in the codebase.
 #
@@ -12,12 +12,12 @@ set +e
 #   VERBOSE=true    # Show all the executed commands, default is `false`
 #
 # Exit codes:
-#   0 - No secrets found
-#   1 - Secrets found
+#   0 - No leaks present
+#   1 - Leaks or error encountered
+#   126 - Unknown flag
 
 # ==============================================================================
 
-exit_code=0
 image_version=v8.16.3@sha256:05b48ff3f4fd7daa9487b42cbf9d576f2dc0dbe2551e3d0a8738e18ba2278091 # v8.16.3
 
 # ==============================================================================
@@ -58,4 +58,4 @@ is_arg_true "$VERBOSE" && set -x
 
 main $*
 
-exit $exit_code
+exit 0

@@ -1,3 +1,6 @@
+[extend]
+useDefault = true
+
 [[rules]]
 description = "IPv4"
 id = "ipv4"
