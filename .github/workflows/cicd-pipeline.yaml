@@ -24,7 +24,7 @@ jobs:
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "git_commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
   scan-secrets:
-    uses: ./.github/workflows/secret-scan.yaml
+    uses: ./.github/workflows/scan-secrets.yaml
   check-file-format:
     uses: ./.github/workflows/check-file-format.yaml
   check-markdown-format:
