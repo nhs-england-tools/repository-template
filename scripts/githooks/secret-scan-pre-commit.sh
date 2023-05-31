@@ -2,27 +2,18 @@
 
 set +e
 
-# Pre-commit git hook to check the EditorConfig rules compliance over changed
-# files. It ensures all non-binary files across the codebase are formatted
-# according to the style defined in the `.editorconfig` file.
+# Pre-commit git hook to scan for secrets hardcoded in the codebase.
 #
 # Usage:
-#   $ ./editorconfig-pre-commit.sh
+#   $ ./secret-scan-pre-commit.sh
 #
 # Options:
-#   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is `origin/main`
-#   ALL_FILES=true                      # Check all files, default is `false`
-#   VERBOSE=true                        # Show all the executed commands, default is `false`
+#   ALL_FILES=true  # Check all files, default is `false`
+#   VERBOSE=true    # Show all the executed commands, default is `false`
 #
 # Exit codes:
-#   0 - All files are formatted correctly
-#   1 - Files are not formatted correctly
-#
-# Notes:
-#   1) Please, make sure to enable EditorConfig linting in your IDE. For the
-#   Visual Studio Code editor it is `editorconfig.editorconfig` that is already
-#   specified in the `./.vscode/extensions.json` file.
-#   2) Due to the file name escaping issue files are checked one by one.
+#   0 - No secrets found
+#   1 - Secrets found
 
 # ==============================================================================
 
