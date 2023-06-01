@@ -27,18 +27,18 @@ set +e
 # ==============================================================================
 
 exit_code=0
-image_digest=0f8f8dd4f393d29755bef2aef4391d37c34e358d676e9d66ce195359a9c72ef3 # 2.7.0
+image_version=2.7.0@sha256:0f8f8dd4f393d29755bef2aef4391d37c34e358d676e9d66ce195359a9c72ef3
 
 # ==============================================================================
 
 function main() {
 
-  if is_arg_true "$ALL_FILES"; then
+  if is-arg-true "$ALL_FILES"; then
 
     # Check all files
     docker run --rm --platform linux/amd64 \
       --volume=$PWD:/check \
-      mstruebing/editorconfig-checker@sha256:$image_digest \
+      mstruebing/editorconfig-checker:$image_version \
         ec \
           --exclude '.git/'
 
@@ -50,7 +50,7 @@ function main() {
       while read file; do
         docker run --rm --platform linux/amd64 \
           --volume=$PWD:/check \
-          mstruebing/editorconfig-checker@sha256:$image_digest \
+          mstruebing/editorconfig-checker:$image_version \
             ec \
               --exclude '.git/' \
               "$file"
@@ -61,7 +61,7 @@ function main() {
   fi
 }
 
-function is_arg_true() {
+function is-arg-true() {
 
   if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
@@ -72,7 +72,7 @@ function is_arg_true() {
 
 # ==============================================================================
 
-is_arg_true "$VERBOSE" && set -x
+is-arg-true "$VERBOSE" && set -x
 
 main $*
 

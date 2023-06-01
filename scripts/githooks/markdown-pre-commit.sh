@@ -26,11 +26,13 @@ set -e
 
 # ==============================================================================
 
-image_digest=3e42db866de0fc813f74450f1065eab9066607fed34eb119d0db6f4e640e6b8d # v0.34.0
+image_version=v0.34.0@sha256:230b1e0e0fa1c7dd6261e025cacf6761ac5ba3557a6a919eec910d731817ff28
+
+# ==============================================================================
 
 function main() {
 
-  if is_arg_true "$ALL_FILES"; then
+  if is-arg-true "$ALL_FILES"; then
     # Check all files
     files="*.md"
   else
@@ -41,14 +43,14 @@ function main() {
   if [ -n "$files" ]; then
     docker run --rm --platform linux/amd64 \
       --volume=$PWD:/workdir \
-      ghcr.io/igorshubovych/markdownlint-cli@sha256:$image_digest \
-        "$files" \
+      ghcr.io/igorshubovych/markdownlint-cli:$image_version \
+        $files \
         --disable MD013 MD033 \
         --ignore .github/PULL_REQUEST_TEMPLATE.md
   fi
 }
 
-function is_arg_true() {
+function is-arg-true() {
 
   if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
@@ -57,7 +59,9 @@ function is_arg_true() {
   fi
 }
 
-is_arg_true "$VERBOSE" && set -x
+# ==============================================================================
+
+is-arg-true "$VERBOSE" && set -x
 
 main $*
 
