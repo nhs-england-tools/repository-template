@@ -6,7 +6,7 @@
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
->| Owners       | `Dan Stefaniuk, Jon Pearce, Tamara Goldschmidt, Tim Rickwood`|
+>| Owners       | `Dan Stefaniuk, Jon Pearce, Tamara Goldschmidt, Tim Rickwood` |
 
 ---
 
