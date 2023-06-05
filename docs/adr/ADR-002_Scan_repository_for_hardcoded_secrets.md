@@ -2,7 +2,7 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `02/06/2023` |
+>| Date         | `05/06/2023` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
@@ -26,7 +26,7 @@
 
 ## Context
 
-To safeguard sensitive details like passwords, API keys etc. from being incorporated into code repositories, it is imperative that we employ secret scanning of the code. This safeguarding process should be conducted in two key areas. Firstly, within the developer's machine, we ought to utilise a git pre-commit hook to halt the inclusion of any secrets within the committed code. Secondly, as a safety net, a similar scan should be integrated into the CI/CD pipeline. Should a secret be detected within this pipeline, it is crucial that the pipeline be programmed to fail, subsequently blocking any related pull requests.
+To safeguard sensitive details like passwords, API keys etc. from being incorporated into code repositories, it is imperative that we employ secret scanning of the code. This safeguarding process should be conducted in two key areas. Firstly, on the developer's machine, we utilise a git pre-commit hook to halt the inclusion of any secrets within the committed code. Secondly, as a safety net, a similar scan should be integrated into the CI/CD pipeline. Should a secret be detected within this pipeline, it is crucial that the pipeline serves as a gate to fail, subsequently blocking any related pull requests.
 
 ## Decision
 
