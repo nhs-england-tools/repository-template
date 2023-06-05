@@ -62,10 +62,11 @@ There are three options presented in this decision record.
      - [ ] Pre-backed Docker image
 
    - Pros
-     - A well know tool that has been around for a while
+     - A well-known tool that has been around for a while
    - Cons
      - Rules and exclusion patterns are not easy to manage as no comments or metadata are allowed in the definition
      - No pre-backed Docker image
+     - Activity of the repo has dropped (last commit a while ago)
 
 2. [trufflehog](https://github.com/trufflesecurity/trufflehog)
 
