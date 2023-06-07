@@ -8,11 +8,12 @@
     - [Prerequisites](#prerequisites)
     - [Development environment configuration](#development-environment-configuration)
   - [Git and GitHub](#git-and-github)
-    - [Git configuration](#git-configuration)
+    - [Configuration](#configuration)
+    - [Authentication](#authentication)
     - [Signing commits](#signing-commits)
       - [Troubleshooting](#troubleshooting)
-  - [Additional settings](#additional-settings)
-    - [Usage](#usage)
+      - [Additional settings](#additional-settings)
+    - [Branching](#branching)
     - [Commit message](#commit-message)
     - [Hooks](#hooks)
     - [Tags](#tags)
@@ -22,6 +23,7 @@
         - [Comment](#comment)
         - [Request changes](#request-changes)
         - [Discarding reviews](#discarding-reviews)
+    - [Removing sensitive data](#removing-sensitive-data)
   - [Development](#development)
     - [Unit testing](#unit-testing)
     - [Code review](#code-review)
@@ -48,7 +50,7 @@ make config
 
 ## Git and GitHub
 
-### Git configuration
+### Configuration
 
 <!-- markdownlint-disable-next-line no-inline-html -->
 The commands below will configure your Git command-line client globally. Please, update your username (<span style="color:red">Your Name</span>) and email address (<span style="color:red">youremail@domain</span>) in the code snippet below prior to executing it.
@@ -74,6 +76,24 @@ git config remote.origin.prune true
 ```
 
 More information on the git settings can be found in the [Git Reference documentation](https://git-scm.com/docs).
+
+### Authentication
+
+Authenticate to GitHub and set up your authorisation token
+
+```shell
+$ gh auth login
+? What account do you want to log into? GitHub.com
+? What is your preferred protocol for Git operations? HTTPS
+? Authenticate Git with your GitHub credentials? No
+? How would you like to authenticate GitHub CLI? Paste an authentication token
+Tip: you can generate a Personal Access Token here https://github.com/settings/tokens
+The minimum required scopes are 'repo', 'read:org'.
+? Paste your authentication token: github_pat_**********************************************************************************
+- gh config set -h github.com git_protocol https
+✓ Configured git protocol
+✓ Logged in as your-github-handle
+```
 
 ### Signing commits
 
@@ -165,7 +185,7 @@ sed -i '/^export GPG_TTY/d' ~/.exports
 echo "export GPG_TTY=\$TTY" >> ~/.exports
 ```
 
-## Additional settings
+#### Additional settings
 
 Configure caching git commit signature passphrase for 3 hours
 
@@ -183,21 +203,22 @@ git config --global credential.helper cache
 #git config --global --unset credential.helper
 ```
 
-Authenticate to GitHub and set up your authorisation token
+### Branching
 
-```shell
-$ gh auth login
-? What account do you want to log into? GitHub.com
-? What is your preferred protocol for Git operations? HTTPS
-? Authenticate Git with your GitHub credentials? No
-? How would you like to authenticate GitHub CLI? Paste an authentication token
-Tip: you can generate a Personal Access Token here https://github.com/settings/tokens
-The minimum required scopes are 'repo', 'read:org'.
-? Paste your authentication token: github_pat_**********************************************************************************
-- gh config set -h github.com git_protocol https
-✓ Configured git protocol
-✓ Logged in as your-github-handle
-```
+Principles to follow
+
+- A direct merge to the main branch is not allowed and can only be done by creating a Pull Request
+- If not stated otherwise the only long-lived branch is main
+- Any new branch should be created from main and short-lived
+- The preferred short-lived branch name format is `task/REF-XXX_Descriptive_branch_name`
+- The preferred hotfix branch name format is `hotfix/REF-XXX_Descriptive_branch_name`
+- Commits should be made often and pushed to the remote, at least once a day
+- Use rebase to get the latest commits from main and update your local branch
+- Squash commits when appropriate
+- Merge commits are not allowed and should be squashed
+- All commits should be cryptographically signed
+
+There are a couple of good cheatsheets by [GitHub](https://training.github.com/downloads/github-git-cheat-sheet/) and a [visual](https://ndpsoftware.com/git-cheatsheet.html#loc=index;) one.
 
 Add your changes, create a signed commit, update from and push to remote
 
@@ -217,23 +238,6 @@ git add .
 git commit -S -m "Create just one commit instead"
 git push --force-with-lease
 ```
-
-### Usage
-
-Principles to follow
-
-- A direct merge to the main branch is not allowed and can only be done by creating a Pull Request
-- If not stated otherwise the only long-lived branch is main
-- Any new branch should be created from main and short-lived
-- The preferred short-lived branch name format is `task/REF-XXX_Descriptive_branch_name`
-- The preferred hotfix branch name format is `hotfix/REF-XXX_Descriptive_branch_name`
-- Commits should be made often and pushed to the remote, at least once a day
-- Use rebase to get the latest commits from main and update your local branch
-- Squash commits when appropriate
-- Merge commits are not allowed and should be squashed
-- All commits should be cryptographically signed
-
-There are a couple of good cheatsheets by [GitHub](https://training.github.com/downloads/github-git-cheat-sheet/) and a [visual](https://ndpsoftware.com/git-cheatsheet.html#loc=index;) one.
 
 Working on a new task
 
@@ -335,7 +339,11 @@ Further paragraphs come after blank lines.
 
 ### Hooks
 
-Git hooks are located in [`./scripts/githooks`](scripts/githooks) and executed automatically on each commit and as part of the Deployment Pipeline. They are as follows:
+Git hooks are located in [`./scripts/githooks`](scripts/githooks) and executed automatically on each commit and as part of the CI/CD pipeline execution. They are as follows:
+
+- Check file format ([EditorConfig](https://github.com/editorconfig))
+- Check markdown format ([markdownlint](https://github.com/DavidAnson/markdownlint))
+- Scan secrets ([GitLeaks](https://github.com/gitleaks/gitleaks))
 
 ### Tags
 
@@ -381,13 +389,17 @@ While it is possible to discard reviews, this should be used sparingly. Whenever
 - The reviewer is out of office for a longer duration and their original feedback has been resolved. It is the responsibility of the new reviewer to ensure the original feedback has been addressed
 - The PR is a hotfix that needs to be deployed quickly. The feedback can be addressed in a follow up PR, if it has not already have been resolved
 
+### Removing sensitive data
+
+The secret scan git hook and the corresponding GitHub action set up in this repository should prevent committing sensitive data to git history. However, if any sensitive information was included, please follow the [Removing sensitive data from a repository](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) guide.
+
 ## Development
 
 Read the [Code of Conduct](../docs/CODE_OF_CONDUCT.md) to keep the community approachable and respectable.
 
 ### Unit testing
 
-When writing or updating unit tests (whether you use Python, Java, Go or shell), please always structure them using the 3 A's approach of 'Arrange', 'Act', and 'Assert'. For example:
+When writing or updating unit tests (whether you use Python, Java, Go or Bash), please always structure them using the 3 A's approach of 'Arrange', 'Act', and 'Assert'. For example:
 
 ```java
 @Test
