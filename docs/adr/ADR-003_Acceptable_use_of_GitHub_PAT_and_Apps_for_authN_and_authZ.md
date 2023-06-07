@@ -1,16 +1,16 @@
-# ADR-002: Acceptable use of GitHub PAT (Personal Access Token) and GitHub Apps for authentication and authorisation
+# ADR-003: Acceptable use of GitHub PAT (Personal Access Token) and GitHub Apps for authentication and authorisation
 
 >|              | |
 >| ------------ | --- |
->| Date         | `dd/mm/YYYY` _when the decision was last updated_ |
->| Status       | `RFC by dd/mm/YYYY, Proposed, In Discussion, Pending Approval, Withdrawn, Rejected, Accepted, Deprecated, ..., Superseded by ADR-XXX or Supersedes ADR-XXX` |
->| Deciders     | `Tech Radar, Engineering, Architecture, Solution Assurance, Clinical Assurance, Technical Review and Governance, Information Governance, Cyber Security, Live Services Board,` ... |
->| Significance | `Structure, Nonfunctional characteristics, Dependencies, Interfaces, Construction techniques,` ... |
+>| Date         | `07/06/2023` |
+>| Status       | `RFC` |
+>| Deciders     | `Engineering` |
+>| Significance | `Dependencies, Interfaces` |
 >| Owners       | |
 
 ---
 
-- [ADR-002: Acceptable use of GitHub PAT (Personal Access Token) and GitHub Apps for authentication and authorisation](#adr-002-acceptable-use-of-github-pat-personal-access-token-and-github-apps-for-authentication-and-authorisation)
+- [ADR-003: Acceptable use of GitHub PAT (Personal Access Token) and GitHub Apps for authentication and authorisation](#adr-003-acceptable-use-of-github-pat-personal-access-token-and-github-apps-for-authentication-and-authorisation)
   - [Context](#context)
   - [Decision](#decision)
     - [Assumptions](#assumptions)
@@ -75,4 +75,4 @@ It is important that if the decision is sub-optimal or the choice is tactical or
 
 ## Tags
 
-`#availability|#scalability|#elasticity|#performance|#reliability|#resilience|#maintainability|#testability|#deployability|#modularity|#simplicity|#security|#data|#cost|#usability|#accessibility|…` these tags are intended to be operational, structural or cross-cutting architecture characteristics to link to related decisions.
+`#maintainability, #security`
