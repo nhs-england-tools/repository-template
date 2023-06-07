@@ -38,7 +38,7 @@ The following software packages must be installed on your laptop before proceedi
 - [GNU make](https://formulae.brew.sh/formula/make)
 - [Docker](https://www.docker.com/)
 
-To ensure all the prerequisite are installed and configured correctly, please follow the [nhs-england-tools/dotfiles](https://github.com/nhs-england-tools/dotfiles) installation process.
+To ensure all the prerequisites are installed and configured correctly, please follow the [nhs-england-tools/dotfiles](https://github.com/nhs-england-tools/dotfiles) installation process.
 
 ### Development environment configuration
 
