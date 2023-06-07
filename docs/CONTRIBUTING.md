@@ -4,7 +4,7 @@
 
 - [Contributing](#contributing)
   - [Table of contents](#table-of-contents)
-  - [Development environment](#development-environment)
+  - [Local environment](#local-environment)
     - [Prerequisites](#prerequisites)
     - [Development environment configuration](#development-environment-configuration)
   - [Git and GitHub](#git-and-github)
@@ -28,7 +28,7 @@
     - [Unit testing](#unit-testing)
     - [Code review](#code-review)
 
-## Development environment
+## Local environment
 
 ### Prerequisites
 
