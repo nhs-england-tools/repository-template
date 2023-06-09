@@ -1,16 +1,43 @@
 #!/bin/bash
 
-# ?
+set -e
+
+# Generate SBOM (Software Bill of Materials) for the repository content and any
+# artefact created by the CI/CD pipeline.
 #
 # Usage:
 #   $ ./generate-sbom.sh
+#
+# Options:
+#   VERBOSE=true  # Show all the executed commands, default is `false`
 
 # ==============================================================================
 
-image_digest=8b11ac4d8d15f598c7523f149a6b65be8540102f3665e4fdaa0d8231fd115092 # v0.80.0
+image_version=v0.83.0@sha256:aa3c040294b0a46b5cf38859fc245da929772161431e1003bfe43cb2852d128d
 
-docker run --rm --platform linux/amd64 \
-    --volume $PWD:/project \
-    --workdir /project \
-    anchore/syft@sha256:$image_digest \
-    ./ --output spdx-json=./sbom-spdx-$(date +'%Y%m%d%H%M%S').json
+# ==============================================================================
+
+function main() {
+
+  docker run --rm --platform linux/amd64 \
+    --volume $PWD:/scan \
+      ghcr.io/anchore/syft:$image_version \
+        packages dir:/scan --output spdx-json=/scan/sbom-spdx.json
+}
+
+function is_arg_true() {
+
+  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# ==============================================================================
+
+is_arg_true "$VERBOSE" && set -x
+
+main $*
+
+exit 0
