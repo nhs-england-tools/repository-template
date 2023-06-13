@@ -19,6 +19,7 @@
     "ms-vscode-remote.remote-containers",
     "ms-vscode-remote.remote-wsl",
     "ms-vscode.hexeditor",
+    "ms-vscode.live-server",
     "ms-vsliveshare.vsliveshare",
     "redhat.vscode-xml",
     "streetsidesoftware.code-spell-checker-british-english",
