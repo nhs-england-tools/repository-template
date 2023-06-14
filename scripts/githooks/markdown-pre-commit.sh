@@ -34,10 +34,10 @@ function main() {
 
   if is-arg-true "$ALL_FILES"; then
     # Check all files
-    files="*.md"
+    files="$(find ./ -type f -name "*.md")"
   else
     # Check changed files only
-    files="$(git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main} "*.md")"
+    files="$( (git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main} "*.md"; git diff --name-only "*.md") | sort | uniq )"
   fi
 
   if [ -n "$files" ]; then
