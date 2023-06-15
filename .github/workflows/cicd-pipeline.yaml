@@ -31,6 +31,8 @@ jobs:
     uses: ./.github/workflows/cloc-repository.yaml
   generate-sbom:
     uses: ./.github/workflows/generate-sbom.yaml
+  scan-cve:
+    uses: ./.github/workflows/scan-cve.yaml
   cicd-pipeline-test:
     runs-on: ubuntu-latest
     needs:
@@ -41,6 +43,7 @@ jobs:
         check-markdown-format,
         cloc-repository,
         generate-sbom,
+        scan-cve,
       ]
     timeout-minutes: 10
     steps:
