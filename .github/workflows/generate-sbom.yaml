@@ -1,0 +1,12 @@
+name: Generate SBOM
+
+on:
+  workflow_call:
+
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          ./scripts/sbom-generator.sh

@@ -2,8 +2,8 @@
 
 set -e
 
-# Generate SBOM (Software Bill of Materials) for the repository content and any
-# artefact created by the CI/CD pipeline.
+# Script to generate SBOM (Software Bill of Materials) for the repository
+# content and any artefact created by the CI/CD pipeline.
 #
 # Usage:
 #   $ ./generate-sbom.sh
@@ -21,8 +21,8 @@ function main() {
 
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/scan \
-      ghcr.io/anchore/syft:$image_version \
-        packages dir:/scan --output spdx-json=/scan/sbom-spdx.json
+    ghcr.io/anchore/syft:$image_version \
+      packages dir:/scan --output spdx-json=/scan/sbom-spdx.json
 }
 
 function is_arg_true() {
