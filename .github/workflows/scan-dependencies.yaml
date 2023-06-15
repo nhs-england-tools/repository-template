@@ -1,0 +1,29 @@
+name: Scan Dependencies
+
+on:
+  workflow_call:
+
+jobs:
+  scan-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          ./scripts/sbom-generator.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sbom-spdx.json
+          path: ./sbom-spdx.json
+      - run: |
+          ./scripts/cve-scanner.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: cve-scan.json
+          path: ./cve-scan.json
+      # - uses: aws-actions/configure-aws-credentials@v2
+      #   with:
+      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+      #     aws-region: ${{ vars.AWS_REGION }}
+      # - run: |
+      #     aws s3 cp ./sbom-spdx.json s3://?
+      #     aws s3 cp ./cve-scan.json s3://?
