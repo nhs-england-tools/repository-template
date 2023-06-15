@@ -14,7 +14,9 @@ jobs:
         with:
           name: sbom-spdx.json
           path: ./sbom-spdx.json
-      - uses: advanced-security/spdx-dependency-submission-action@v0.0.1
-        #continue-on-error: true
-        with:
-          filePath: ./sbom-spdx.json
+      # - uses: aws-actions/configure-aws-credentials@v2
+      #   with:
+      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+      #     aws-region: ${{ vars.AWS_REGION }}
+      # - run: |
+      #     aws s3 cp ./sbom-spdx.json s3://?
