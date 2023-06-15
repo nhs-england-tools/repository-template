@@ -14,3 +14,7 @@ jobs:
         with:
           name: sbom-spdx.json
           path: ./sbom-spdx.json
+      - uses: advanced-security/spdx-dependency-submission-action@v0.0.1
+        #continue-on-error: true
+        with:
+          filePath: ./sbom-spdx.json
