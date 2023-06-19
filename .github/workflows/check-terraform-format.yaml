@@ -1,0 +1,13 @@
+name: Check Terraform Format
+
+on:
+  workflow_call:
+
+jobs:
+  check-terraform-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          export CHECK_ONLY=true
+          ./scripts/githooks/terraform-pre-commit.sh
