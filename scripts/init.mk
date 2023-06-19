@@ -1,3 +1,13 @@
+terraform-install: # Install Terraform
+	if command -v asdf > /dev/null; then
+		asdf plugin add terraform ||:
+		asdf install terraform # SEE: .tool-versions
+	elif command -v tfswitch > /dev/null; then
+		versions=$$(git rev-parse --show-toplevel)/.tool-versions
+		terraform_version=$$(grep terraform $$versions | cut -f2 -d' ')
+		tfswitch $$terraform_version
+	fi
+
 githooks-install: # Install git hooks configured in this repository
 	echo "./scripts/githooks/pre-commit" > .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
