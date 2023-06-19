@@ -1,3 +1,27 @@
+nodejs-install: # Install Node.js
+	if command -v asdf > /dev/null; then
+		asdf plugin add nodejs ||:
+		asdf install nodejs # SEE: .tool-versions
+		asdf plugin add yarn ||:
+		asdf install yarn latest
+	elif command -v nvm > /dev/null; then
+		versions=$$(git rev-parse --show-toplevel)/.tool-versions
+		nodejs_version=$$(grep nodejs $$versions | cut -f2 -d' ')
+		nvm install $$nodejs_version
+	fi
+
+python-install: # Install Python
+	if command -v asdf > /dev/null; then
+		asdf plugin add python ||:
+		asdf install python # SEE: .tool-versions
+		asdf plugin add poetry ||:
+		asdf install poetry latest
+	elif command -v pyenv > /dev/null; then
+		versions=$$(git rev-parse --show-toplevel)/.tool-versions
+		python_version=$$(grep python $$versions | cut -f2 -d' ')
+		pyenv install $$python_version
+	fi
+
 terraform-install: # Install Terraform
 	if command -v asdf > /dev/null; then
 		asdf plugin add terraform ||:
@@ -39,4 +63,7 @@ else
 endif
 
 .SILENT: \
-	githooks-install
+	githooks-install \
+	nodejs-install \
+	python-install \
+	terraform-install

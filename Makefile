@@ -5,7 +5,10 @@ include scripts/init.mk
 
 config: # Configure development environment
 	make \
-		githooks-install
+		githooks-install \
+		nodejs-install \
+		python-install \
+		terraform-install
 
 .SILENT: \
 	config
