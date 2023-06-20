@@ -43,6 +43,8 @@ After a successful installation, provide an informative example of how this proj
 
 The [C4 model](https://c4model.com/) is a simple and intuitive way to create software architecture diagrams that are clear, consistent, scalable and most importantly collaborative. This should result in documenting all the system interfaces, external dependencies and integration points.
 
+![Repository Template](./docs/diagrams/Repository_Template_GitHub_Generic.png)
+
 ### Configuration
 
 Most of the projects are built with customisability and extendability in mind. At a minimum, this can be achieved by implementing service level configuration options and settings. The intention of this section is to show how this can be used. If the system processes data, you could mention here for example how the input is prepared for testing - anonymised, synthetic or live data.
