@@ -17,5 +17,5 @@ indent_size = 4
 [{Dockerfile,Dockerfile.}*]
 indent_size = 4
 
-[*{.mk,Makefile}]
+[{Makefile,*.mk,go.mod,go.sum,*.go,.gitmodules}]
 indent_style = tab
