@@ -1,3 +1,10 @@
+clean:: # Remove all generated and temporary files
+	rm -rf \
+		docs/diagrams/.*.bkp \
+		docs/diagrams/.*.dtmp \
+		cve-scan*.json \
+		sbom-spdx*.json
+
 githooks-install: # Install git hooks configured in this repository
 	echo "./scripts/githooks/pre-commit" > .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
@@ -29,4 +36,5 @@ else
 endif
 
 .SILENT: \
+	clean \
 	githooks-install
