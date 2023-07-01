@@ -27,11 +27,12 @@ jobs:
     needs: [metadata]
     timeout-minutes: 5
     steps:
-      - uses: ./.github/actions/scan-secrets.yaml
-      - uses: ./.github/actions/check-file-format.yaml
-      - uses: ./.github/actions/check-markdown-format.yaml
-      - uses: ./.github/actions/cloc-repository.yaml
-      - uses: ./.github/actions/scan-dependencies.yaml
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/scan-secrets
+      - uses: ./.github/actions/check-file-format
+      - uses: ./.github/actions/check-markdown-format
+      - uses: ./.github/actions/cloc-repository
+      - uses: ./.github/actions/scan-dependencies
   test-stage:
     runs-on: ubuntu-latest
     needs: [commit-stage]
