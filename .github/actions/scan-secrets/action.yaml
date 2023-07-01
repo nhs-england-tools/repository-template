@@ -1,0 +1,12 @@
+name: Scan Secrets
+description: 'This action scans this repository for hardcoded secrets.'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - shell: bash
+      run: |
+        export ALL_FILES=true
+        ./scripts/githooks/secret-scan-pre-commit.sh

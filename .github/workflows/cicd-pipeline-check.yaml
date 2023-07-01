@@ -1,0 +1,50 @@
+name: CI/CD Pipeline Check
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+  workflow_call:
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      build_datetime: ${{ steps.metadata.outputs.build_datetime }}
+      build_timestamp: ${{ steps.metadata.outputs.build_timestamp }}
+      build_epoch: ${{ steps.metadata.outputs.build_epoch }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - id: metadata
+        run: |
+          datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
+          echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
+          echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
+          echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+  commit-stage:
+    runs-on: ubuntu-latest
+    needs: [metadata]
+    timeout-minutes: 5
+    steps:
+      - uses: ./.github/actions/scan-secrets.yaml
+      - uses: ./.github/actions/check-file-format.yaml
+      - uses: ./.github/actions/check-markdown-format.yaml
+      - uses: ./.github/actions/cloc-repository.yaml
+      - uses: ./.github/actions/scan-dependencies.yaml
+  test-stage:
+    runs-on: ubuntu-latest
+    needs: [commit-stage]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+      - name: List Variables
+        run: |
+          export BUILD_DATETIME="${{ needs.metadata.outputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ needs.metadata.outputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ needs.metadata.outputs.build_epoch }}"
+          export VERSION="${{ needs.get-metadata.outputs.version }}"
+          make list-variables
+      # - name: Run tests ...
+      #   run: |
+      #     ?
