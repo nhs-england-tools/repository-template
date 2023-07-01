@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: "Scan Secrets"
-        uses: ./.github/actions/scan-secrets
+        uses: ./.github/actions/scan-secrets.yaml
       - name: "Check File Format"
         uses: ./.github/actions/check-file-format
       - name: "Check Markdown Format"
