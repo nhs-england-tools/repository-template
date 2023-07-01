@@ -41,7 +41,7 @@ jobs:
         uses: ./.github/actions/scan-dependencies
   test-stage:
     runs-on: ubuntu-latest
-    needs: [commit-stage]
+    needs: [metadata, commit-stage]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
