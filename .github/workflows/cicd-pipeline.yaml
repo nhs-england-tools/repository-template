@@ -1,10 +1,13 @@
-name: CI/CD Pipeline Check
+name: CI/CD Pipeline
 
 on:
   push:
-    branches-ignore:
-      - "main"
-  workflow_call:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 jobs:
   metadata:
@@ -30,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: "Scan Secrets"
-        uses: ./.github/actions/scan-secrets.yaml
+        uses: ./.github/actions/scan-secrets
       - name: "Check File Format"
         uses: ./.github/actions/check-file-format
       - name: "Check Markdown Format"
@@ -53,5 +56,22 @@ jobs:
           export VERSION="${{ needs.metadata.outputs.version }}"
           make list-variables
       # - name: Run tests ...
+      #   run: |
+      #     ?
+  build-stage:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [metadata, test-stage]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+      - name: List Variables
+        run: |
+          export BUILD_DATETIME="${{ needs.metadata.outputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ needs.metadata.outputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ needs.metadata.outputs.build_epoch }}"
+          export VERSION="${{ needs.metadata.outputs.version }}"
+          make list-variables
+      # - name: Build ...
       #   run: |
       #     ?
