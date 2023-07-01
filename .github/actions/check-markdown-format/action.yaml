@@ -1,7 +1,7 @@
 name: Check Markdown Format
-description: 'This action checks the Markdown format of the files in the repository.'
+description: "This action checks the Markdown format of the files in the repository."
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - uses: actions/checkout@v3
       with:

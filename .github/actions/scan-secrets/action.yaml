@@ -1,7 +1,7 @@
 name: Scan Secrets
-description: 'This action scans this repository for hardcoded secrets.'
+description: "This action scans this repository for hardcoded secrets."
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - uses: actions/checkout@v3
       with:

@@ -1,7 +1,7 @@
 name: Count Lines of Code of This Repository
-description: 'This action counts the lines of code of this repository.'
+description: "This action counts the lines of code of this repository."
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - uses: actions/checkout@v3
     - shell: bash
