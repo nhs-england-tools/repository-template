@@ -31,3 +31,8 @@ jobs:
   build-stage:
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-build.yaml
+    with:
+      build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
+      build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
+      build_epoch: "${{ needs.metadata.outputs.build_epoch }}"
+      version: "${{ needs.metadata.outputs.version }}"
