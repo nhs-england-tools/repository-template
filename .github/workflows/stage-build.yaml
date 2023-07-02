@@ -39,6 +39,10 @@ jobs:
       - name: Check artefact 1
         run: |
           echo "Checking artefact 1 ..."
+      - name: Upload artefact 1
+        run: |
+          echo "Uploading artefact 1 ..."
+          # TODO: Use either action/cache or action/upload-artifact
   artefact-2:
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -57,3 +61,7 @@ jobs:
       - name: Check artefact 2
         run: |
           echo "Checking artefact 2 ..."
+      - name: Upload artefact 2
+        run: |
+          echo "Uploading artefact 2 ..."
+          # TODO: Use either action/cache or action/upload-artifact

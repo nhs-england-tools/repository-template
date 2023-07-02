@@ -1,0 +1,113 @@
+name: Acceptance Stage
+
+on:
+  workflow_call:
+    inputs:
+      build_datetime:
+        description: "Build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_timestamp:
+        description: "Build timestamp, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_epoch:
+        description: "Build epoch, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      version:
+        description: "Version of the software, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+
+jobs:
+  environment-set-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: List variables
+        run: |
+          export BUILD_DATETIME="${{ inputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ inputs.build_epoch }}"
+          export VERSION="${{ inputs.version }}"
+          make list-variables
+      - name: Create infractructure
+        run: |
+          echo "Creating infractructure ..."
+      - name: Update database
+        run: |
+          echo "Updating database ..."
+      - name: Deploy application
+        run: |
+          echo "Deploying application ..."
+  accessibility-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+      - name: List variables
+        run: |
+          export BUILD_DATETIME="${{ inputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ inputs.build_epoch }}"
+          export VERSION="${{ inputs.version }}"
+          make list-variables
+      - name: Run accessibility test
+        run: |
+          echo "Running accessibility test ..."
+      - name: Save result
+        run: |
+          echo "Saveing result ..."
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+      - name: List variables
+        run: |
+          export BUILD_DATETIME="${{ inputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ inputs.build_epoch }}"
+          export VERSION="${{ inputs.version }}"
+          make list-variables
+      - name: Run load test
+        run: |
+          echo "Running load test ..."
+      - name: Save result
+        run: |
+          echo "Saveing result ..."
+  security-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+      - name: List variables
+        run: |
+          export BUILD_DATETIME="${{ inputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ inputs.build_epoch }}"
+          export VERSION="${{ inputs.version }}"
+          make list-variables
+      - name: Run security test
+        run: |
+          echo "Running security test ..."
+      - name: Save result
+        run: |
+          echo "Saveing result ..."
+  environment-tear-down:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: List variables
+        run: |
+          export BUILD_DATETIME="${{ inputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ inputs.build_epoch }}"
+          export VERSION="${{ inputs.version }}"
+          make list-variables
+      - name: Tear down environment
+        run: |
+          echo "Tearing down environment ..."
