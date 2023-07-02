@@ -21,8 +21,6 @@ jobs:
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
 
-  # === Commit Stage ===========================================================
-
   scan-secrets:
     uses: ./.github/workflows/job-scan-secrets.yaml
   check-file-format:
