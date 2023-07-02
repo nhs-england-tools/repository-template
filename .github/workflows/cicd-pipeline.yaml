@@ -58,13 +58,20 @@ jobs:
       #   run: |
       #     ?
   build-stage:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     needs: [metadata, test-stage]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
+      - name: Check if Pull Request exists
+        run: |
+          if gh pr list --base ${{ github.ref }} | grep -q .; then
+            echo "is_pull_request_open=true" >> $GITHUB_ENV
+          else
+            echo "is_pull_request_open=false" >> $GITHUB_ENV
+          fi
       - name: List Variables
+        if: env.is_pull_request_open == 'true'
         run: |
           export BUILD_DATETIME="${{ needs.metadata.outputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ needs.metadata.outputs.build_timestamp }}"
