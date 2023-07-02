@@ -13,16 +13,44 @@ set -e
 
 # ==============================================================================
 
-image_version=v0.83.0@sha256:aa3c040294b0a46b5cf38859fc245da929772161431e1003bfe43cb2852d128d
+image_version=v0.84.1@sha256:9a8f80eee3984d4a3f9a86e4d66e739e30dfc34564d76d3574f98798db5d5b35
 
 # ==============================================================================
 
 function main() {
 
+  create-sbom
+  enrich-sbom
+}
+
+function create-sbom() {
+
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/scan \
     ghcr.io/anchore/syft:$image_version \
-      packages dir:/scan --output spdx-json=/scan/sbom-spdx.json
+      packages dir:/scan \
+      --config /scan/scripts/config/.syft.yaml \
+      --output spdx-json=/scan/sbom-spdx.tmp.json
+}
+
+function enrich-sbom() {
+
+  git_url=$(git config --get remote.origin.url)
+  git_branch=$(git rev-parse --abbrev-ref HEAD)
+  git_commit_hash=$(git rev-parse HEAD)
+  git_tags=$(echo \"$(git tag | tr '\n' ',' | sed 's/,$//' | sed 's/,/","/g')\" | sed 's/""//g')
+  pipeline_run_id=${GITHUB_RUN_ID:-0}
+  pipeline_run_number=${GITHUB_RUN_NUMBER:-0}
+  pipeline_run_attempt=${GITHUB_RUN_ATTEMPT:-0}
+
+  docker run --rm --platform linux/amd64 \
+    --volume $PWD:/repo \
+    --workdir /repo \
+    ghcr.io/make-ops-tools/jq:latest \
+      '.creationInfo |= . + {"repository":{"url":"'${git_url}'","branch":"'${git_branch}'","tags":['${git_tags}'],"commitHash":"'${git_commit_hash}'"},"pipeline":{"id":'${pipeline_run_id}',"number":'${pipeline_run_number}',"attempt":'${pipeline_run_attempt}'}}' \
+      sbom-spdx.tmp.json \
+        > sbom-spdx.json
+  rm -f sbom-spdx.tmp.json
 }
 
 function is_arg_true() {
