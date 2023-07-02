@@ -24,12 +24,12 @@ jobs:
   # === Commit Stage ===========================================================
 
   scan-secrets:
-    uses: ./.github/workflows/jobs/scan-secrets.yaml
+    uses: ./.github/workflows/job-scan-secrets.yaml
   check-file-format:
-    uses: ./.github/workflows/jobs/check-file-format.yaml
+    uses: ./.github/workflows/job-check-file-format.yaml
   check-markdown-format:
-    uses: ./.github/workflows/jobs/check-markdown-format.yaml
+    uses: ./.github/workflows/job-check-markdown-format.yaml
   cloc-repository:
-    uses: ./.github/workflows/jobs/cloc-repository.yaml
+    uses: ./.github/workflows/job-cloc-repository.yaml
   scan-dependencies:
-    uses: ./.github/workflows/jobs/scan-dependencies.yaml
+    uses: ./.github/workflows/job-scan-dependencies.yaml
