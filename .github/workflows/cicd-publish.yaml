@@ -9,7 +9,7 @@ on:
 jobs:
   metadata:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == 'true'
+    if: github.event.pull_request.merged == true
     timeout-minutes: 1
     outputs:
       version: ${{ steps.variables.outputs.version }}
@@ -27,7 +27,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [metadata]
-    if: github.event.pull_request.merged == 'true'
+    if: github.event.pull_request.merged == true
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v3
