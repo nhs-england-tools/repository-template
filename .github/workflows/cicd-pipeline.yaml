@@ -8,11 +8,13 @@ on:
 jobs:
   metadata:
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     outputs:
       build_datetime: ${{ steps.metadata.outputs.build_datetime }}
       build_timestamp: ${{ steps.metadata.outputs.build_timestamp }}
       build_epoch: ${{ steps.metadata.outputs.build_epoch }}
       version: ${{ steps.metadata.outputs.version }}
+      does_pull_request_exist: ${{ steps.metadata.outputs.does_pull_request_exist }}
     steps:
       - uses: actions/checkout@v3
       - id: metadata
@@ -22,12 +24,24 @@ jobs:
           echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+      - name: Check if Pull Request exists
+        run: |
+          branch_name=${GITHUB_REF#refs/heads/}
+          echo "Current branch is '$branch_name'"
+          if gh pr list --base ${{ github.ref }} | grep -q .; then
+            echo "Pull Request exists for this branch"
+            echo "does_pull_request_exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "Pull Request doesn't exists for this branch"
+            echo "does_pull_request_exist=false" >> $GITHUB_OUTPUT
+          fi
       - name: List variables
         run: |
           export BUILD_DATETIME="${{ steps.metadata.outputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ steps.metadata.outputs.build_timestamp }}"
           export BUILD_EPOCH="${{ steps.metadata.outputs.build_epoch }}"
           export VERSION="${{ steps.metadata.outputs.version }}"
+          export DOES_PULL_REQUEST_EXIST="${{ steps.metadata.outputs.does_pull_request_exist }}"
           make list-variables
   commit-stage:
     needs: [metadata]
