@@ -64,8 +64,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Check if Pull Request exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh pr list --base ${{ github.ref }} | grep -q .; then
+          branch_name=${GITHUB_REF#refs/heads/}
+          if gh pr list --base "$branch_name" | grep -q .; then
             echo "is_pull_request_open=true" >> $GITHUB_ENV
           else
             echo "is_pull_request_open=false" >> $GITHUB_ENV
