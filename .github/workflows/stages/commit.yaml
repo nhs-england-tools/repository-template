@@ -1,0 +1,35 @@
+name: Commit Stage
+
+on:
+  workflow_call:
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      build_datetime: ${{ steps.metadata.outputs.build_datetime }}
+      build_timestamp: ${{ steps.metadata.outputs.build_timestamp }}
+      build_epoch: ${{ steps.metadata.outputs.build_epoch }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: metadata
+        run: |
+          datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
+          echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
+          echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
+          echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+  # === Commit Stage ===========================================================
+
+  scan-secrets:
+    uses: ./.github/workflows/jobs/scan-secrets.yaml
+  check-file-format:
+    uses: ./.github/workflows/jobs/check-file-format.yaml
+  check-markdown-format:
+    uses: ./.github/workflows/jobs/check-markdown-format.yaml
+  cloc-repository:
+    uses: ./.github/workflows/jobs/cloc-repository.yaml
+  scan-dependencies:
+    uses: ./.github/workflows/jobs/scan-dependencies.yaml

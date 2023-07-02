@@ -1,0 +1,13 @@
+name: Count Lines of Code of This Repository
+
+on:
+  workflow_call:
+
+jobs:
+  cloc-repository:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          export FORMAT=default
+          ./scripts/cloc-repository.sh
