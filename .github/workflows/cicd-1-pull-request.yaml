@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pull Request
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
           make list-variables
   commit-stage:
     needs: [metadata]
-    uses: ./.github/workflows/stage-commit.yaml
+    uses: ./.github/workflows/stage-1-commit.yaml
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
       build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
@@ -60,7 +60,7 @@ jobs:
       version: "${{ needs.metadata.outputs.version }}"
   test-stage:
     needs: [metadata, commit-stage]
-    uses: ./.github/workflows/stage-test.yaml
+    uses: ./.github/workflows/stage-2-test.yaml
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
       build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
@@ -68,7 +68,7 @@ jobs:
       version: "${{ needs.metadata.outputs.version }}"
   build-stage:
     needs: [metadata, test-stage]
-    uses: ./.github/workflows/stage-build.yaml
+    uses: ./.github/workflows/stage-3-build.yaml
     if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
@@ -77,7 +77,7 @@ jobs:
       version: "${{ needs.metadata.outputs.version }}"
   acceptance-stage:
     needs: [metadata, build-stage]
-    uses: ./.github/workflows/stage-acceptance.yaml
+    uses: ./.github/workflows/stage-4-acceptance.yaml
     if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
