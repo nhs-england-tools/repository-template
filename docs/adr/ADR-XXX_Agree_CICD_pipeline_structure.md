@@ -28,6 +28,26 @@
 
 Describe the context and the problem statement. Is there a relationship to other decisions previously made? Are there any dependencies and/or constraints within which the decision will be made? Do these need to be reviewed or validated? Please, note that environmental limitations or restrictions such as accepted technology standards, commonly recognised and used patterns, engineering and architecture principles, organisation policies, governance and so on, may as an effect narrow down the choices. This should also be explicitly documented, as this is a point-in-time decision with the intention of being able to articulate it clearly and justify it later.
 
+Requirements:
+
+- Implement the exemplar CI/CD pipeline using GitHub workflows and actions
+- Incorporate the four main CI/CD pipeline stages, which are as follows:
+  1. Commit
+  2. Test
+  3. Build
+  4. Acceptance
+- Provide `publish` and `deploy` workflows as separate processes
+- Maintain simplicity in the pipeline but ensure it is scalable and extensible for larger projects
+- Enable parallel execution of jobs to speed up the overall process
+- Prevent the workflow from being triggered twice, i.e. when pushing to a branch with an existing pull request
+- Implement good CI/CD practices, such as:
+  - Setting the build time variables at the start of the process
+  - Storing the software version in the `./VERSION` file
+  - Keeping the main workflow modular
+  - Ensuring a timeout is set for each job
+  - Listing environment variables
+  - Making actions portable, e.g. allowing them to be run on a workstation or on Azure DevOps using external scripts
+
 ## Decision
 
 ### Assumptions

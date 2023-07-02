@@ -26,7 +26,7 @@ jobs:
           echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
-      - name: Check if Pull Request exists for this branch
+      - name: Check if pull request exists for this branch
         id: pr_exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -34,10 +34,10 @@ jobs:
           branch_name=${GITHUB_REF#refs/heads/}
           echo "Current branch is '$branch_name'"
           if gh pr list --head $branch_name | grep -q .; then
-            echo "Pull Request exists"
+            echo "Pull request exists"
             echo "does_pull_request_exist=true" >> $GITHUB_OUTPUT
           else
-            echo "Pull Request doesn't exist"
+            echo "Pull request doesn't exist"
             echo "does_pull_request_exist=false" >> $GITHUB_OUTPUT
           fi
       - name: List variables

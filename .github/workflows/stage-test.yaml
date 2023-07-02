@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
-      - name: List Variables
+      - name: List variables
         run: |
           export BUILD_DATETIME="${{ inputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
@@ -44,7 +44,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
-      - name: List Variables
+      - name: List variables
         run: |
           export BUILD_DATETIME="${{ inputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
