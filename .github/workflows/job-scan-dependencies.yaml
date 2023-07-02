@@ -6,6 +6,7 @@ on:
 jobs:
   scan-dependencies:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v3
       - run: |

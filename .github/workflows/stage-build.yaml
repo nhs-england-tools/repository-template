@@ -4,26 +4,26 @@ on:
   workflow_call:
     inputs:
       build_datetime:
-        description: "Build datetime"
+        description: "Build datetime, set by the CI/CD pipeline workflow"
         required: true
         type: string
       build_timestamp:
-        description: "Build timestamp"
+        description: "Build timestamp, set by the CI/CD pipeline workflow"
         required: true
         type: string
       build_epoch:
-        description: "Build epoch"
+        description: "Build epoch, set by the CI/CD pipeline workflow"
         required: true
         type: string
       version:
-        description: "Version of the software"
+        description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
         type: string
 
 jobs:
   artefact-1:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v3
       - name: List variables
@@ -41,7 +41,7 @@ jobs:
           echo "Checking artefact 1 ..."
   artefact-2:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v3
       - name: List variables

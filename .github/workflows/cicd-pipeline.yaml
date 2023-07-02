@@ -32,9 +32,19 @@ jobs:
   commit-stage:
     needs: [metadata]
     uses: ./.github/workflows/stage-commit.yaml
+    with:
+      build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
+      build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
+      build_epoch: "${{ needs.metadata.outputs.build_epoch }}"
+      version: "${{ needs.metadata.outputs.version }}"
   test-stage:
     needs: [metadata, commit-stage]
     uses: ./.github/workflows/stage-test.yaml
+    with:
+      build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
+      build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
+      build_epoch: "${{ needs.metadata.outputs.build_epoch }}"
+      version: "${{ needs.metadata.outputs.version }}"
   build-stage:
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-build.yaml
