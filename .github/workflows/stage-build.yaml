@@ -30,7 +30,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: List Variables
-        if: env.is_pull_request_open == 'true'
         run: |
           export BUILD_DATETIME="${{ needs.metadata.outputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ needs.metadata.outputs.build_timestamp }}"
