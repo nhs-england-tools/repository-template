@@ -69,7 +69,7 @@ jobs:
   build-stage:
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-build.yaml
-    if: needs.metadata.outputs.does_pull_request_exist == true || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
+    if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
       build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
@@ -78,7 +78,7 @@ jobs:
   acceptance-stage:
     needs: [metadata, build-stage]
     uses: ./.github/workflows/stage-acceptance.yaml
-    if: needs.metadata.outputs.does_pull_request_exist == true || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
+    if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
       build_timestamp: "${{ needs.metadata.outputs.build_timestamp }}"
