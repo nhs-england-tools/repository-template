@@ -16,23 +16,27 @@ jobs:
       version: ${{ steps.metadata.outputs.version }}
       does_pull_request_exist: ${{ steps.metadata.outputs.does_pull_request_exist }}
     steps:
-      - uses: actions/checkout@v3
-      - id: metadata
+      - name: Check out the repository
+        uses: actions/checkout@v3
+      - name: Set CI/CD variables
+        id: metadata
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
           echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
           echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
-      - name: Check if Pull Request exists
+      - name: Check if Pull Request exists for this branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           branch_name=${GITHUB_REF#refs/heads/}
           echo "Current branch is '$branch_name'"
           if gh pr list --base ${{ github.ref }} | grep -q .; then
-            echo "Pull Request exists for this branch"
+            echo "Pull Request exists"
             echo "does_pull_request_exist=true" >> $GITHUB_OUTPUT
           else
-            echo "Pull Request doesn't exists for this branch"
+            echo "Pull Request doesn't exist"
             echo "does_pull_request_exist=false" >> $GITHUB_OUTPUT
           fi
       - name: List variables
