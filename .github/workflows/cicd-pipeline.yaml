@@ -10,16 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     outputs:
-      build_datetime: ${{ steps.metadata.outputs.build_datetime }}
-      build_timestamp: ${{ steps.metadata.outputs.build_timestamp }}
-      build_epoch: ${{ steps.metadata.outputs.build_epoch }}
-      version: ${{ steps.metadata.outputs.version }}
-      does_pull_request_exist: ${{ steps.metadata.outputs.does_pull_request_exist }}
+      build_datetime: ${{ steps.variables.outputs.build_datetime }}
+      build_timestamp: ${{ steps.variables.outputs.build_timestamp }}
+      build_epoch: ${{ steps.variables.outputs.build_epoch }}
+      version: ${{ steps.variables.outputs.version }}
+      does_pull_request_exist: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v3
       - name: Set CI/CD variables
-        id: metadata
+        id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
           echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
@@ -27,6 +27,7 @@ jobs:
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
       - name: Check if Pull Request exists for this branch
+        id: pr_exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -41,11 +42,11 @@ jobs:
           fi
       - name: List variables
         run: |
-          export BUILD_DATETIME="${{ steps.metadata.outputs.build_datetime }}"
-          export BUILD_TIMESTAMP="${{ steps.metadata.outputs.build_timestamp }}"
-          export BUILD_EPOCH="${{ steps.metadata.outputs.build_epoch }}"
-          export VERSION="${{ steps.metadata.outputs.version }}"
-          export DOES_PULL_REQUEST_EXIST="${{ steps.metadata.outputs.does_pull_request_exist }}"
+          export BUILD_DATETIME="${{ steps.variables.outputs.build_datetime }}"
+          export BUILD_TIMESTAMP="${{ steps.variables.outputs.build_timestamp }}"
+          export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
+          export VERSION="${{ steps.variables.outputs.version }}"
+          export DOES_PULL_REQUEST_EXIST="${{ steps.pr_exists.outputs.does_pull_request_exist }}"
           make list-variables
   commit-stage:
     needs: [metadata]
