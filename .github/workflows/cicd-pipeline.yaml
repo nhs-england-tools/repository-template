@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "**"
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
   metadata:
@@ -51,7 +53,10 @@ jobs:
           export BUILD_EPOCH="${{ needs.metadata.outputs.build_epoch }}"
           export VERSION="${{ needs.metadata.outputs.version }}"
           make list-variables
-      # - name: Run tests ...
+      # - name: Run unit tests ...
+      #   run: |
+      #     ?
+      # - name: Run other low-level tests ...
       #   run: |
       #     ?
   build-stage:
