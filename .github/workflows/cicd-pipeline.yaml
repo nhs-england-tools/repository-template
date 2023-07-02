@@ -7,11 +7,11 @@ on:
 
 jobs:
   commit-stage:
-    uses: ./.github/workflows/stages/commit.yaml
+    uses: ./.github/workflows/stage-commit.yaml
   test-stage:
-    uses: ./.github/workflows/stages/test.yaml
+    uses: ./.github/workflows/stage-test.yaml
   build-stage:
-    uses: ./.github/workflows/stages/build.yaml
+    uses: ./.github/workflows/stage-build.yaml
   cicd-pipeline:
     runs-on: ubuntu-latest
     needs: [commit-stage, test-stage, build-stage]
