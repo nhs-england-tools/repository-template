@@ -2,9 +2,10 @@ PROJECT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 include $(abspath $(PROJECT_DIR)/scripts/init.mk)
 
 # This file contains hooks into the project configuration, test and build cycle
-# as automated steps to be executed locally and in the CI/CD pipeline.
+# as automated steps to be executed on a workstation and in the CI/CD pipeline.
 
 config: # Configure development environment
+	# TODO: Use only `make` targets that are specific to this project, e.g. you may not need to install Node.js
 	make \
 		githooks-install \
 		nodejs-install \
