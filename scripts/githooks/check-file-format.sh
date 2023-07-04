@@ -7,7 +7,7 @@ set +e
 # according to the style defined in the `.editorconfig` file.
 #
 # Usage:
-#   $ ./editorconfig-pre-commit.sh
+#   $ ./check-file-format.sh
 #
 # Options:
 #   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is `origin/main`

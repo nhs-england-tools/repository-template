@@ -1,12 +1,12 @@
 # ADR-001: Use git hook and GitHub Action to check the `.editorconfig` compliance
 
->|              | |
->| ------------ | --- |
->| Date         | `15/05/2023` |
->| Status       | `RFC` |
->| Deciders     | `Engineering` |
->| Significance | `Construction techniques` |
->| Owners       | `Dan Stefaniuk, Amaan Ibn-Nasar` |
+>|              |                                                      |
+>| ------------ | ---------------------------------------------------- |
+>| Date         | `04/07/2023`                                         |
+>| Status       | `RFC`                                                |
+>| Deciders     | `Engineering`                                        |
+>| Significance | `Construction techniques`                            |
+>| Owners       | `Dan Stefaniuk, Amaan Ibn-Nasar, Thomas Judd-Cooper` |
 
 ---
 
@@ -25,6 +25,7 @@
   - [Consequences](#consequences)
   - [Compliance](#compliance)
   - [Notes](#notes)
+  - [Actions](#actions)
   - [Tags](#tags)
 
 ## Context
@@ -110,7 +111,7 @@ This option is an extension built upon option 2a.
 
 ### Outcome
 
-The decision is to implement Option 2b.
+The decision is to implement the Option 2b for all the git hooks included in this repository template with in conjunction the Option 1 as the git hook executor. This will allow for flexibility and extensibility of the git hooks used by a repository built upon this template.
 
 ### Rationale
 
@@ -122,9 +123,9 @@ As a result of the above decision
 
 - a single Bash script will be implemented
 - it will be placed in the `scripts/githooks` directory
-- the name of the file will be `editorconfig-pre-commit.sh`
-- there will be a `pre-commit` runner included
-- the GitHub Action will call the git hook `editorconfig-pre-commit.sh` script directly
+- the name of the file will be `check-file-format.sh`
+- there will be a `pre-commit` runner installed by the [pre-commit](https://pre-commit.com/) framework using a make target
+- the GitHub Action will call the git hook `check-file-format.sh` script directly
 - and a couple of `Makefile` targets like `config`, `githooks-install` will be implemented to bootstrap the project
 
 The intention of this decision is to guide any other git hook and GitHub Action implementations.
@@ -136,6 +137,11 @@ Both, the git hook and the GitHub Action should be executed automatically as par
 ## Notes
 
 There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub actions even more portable. The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.
+
+## Actions
+
+- [ ] Ensure the naming convention of the other git hooks follows the pattern set by the `./scripts/githooks/check-file-format.sh` script
+- [ ] Relocate shell scripts that are called by the GitHub workflow, currently placed in the `./scripts` directory, to `./.github/workflows/scripts`
 
 ## Tags
 

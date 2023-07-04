@@ -1,8 +1,16 @@
 # Repository Template
 
-Start with an overview or a brief description of what the project is about and what it does.
+Start with an overview or a brief description of what the project is about and what it does. For example -
 
-There is an expectation that each file of this repository template is concise and self-documented.
+Welcome to our repository template designed to streamline your project setup! This robust template provides a reliable starting point for your new projects, covering an essential tech stack and encouraging best practices in documenting.
+
+This repository template aims to foster a user-friendly development environment by ensuring that every included file is concise and adequately self-documented. By adhering to this standard, we can promote increased clarity and maintainability throughout your project's lifecycle. Bundled within this template are resources that pave the way for seamless repository creation. Our supported tech stack includes:
+
+- Terraform
+- Python
+- Node.js
+
+Make use of this repository template to expedite your project setup and enhance your productivity right from the get-go. Enjoy the advantage of having a well-structured, self-documented project that reduces overhead and increases focus on what truly matters - coding!
 
 ## Table of Contents
 
@@ -21,6 +29,21 @@ There is an expectation that each file of this repository template is concise an
 ## Installation
 
 By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
+
+Clone the repository
+
+```shell
+git clone https://github.com/nhs-england-tools/repository-template.git
+cd nhs-england-tools/repository-template
+```
+
+Install and configure toolchain dependencies
+
+```shell
+make config
+```
+
+If this repository is
 
 ```shell
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
