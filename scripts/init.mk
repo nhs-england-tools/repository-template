@@ -23,10 +23,10 @@ githooks-run: # Run git hooks configured in this repository
 		--all-files
 
 asdf-install: # Install asdf from https://asdf-vm.com/
-	if [ -d "$$HOME/.asdf" ]; then
-		( cd "$$HOME/.asdf"; git pull )
+	if [ -d "${HOME}/.asdf" ]; then
+		( cd "${HOME}/.asdf"; git pull )
 	else
-		git clone --depth=1 https://github.com/asdf-vm/asdf.git "$$HOME/.asdf" ||:
+		git clone --depth=1 https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
 	fi
 	asdf plugin update --all
 
