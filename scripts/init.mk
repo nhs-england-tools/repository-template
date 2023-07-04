@@ -68,7 +68,7 @@ else
 endif
 
 .SILENT: \
-	_install-asdf-dependency \
+	_install-dependency \
 	asdf-install \
 	clean \
 	githooks-install \
