@@ -14,12 +14,12 @@ terraform-install: # Install Terraform
 githooks-install: # Install git hooks configured in this repository
 	make _install-dependency name="pre-commit"
 	pre-commit install \
-		--config ./scripts/githooks/.pre-commit-config.yaml \
+		--config ./scripts/config/.pre-commit.yaml \
 		--install-hooks
 
 githooks-run: # Run git hooks configured in this repository
 	pre-commit run \
-		--config ./scripts/githooks/.pre-commit-config.yaml \
+		--config ./scripts/config/.pre-commit.yaml \
 		--all-files
 
 asdf-install: # Install asdf from https://asdf-vm.com/
