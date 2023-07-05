@@ -1,11 +1,11 @@
 # ADR-002: Scan repository for hardcoded secrets
 
->|              | |
->| ------------ | --- |
->| Date         | `05/06/2023` |
->| Status       | `RFC` |
->| Deciders     | `Engineering` |
->| Significance | `Construction techniques` |
+>|              |                                                               |
+>| ------------ | ------------------------------------------------------------- |
+>| Date         | `05/06/2023`                                                  |
+>| Status       | `RFC`                                                         |
+>| Deciders     | `Engineering`                                                 |
+>| Significance | `Construction techniques`                                     |
 >| Owners       | `Dan Stefaniuk, Jon Pearce, Tamara Goldschmidt, Tim Rickwood` |
 
 ---

@@ -1,12 +1,12 @@
 # ADR-nnn: Any Decision Record Template
 
->|              | |
->| ------------ | --- |
->| Date         | `dd/mm/YYYY` _when the decision was last updated_ |
->| Status       | `RFC by dd/mm/YYYY, Proposed, In Discussion, Pending Approval, Withdrawn, Rejected, Accepted, Deprecated, ..., Superseded by ADR-XXX or Supersedes ADR-XXX` |
+>|              |                                                                                                                                                                                    |
+>| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+>| Date         | `dd/mm/YYYY` _when the decision was last updated_                                                                                                                                  |
+>| Status       | `RFC by dd/mm/YYYY, Proposed, In Discussion, Pending Approval, Withdrawn, Rejected, Accepted, Deprecated, ..., Superseded by ADR-XXX or Supersedes ADR-XXX`                        |
 >| Deciders     | `Tech Radar, Engineering, Architecture, Solution Assurance, Clinical Assurance, Technical Review and Governance, Information Governance, Cyber Security, Live Services Board,` ... |
->| Significance | `Structure, Nonfunctional characteristics, Dependencies, Interfaces, Construction techniques,` ... |
->| Owners       | |
+>| Significance | `Structure, Nonfunctional characteristics, Dependencies, Interfaces, Construction techniques,` ...                                                                                 |
+>| Owners       |                                                                                                                                                                                    |
 
 ---
 
