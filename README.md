@@ -60,6 +60,10 @@ The following software packages or their equivalents are expected to be installe
 
 After a successful installation, provide an informative example of how this project can be used. Additional code snippets, screenshots and demos work well in this space. You may also link to the other documentation resources, e.g. the [User Guide](./docs/user-guide.md) to demonstrate more use cases and to show more features.
 
+### Testing
+
+There are `make` tasks for you to configure to run your tests.  Run `make test` to see how they work.  You should be able to use the same entry points for local development as in your CI pipeline.
+
 ## Architecture
 
 ### Diagrams
