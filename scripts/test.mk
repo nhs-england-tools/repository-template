@@ -9,29 +9,29 @@
 #   - code review, which is outside the scope of automated testing for the moment
 
 test-integration:
-	@make _test name="integration"
+	make _test name="integration"
 
 test-contract:
-	@make _test name="contract"
+	make _test name="contract"
 
 test-ui:
-	@make _test name="ui"
+	make _test name="ui"
 
 test-accessibility:
-	@make _test name="accessibility"
+	make _test name="accessibility"
 
 test-lint:
-	@make _test name="lint"
+	make _test name="lint"
 
 # test-code-quality covers checking for duplicate code, code smells, and dead code.
 test-code-quality:
-	@make _test name="code-quality"
+	make _test name="code-quality"
 
 test-unit:
-	@make _test name="unit"
+	make _test name="unit"
 
 test-coverage:
-	@make _test name="coverage"
+	make _test name="coverage"
 
 test: test-unit \
 	test-lint \
@@ -43,10 +43,21 @@ test: test-unit \
 	test-accessibility
 
 _test:
-	@set -e ;\
+	set -e ;\
 	SCRIPT="scripts/test/${name}" ;\
 	if [ -e "$${SCRIPT}" ]; then \
 		exec $$SCRIPT ;\
 	else \
 		echo "make test-${name} not implemented: $${SCRIPT} not found" >&2 ;\
 	fi
+
+.SILENT: \
+	_test \
+	test-accessibility \
+	test-code-quality \
+	test-contract \
+	test-coverage \
+	test-integration \
+	test-lint \
+	test-ui \
+	test-unit
