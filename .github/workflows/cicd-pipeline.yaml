@@ -39,6 +39,8 @@ jobs:
     uses: ./.github/workflows/cloc-repository.yaml
   scan-dependencies:
     uses: ./.github/workflows/scan-dependencies.yaml
+  perform-static-analysis:
+    uses: ./.github/workflows/perform-static-analysis.yaml
   cicd-pipeline-test:
     runs-on: ubuntu-latest
     needs:

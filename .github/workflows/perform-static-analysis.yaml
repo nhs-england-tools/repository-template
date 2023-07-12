@@ -1,0 +1,16 @@
+name: Perform Static Analysis
+
+on:
+  workflow_call:
+
+jobs:
+  perform-static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./scripts/githooks/perform-static-analysis.sh
