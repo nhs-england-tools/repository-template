@@ -13,4 +13,4 @@ jobs:
       - env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          ./scripts/githooks/perform-static-analysis.sh
+          ./scripts/perform-static-analysis.sh
