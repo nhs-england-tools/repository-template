@@ -8,31 +8,32 @@
 #   - secret scanning, which we expect to be a pre-commit hook
 #   - code review, which is outside the scope of automated testing for the moment
 
-test-integration:
+test-integration: # Run your integration tests from scripts/test/integration
 	make _test name="integration"
 
-test-contract:
+test-contract: # Run your contract tests from scripts/test/contract
 	make _test name="contract"
 
-test-ui:
+test-ui: # Run your UI tests from scripts/test/ui
 	make _test name="ui"
 
-test-accessibility:
+test-accessibility: # Run your accessibility tests from scripts/test/accessibility
 	make _test name="accessibility"
 
-test-lint:
+test-lint: # Lint your code from scripts/test/lint
 	make _test name="lint"
 
 # test-code-quality covers checking for duplicate code, code smells, and dead code.
-test-code-quality:
+test-code-quality: # Run your code quality tests from scripts/test/code-quality
 	make _test name="code-quality"
 
-test-unit:
+test-unit: # Run your unit tests from scripts/test/unit
 	make _test name="unit"
 
-test-coverage:
+test-coverage: # Evaluate code coverage from scripts/test/coverage
 	make _test name="coverage"
 
+test: # Run all the test tasks
 test: test-unit \
 	test-lint \
 	test-code-quality \
