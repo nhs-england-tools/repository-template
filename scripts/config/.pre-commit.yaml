@@ -3,7 +3,7 @@ repos:
   hooks:
   - id: scan-secrets
     name: Scan Secrets
-    entry: ./scripts/githooks/secret-scan-pre-commit.sh
+    entry: ./scripts/githooks/scan-secrets.sh
     language: script
     pass_filenames: false
 - repo: local
@@ -17,13 +17,13 @@ repos:
   hooks:
   - id: check-markdown-format
     name: Check Markdown Format
-    entry: ./scripts/githooks/markdown-pre-commit.sh
+    entry: ./scripts/githooks/check-markdown-format.sh
     language: script
     pass_filenames: false
 - repo: local
   hooks:
   - id: check-terraform-format
     name: Check Terraform Format
-    entry: ./scripts/githooks/terraform-pre-commit.sh
+    entry: ./scripts/githooks/check-terraform-format.sh
     language: script
     pass_filenames: false

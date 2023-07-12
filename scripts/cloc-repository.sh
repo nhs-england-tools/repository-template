@@ -13,7 +13,8 @@ set -e
 
 # ==============================================================================
 
-image_version=latest
+# SEE: https://github.com/make-ops-tools/gocloc/pkgs/container/gocloc, use the `linux/amd64` os/arch
+image_version=latest@sha256:6888e62e9ae693c4ebcfed9f1d86c70fd083868acb8815fe44b561b9a73b5032
 
 # ==============================================================================
 

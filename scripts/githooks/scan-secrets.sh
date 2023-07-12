@@ -5,7 +5,7 @@ set -e
 # Pre-commit git hook to scan for secrets hardcoded in the codebase.
 #
 # Usage:
-#   $ ./secret-scan-pre-commit.sh
+#   $ ./scan-secrets.sh
 #
 # Options:
 #   ALL_FILES=true  # Scan whole git history or 'last-commit', default is `false`
@@ -18,6 +18,7 @@ set -e
 
 # ==============================================================================
 
+# SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks, use the `linux/amd64` os/arch
 image_version=v8.17.0@sha256:99e40155529614d09d264cc886c1326c9a4593ad851ccbeaaed8dcf03ff3d3d7
 
 # ==============================================================================

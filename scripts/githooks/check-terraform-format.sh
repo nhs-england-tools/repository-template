@@ -5,7 +5,7 @@ set -e
 # Pre-commit git hook to check format Terraform code.
 #
 # Usage:
-#   $ ./terraform-pre-commit.sh
+#   $ ./check-terraform-format.sh
 #
 # Options:
 #   CHECK_ONLY=true # Do not format, run check only, default is `false`
