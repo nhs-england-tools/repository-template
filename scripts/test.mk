@@ -31,7 +31,7 @@ test-unit:
 	@make _test name="unit"
 
 test-coverage:
-	@make -test name="coverage"
+	@make _test name="coverage"
 
 test: test-unit \
 	test-lint \
