@@ -26,8 +26,8 @@ function main() {
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/usr/src \
     sonarsource/sonar-scanner-cli:$image_version \
-      -D project.settings=/usr/src/scripts/config/sonar-scanner.properties \
-      -D sonar.login="$(echo $SONAR_TOKEN)"
+      -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
+      -Dsonar.login="$(echo $SONAR_TOKEN)"
 }
 
 function is_arg_true() {
