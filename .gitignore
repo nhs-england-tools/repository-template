@@ -2,4 +2,3 @@ cve-scan*.json
 sbom-spdx*.json
 *.code-workspace
 !project.code-workspace
-*~
