@@ -40,7 +40,7 @@ cd nhs-england-tools/repository-template
 
 The following software packages or their equivalents are expected to be installed
 
-- [GNU make](https://www.gnu.org/software/make/) **v3.82 or later** [^1]
+- [GNU make](https://www.gnu.org/software/make/) **v3.82 or later: OS X users, take note** [^1]
 - [Docker](https://www.docker.com/)
 
 ### Installation
@@ -100,14 +100,11 @@ Unless stated otherwise, the codebase is released under the MIT License. This co
 Any HTML or Markdown documentation is [© Crown Copyright](https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/) and available under the terms of the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 
 
-[^1]:
-Note that the version of GNU Make available by default on OS X is earlier than this.  You will need to upgrade it, or certain `make` tasks will fail.  On OS X, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
+[^1]: Note that the version of GNU Make available by default on OS X is earlier than this.  You will need to upgrade it, or certain `make` tasks will fail.  On OS X, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
 
-```
-$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-$ brew install make
-```
-
-You will then see instructions to fix your `$PATH` variable to make the newly installed version available.
-
-If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
+    ```
+    $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    $ brew install make
+    ```
+    You will then see instructions to fix your `$PATH` variable to make the newly installed version available.
+    If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
