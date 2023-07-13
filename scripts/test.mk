@@ -33,6 +33,7 @@ test-unit: # Run your unit tests from scripts/test/unit
 test-coverage: # Evaluate code coverage from scripts/test/coverage
 	make _test name="coverage"
 
+
 test: # Run all the test tasks
 test: test-unit \
 	test-lint \
@@ -44,14 +45,15 @@ test: test-unit \
 	test-accessibility
 
 _test:
-	set -e ;\
-	SCRIPT="scripts/test/${name}" ;\
-	if [ -e "$${SCRIPT}" ]; then \
-		exec $$SCRIPT ;\
-	else \
-		echo "make test-${name} not implemented: $${SCRIPT} not found" >&2 ;\
+	set -e
+	SCRIPT="scripts/test/${name}"
+	if [ -e "$${SCRIPT}" ]; then
+		exec $$SCRIPT
+	else
+		echo "make test-${name} not implemented: $${SCRIPT} not found" >&2
 	fi
 
+.ONELINE:
 .SILENT: \
 	_test \
 	test-accessibility \
