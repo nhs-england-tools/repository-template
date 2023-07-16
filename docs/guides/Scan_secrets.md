@@ -25,7 +25,7 @@ Scanning a repository for hardcoded secrets is a crucial security practice. "Har
 
 - [Add custom secret patterns](../../scripts/config/.gitleaks.toml) to the configuration file to align with your project's specific requirements
 - [Create a secret scan baseline](https://github.com/gitleaks/gitleaks/blob/master/README.md#gitleaksignore) for your repository by adding false-positive fingerprints to the ignore list
-- Make sure the GitHub action, which incorporates Gitleaks, is part of your GitHub CI/CD workflow
+- Ensure that the GitHub action, which incorporates Gitleaks, forms part of your GitHub CI/CD workflow. It is designed to run a full scan as a part of the pipeline, providing additional protection against hardcoded secrets that might have been included prior to the rule additions or by bypassing the scanner
 - Further details on this topic can be found in the [decision record](https://github.com/nhs-england-tools/repository-template/blob/main/docs/adr/ADR-002_Scan_repository_for_hardcoded_secrets.md) as well as in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets) where a usage of an alternative tool is shown
 
 ## Testing
