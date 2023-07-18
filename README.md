@@ -106,5 +106,6 @@ Any HTML or Markdown documentation is [© Crown Copyright](https://www.nationala
     $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     $ brew install make
     ```
+    
     You will then see instructions to fix your `$PATH` variable to make the newly installed version available.
     If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
