@@ -16,9 +16,11 @@ Make use of this repository template to expedite your project setup and enhance 
 
 - [Repository Template](#repository-template)
   - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
+  - [Setup](#setup)
     - [Prerequisites](#prerequisites)
+	- [Installation](#installation)
   - [Usage](#usage)
+	- [Testing](#testing)
   - [Architecture](#architecture)
     - [Diagrams](#diagrams)
     - [Configuration](#configuration)
@@ -26,7 +28,7 @@ Make use of this repository template to expedite your project setup and enhance 
   - [Contacts](#contacts)
   - [Licence](#licence)
 
-## Installation
+## Setup
 
 By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
 
