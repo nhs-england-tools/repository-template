@@ -36,6 +36,7 @@ _install-dependency: # Install asdf dependency - mandatory: name=[listed in the 
 
 clean:: # Remove all generated and temporary files
 	rm -rf \
+		.scannerwork \
 		docs/diagrams/.*.bkp \
 		docs/diagrams/.*.dtmp \
 		cve-scan*.json \
