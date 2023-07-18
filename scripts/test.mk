@@ -35,7 +35,8 @@ test-coverage: # Evaluate code coverage from scripts/test/coverage
 
 
 test: # Run all the test tasks
-test: test-unit \
+	@make \
+	test-unit \
 	test-lint \
 	test-code-quality \
 	test-coverage \
