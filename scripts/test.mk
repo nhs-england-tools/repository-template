@@ -54,7 +54,6 @@ _test:
 		echo "make test-${name} not implemented: $${SCRIPT} not found" >&2
 	fi
 
-.ONELINE:
 .SILENT: \
 	_test \
 	test-accessibility \
