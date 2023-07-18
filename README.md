@@ -102,7 +102,6 @@ Unless stated otherwise, the codebase is released under the MIT License. This co
 
 Any HTML or Markdown documentation is [© Crown Copyright](https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/) and available under the terms of the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 
-
 [^1]: Note that the version of GNU Make available by default on OS X is earlier than this.  You will need to upgrade it, or certain `make` tasks will fail.  On OS X, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
 
     ```
