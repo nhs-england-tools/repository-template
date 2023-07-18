@@ -91,7 +91,7 @@ cat $file.gpg-key.pub
 
 ## Troubleshooting
 
-If you receive the error message "error: gpg failed to sign the data", make sure you added `export GPG_TTY=$(tty)` to your `~/.zshrc` and restarted your terminal.
+If you receive the error message "error: gpg failed to sign the data", make sure you added `export GPG_TTY=$(tty)` to your `~/.zshrc` or `~/.bashrc`, and restarted your terminal.
 
 ```shell
 sed -i '/^export GPG_TTY/d' ~/.exports
@@ -103,7 +103,7 @@ echo "export GPG_TTY=\$TTY" >> ~/.exports
 Configure caching git commit signature passphrase for 3 hours
 
 ```shell
-source ~/.zshrc
+source ~/.zshrc # or ~/.bashrc
 mkdir -p ~/.gnupg
 sed -i '/^pinentry-program/d' ~/.gnupg/gpg-agent.conf 2>/dev/null ||:
 echo "pinentry-program $(whereis -q pinentry)" >> ~/.gnupg/gpg-agent.conf
