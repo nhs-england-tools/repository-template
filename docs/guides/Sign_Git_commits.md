@@ -80,6 +80,7 @@ gpg --delete-keys $ID
 Configure Git to use the new key.
 
 ```shell
+git config commit.gpgsign true
 git config user.signingkey $ID
 ```
 
