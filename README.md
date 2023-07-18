@@ -20,7 +20,7 @@ Make use of this repository template to expedite your project setup and enhance 
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
   - [Usage](#usage)
-	- [Testing](#testing)
+    - [Testing](#testing)
   - [Architecture](#architecture)
     - [Diagrams](#diagrams)
     - [Configuration](#configuration)
