@@ -43,7 +43,7 @@ function main() {
 
   if [ -n "$files" ]; then
     docker run --rm --platform linux/amd64 \
-      --volume=$PWD:/workdir \
+      --volume $PWD:/workdir \
       ghcr.io/igorshubovych/markdownlint-cli:$image_version \
         $files \
         --disable MD013 MD033 \

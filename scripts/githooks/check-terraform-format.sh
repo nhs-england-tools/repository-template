@@ -27,7 +27,7 @@ function main() {
   fi
 
   docker run --rm --platform linux/amd64 \
-    --volume=$PWD:/workdir \
+    --volume $PWD:/workdir \
     hashicorp/terraform:$image_version \
       fmt -recursive $opts
 }

@@ -21,7 +21,7 @@ image_version=latest@sha256:6888e62e9ae693c4ebcfed9f1d86c70fd083868acb8815fe44b5
 function main() {
 
   docker run --rm --platform linux/amd64 \
-    --volume=$PWD:/workdir \
+    --volume $PWD:/workdir \
     ghcr.io/make-ops-tools/gocloc:$image_version \
       --output-type=${FORMAT:-default} .
 }

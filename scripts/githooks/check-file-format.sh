@@ -38,7 +38,7 @@ function main() {
 
     # Check all files
     docker run --rm --platform linux/amd64 \
-      --volume=$PWD:/check \
+      --volume $PWD:/check \
       mstruebing/editorconfig-checker:$image_version \
         ec \
           --exclude '.git/'
