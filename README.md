@@ -18,7 +18,7 @@ Make use of this repository template to expedite your project setup and enhance 
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
     - [Prerequisites](#prerequisites)
-	- [Installation](#installation)
+    - [Installation](#installation)
   - [Usage](#usage)
 	- [Testing](#testing)
   - [Architecture](#architecture)
