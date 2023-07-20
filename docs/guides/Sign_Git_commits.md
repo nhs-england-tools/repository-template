@@ -10,6 +10,8 @@
 
 Signing Git commits is a good practice and ensures the correct web of trust has been established for the distributed version control management, e.g. [Bitwarden](https://bitwarden.com/).
 
+There are two ways to sign commits in GitHub, using a GPG or an SSH signature. Detailed information about this can be found in the following [documentation](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification). It is recommended to use the GPG method for signing commits as GPG keys can be set to expire or be revoked if needed. Below is a step-by-step guide on how to set it up.
+
 ## Setup
 
 <!-- markdownlint-disable-next-line no-inline-html -->
