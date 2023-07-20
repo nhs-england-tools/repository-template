@@ -16,9 +16,11 @@ Make use of this repository template to expedite your project setup and enhance 
 
 - [Repository Template](#repository-template)
   - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
+  - [Setup](#setup)
     - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
   - [Usage](#usage)
+    - [Testing](#testing)
   - [Architecture](#architecture)
     - [Diagrams](#diagrams)
     - [Configuration](#configuration)
@@ -26,7 +28,7 @@ Make use of this repository template to expedite your project setup and enhance 
   - [Contacts](#contacts)
   - [Licence](#licence)
 
-## Installation
+## Setup
 
 By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
 
@@ -36,6 +38,25 @@ Clone the repository
 git clone https://github.com/nhs-england-tools/repository-template.git
 cd nhs-england-tools/repository-template
 ```
+
+### Prerequisites
+
+The following software packages or their equivalents are expected to be installed
+
+- [GNU make](https://www.gnu.org/software/make/) **v3.82 or later: OS X users, take note below**
+- [Docker](https://www.docker.com/)
+
+Note that the version of GNU Make available by default on OS X is earlier than this.  You will need to upgrade it, or certain `make` tasks will fail.  On OS X, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
+
+```shell
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install make
+```
+
+You will then see instructions to fix your `$PATH` variable to make the newly installed version available.
+If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
+
+### Installation
 
 Install and configure toolchain dependencies
 
@@ -49,16 +70,13 @@ If this repository is
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
 ```
 
-### Prerequisites
-
-The following software packages or their equivalents are expected to be installed
-
-- [GNU make](https://www.gnu.org/software/make/)
-- [Docker](https://www.docker.com/)
-
 ## Usage
 
 After a successful installation, provide an informative example of how this project can be used. Additional code snippets, screenshots and demos work well in this space. You may also link to the other documentation resources, e.g. the [User Guide](./docs/user-guide.md) to demonstrate more use cases and to show more features.
+
+### Testing
+
+There are `make` tasks for you to configure to run your tests.  Run `make test` to see how they work.  You should be able to use the same entry points for local development as in your CI pipeline.
 
 ## Architecture
 
