@@ -1,0 +1,11 @@
+# SEE: https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md013.md
+MD013: false
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
+MD024:
+  siblings_only: true
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md033.md
+MD033: false

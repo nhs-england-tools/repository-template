@@ -46,8 +46,7 @@ function main() {
       --volume $PWD:/workdir \
       ghcr.io/igorshubovych/markdownlint-cli:$image_version \
         $files \
-        --disable MD013 MD033 \
-        --ignore .github/PULL_REQUEST_TEMPLATE.md
+        --config /workdir/scripts/config/.markdownlint.yaml
   fi
 }
 
