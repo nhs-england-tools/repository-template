@@ -27,6 +27,10 @@ In modern software development, leveraging third-party dependencies is a common 
 - [Create a dependency baseline](https://github.com/anchore/grype#specifying-matches-to-ignore) for your repository excluding false-positives from the scanning process
 - Make sure the GitHub action, which incorporates Syft and Grype, is part of your GitHub CI/CD workflow. More details on this can be found in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/dependency-scan/README.md)
 - It is crucial to ensure SBOM report is uploaded to a central repository or a designated location for streamlined reporting and easy access (TODO: Add more details here)
+  - `IDP_AWS_ACCOUNT_ID`
+  - `IDP_AWS_REGION`
+  - `IDP_AWS_ROLE_NAME`
+  - `IDP_SBOM_BUCKET_ENDPOINT`
 
 ## Testing
 
