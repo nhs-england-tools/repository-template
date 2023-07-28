@@ -6,6 +6,9 @@ on:
 jobs:
   scan-dependencies:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - id: datetime
         run: echo "value=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
