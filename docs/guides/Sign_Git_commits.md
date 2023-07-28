@@ -157,19 +157,10 @@ You should not do this if you already have GPG signing set up. One or the other 
 If you do not already have SSH key access set up on your GitHub account, first [generate a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent). To create a new SSH key, you need to run the following command. This will generate a new SSH key of the type `ed25519` and associate it with your email address. Please replace your.name@email with your actual email address.
 
 ```shell
-ssh-keygen -t ed25519 -C "your.name@email"
+ssh-keygen -t ed25519 -C "your.name@email" -f "~/.ssh/github-signing-key"
 ```
 
-When you run this command, it will ask you to enter a passphrase. Choose a strong passphrase and make sure to remember it, as you will need to enter it every time you use this key.
-
-It is a good security practice to use separate SSH keys for different purposes. After creating a new key, it is advisable to rename it accordingly. This makes it easier to identify the purpose of each key.
-
-You can rename your keys with the following commands:
-
-```shell
-mv ~/.ssh/id_ed25519 ~/.ssh/github-signing-key
-mv ~/.ssh/id_ed25519.pub ~/.ssh/github-signing-key.pub
-```
+When you run this command, it will ask you to enter a passphrase. Choose a strong passphrase and make sure to remember it, as you will need to provide it when your key is loaded by the SSH agent.
 
 ### Configure Git
 
