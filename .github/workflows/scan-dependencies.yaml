@@ -2,6 +2,11 @@ name: Scan Dependencies
 
 on:
   workflow_call:
+    inputs:
+      build_timestamp:
+        description: "Build timestamp, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
 
 jobs:
   scan-dependencies:
@@ -10,8 +15,6 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - id: datetime
-        run: echo "value=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
       - name: "Checkout code"
         uses: actions/checkout@v3
       - name: "Generate SBOM"
@@ -35,5 +38,5 @@ jobs:
           aws-region: ${{ secrets.IDP_AWS_REGION }}
       - name: "Send the SBOM and vulnerabilities report to the central location"
         run: |
-          aws s3 cp ./sbom-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/sbom-report-${{ steps.datetime.outputs.value }}.json
-          aws s3 cp ./vulnerabilities-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/vulnerabilities-report-${{ steps.datetime.outputs.value }}.json
+          aws s3 cp ./sbom-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/sbom-report-${{ inputs.build_timestamp }}.json
+          aws s3 cp ./vulnerabilities-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/vulnerabilities-report-${{ inputs.build_timestamp }}.json
