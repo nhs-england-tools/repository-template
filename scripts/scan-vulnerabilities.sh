@@ -5,7 +5,7 @@ set -e
 # Script to scan an SBOM file for CVEs (Common Vulnerabilities and Exposures).
 #
 # Usage:
-#   $ ./cve-scanner.sh
+#   $ ./scan-vulnerabilities.sh
 #
 # Options:
 #   VERBOSE=true  # Show all the executed commands, default is `false`
@@ -22,10 +22,10 @@ function main() {
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/scan \
     ghcr.io/anchore/grype:$image_version \
-      sbom:/scan/sbom-spdx.json \
+      sbom:/scan/sbom-report.json \
       --config /scan/scripts/config/.grype.yaml \
       --output json \
-      --file /scan/cve-scan.json
+      --file /scan/vulnerabilities-report.json
 }
 
 function is_arg_true() {

@@ -14,12 +14,12 @@ In modern software development, leveraging third-party dependencies is a common 
 
 ## Key files
 
-- [sbom-generator.sh](../../scripts/sbom-generator.sh): A shell script that generates SBOM (Software Bill of Materials)
+- [generate-sbom.sh](../../scripts/generate-sbom.sh): A shell script that generates SBOM (Software Bill of Materials)
 - [.syft.yaml](../../scripts/config/.syft.yaml): A configuration file for the SBOM generator
-- [cve-scanner.sh](../../scripts/cve-scanner.sh): A shell script that performs CVE analysis
+- [scan-vulnerabilities.sh](../../scripts/scan-vulnerabilities.sh): A shell script that performs CVE analysis
 - [.grype.yaml](../../scripts/config/.grype.yaml): A configuration file for the CVE scanner
 - [scan-dependencies.yaml](../../.github/workflows/scan-dependencies.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
-- [.gitignore](../../.gitignore): Excludes the `sbom-spdx*.json` and `cve-scan*.json` report files created during the process
+- [.gitignore](../../.gitignore): Excludes the `sbom-report*.json` and `vulnerabilities-report*.json` report files created during the process
 
 ## Configuration checklist
 
@@ -39,13 +39,13 @@ You can run and test the process locally on a developer's workstation using the 
 SBOM generator
 
 ```shell
-./scripts/sbom-generator.sh
-cat sbom-spdx.json | jq
+./scripts/generate-sbom.sh
+cat sbom-report.json | jq
 ```
 
 CVE scanner
 
 ```shell
-./scripts/cve-scanner.sh
-cat cve-scan.json | jq
+./scripts/scan-vulnerabilities.sh
+cat vulnerabilities-report.json | jq
 ```

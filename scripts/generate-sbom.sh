@@ -31,7 +31,7 @@ function create-sbom() {
     ghcr.io/anchore/syft:$image_version \
       packages dir:/scan \
       --config /scan/scripts/config/.syft.yaml \
-      --output spdx-json=/scan/sbom-spdx.tmp.json
+      --output spdx-json=/scan/sbom-report.tmp.json
 }
 
 function enrich-sbom() {
@@ -49,9 +49,9 @@ function enrich-sbom() {
     --workdir /repo \
     ghcr.io/make-ops-tools/jq:latest \
       '.creationInfo |= . + {"repository":{"url":"'${git_url}'","branch":"'${git_branch}'","tags":['${git_tags}'],"commitHash":"'${git_commit_hash}'"},"pipeline":{"id":'${pipeline_run_id}',"number":'${pipeline_run_number}',"attempt":'${pipeline_run_attempt}'}}' \
-      sbom-spdx.tmp.json \
-        > sbom-spdx.json
-  rm -f sbom-spdx.tmp.json
+      sbom-report.tmp.json \
+        > sbom-report.json
+  rm -f sbom-report.tmp.json
 }
 
 function is_arg_true() {

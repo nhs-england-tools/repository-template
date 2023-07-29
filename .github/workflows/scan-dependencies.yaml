@@ -12,21 +12,28 @@ jobs:
     steps:
       - id: datetime
         run: echo "value=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v3
-      - run: ./scripts/sbom-generator.sh
-      - uses: actions/upload-artifact@v3
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Generate SBOM"
+        run: ./scripts/generate-sbom.sh
+      - name: "Upload SBOM report as an artefact"
+        uses: actions/upload-artifact@v3
         with:
-          name: sbom-spdx.json
-          path: ./sbom-spdx.json
-      - run: ./scripts/cve-scanner.sh
-      - uses: actions/upload-artifact@v3
+          name: sbom-report.json
+          path: ./sbom-report.json
+      - name: "Scan vulnerabilities"
+        run: ./scripts/scan-vulnerabilities.sh
+      - name: "Upload vulnerabilities report as an artefact"
+        uses: actions/upload-artifact@v3
         with:
-          name: cve-scan.json
-          path: ./cve-scan.json
-      - uses: aws-actions/configure-aws-credentials@v2
+          name: vulnerabilities-report.json
+          path: ./vulnerabilities-report.json
+      - name: "Authenticate to send the reports"
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.IDP_AWS_ACCOUNT_ID }}:role/${{ secrets.IDP_AWS_ROLE_NAME }}
           aws-region: ${{ secrets.IDP_AWS_REGION }}
-      - run: |
-          aws s3 cp ./sbom-spdx.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/sbom-spdx-${{ steps.datetime.outputs.value }}.json
-          aws s3 cp ./cve-scan.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/cve-scan-${{ steps.datetime.outputs.value }}.json
+      - name: "Send the SBOM and vulnerabilities report to the central location"
+        run: |
+          aws s3 cp ./sbom-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/sbom-report-${{ steps.datetime.outputs.value }}.json
+          aws s3 cp ./vulnerabilities-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/vulnerabilities-report-${{ steps.datetime.outputs.value }}.json
