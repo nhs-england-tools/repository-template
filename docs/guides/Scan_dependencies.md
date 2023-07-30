@@ -28,10 +28,10 @@ In modern software development, leveraging third-party dependencies is a common 
 - [Create a dependency baseline](https://github.com/anchore/grype#specifying-matches-to-ignore) for your repository excluding false-positives from the scanning process
 - Make sure the GitHub action, which incorporates Syft and Grype, is part of your GitHub CI/CD workflow. More details on this can be found in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/dependency-scan/README.md)
 - It is crucial to ensure that both, the SBOM and the vulnerabilities reports are uploaded to the central repository or a designated location for streamlined reporting and easy access. Here are the secret variables that has to be set for this functionality to work:
-  - `IDP_AWS_ACCOUNT_ID` - the central AWS account ID where the reports will be uploaded; this will be set by a GitHub organization owner
-  - `IDP_AWS_REGION` - the region of the AWS account; this will be set by a GitHub organization owner
-  - `IDP_AWS_ROLE_NAME` - a dedicated role name for this repository that can authenticate to the central location for the purpose of uploading the reports
-  - `IDP_SBOM_BUCKET_ENDPOINT` - this is a dedicated S3 bucket endpoint for uploading the reports
+  - `IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID` - the central AWS account ID where the reports will be uploaded; this will be set by a GitHub organization owner
+  - `IDP_AWS_REPORT_UPLOAD_REGION` - the region of the AWS account; this will be set by a GitHub organization owner
+  - `IDP_AWS_REPORT_UPLOAD_ROLE_NAME` - a dedicated role name for this repository that can authenticate to the central location for the purpose of uploading the reports
+  - `IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT` - this is a dedicated S3 bucket endpoint for uploading the reports and should be in the following format `s3://bucket-name/repository-identifier/`
 - If you have any queries about how to set this up, please contact either [@stefaniuk](https://github.com/stefaniuk) or [@andyblundell](https://github.com/andyblundell)
 
 ## Testing

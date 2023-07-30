@@ -37,15 +37,15 @@ jobs:
           path: ./vulnerabilities-report.json.zip
       - name: "Check prerequisites for sending the reports"
         id: check
-        run: echo "secrets_exist=${{ secrets.IDP_AWS_ROLE_NAME != '' && secrets.IDP_SBOM_BUCKET_ENDPOINT != '' }}" >> $GITHUB_OUTPUT
+        run: echo "secrets_exist=${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME != '' && secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT != '' }}" >> $GITHUB_OUTPUT
       - name: "Authenticate to send the reports"
         if: steps.check.outputs.secrets_exist == 'true'
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.IDP_AWS_ACCOUNT_ID }}:role/${{ secrets.IDP_AWS_ROLE_NAME }}
-          aws-region: ${{ secrets.IDP_AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}:role/${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}
+          aws-region: ${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}
       - name: "Send the SBOM and vulnerabilities reports to the central location"
         if: steps.check.outputs.secrets_exist == 'true'
         run: |
-          aws s3 cp ./sbom-report.json.zip ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-sbom-report.json.zip
-          aws s3 cp ./vulnerabilities-report.json.zip ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-vulnerabilities-report.json.zip
+          aws s3 cp ./sbom-report.json.zip ${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-sbom-report.json.zip
+          aws s3 cp ./vulnerabilities-report.json.zip ${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-vulnerabilities-report.json.zip
