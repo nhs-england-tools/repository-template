@@ -20,11 +20,11 @@ image_version=latest@sha256:6888e62e9ae693c4ebcfed9f1d86c70fd083868acb8815fe44b5
 
 function main() {
 
-  create-cloc
-  enrich-cloc
+  create-report
+  enrich-report
 }
 
-function create-cloc() {
+function create-report() {
 
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/workdir \
@@ -37,7 +37,7 @@ function create-cloc() {
   fi
 }
 
-function enrich-cloc() {
+function enrich-report() {
 
   build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}
   git_url=$(git config --get remote.origin.url)
