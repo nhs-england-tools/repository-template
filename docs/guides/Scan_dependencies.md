@@ -32,7 +32,7 @@ In modern software development, leveraging third-party dependencies is a common 
   - `IDP_AWS_REGION` - the region of the AWS account; this will be set by a GitHub organization owner
   - `IDP_AWS_ROLE_NAME` - a dedicated role name for this repository that can authenticate to the central location for the purpose of uploading the reports
   - `IDP_SBOM_BUCKET_ENDPOINT` - this is a dedicated S3 bucket endpoint for uploading the reports
-- If you have any queries about how to set this up, please contact either @stefaniuk or @andyblundell
+- If you have any queries about how to set this up, please contact either [@stefaniuk](https://github.com/stefaniuk) or [@andyblundell](https://github.com/andyblundell)
 
 ## Testing
 
@@ -58,9 +58,9 @@ cat vulnerabilities-report.json | jq
 
    Syft, Grype, and Dependabot each serve unique functions in our CI/CD pipeline. Syft is used to generate a detailed Software Bill of Materials (SBOM), providing full visibility and traceability of all incorporated software components. Grype performs detailed scans of dependencies against the Common Vulnerabilities and Exposures (CVEs) list, adding an extra layer of security by introducing a quality gate in the delivery pipeline. Dependabot helps to keep your dependencies up-to-date and can also alert you to known vulnerabilities affecting your dependencies, showing the best path to resolution. By using all three, we ensure comprehensive dependency management is in place, from tracking and updating dependencies to identifying and rectifying found vulnerabilities.
 
-2. _Why don't we use a GitHub Action already available on the GitHub Marketplace, or bundle this functionality into a single one?_
+2. _Why don't we use a GitHub Action already available on the Marketplace, or bundle this functionality into a single one?_
 
-   While GitHub Actions are a key part of our CI/CD pipeline, they are not a standalone solution for dependency management. Syft, Grype, and Dependabot provide specialized functionalities that, although integrated into our pipeline through GitHub Actions, cannot be fully replaced by a single GitHub Action alone. By treating these tools as distinct components, we retain more flexibility in our configuration and can make more granular adjustments as needed. There are additional benefits, such as:
+   While GitHub Actions are a key part of our CI/CD pipeline, they are not a standalone solution for dependency management. Syft, Grype, and Dependabot provide specialised functionalities that, although integrated into our pipeline through GitHub Actions, cannot be fully replaced by a single GitHub Action alone. By treating these tools as distinct components, we retain more flexibility in our configuration and can make more granular adjustments as needed. There are additional benefits of shell scripts being incorporated directly in the repository, such as:
 
    - Transparency and visibility of the implementation
    - Ease of investigating CVEs found in the repository without depending on a third-party like GitHub
