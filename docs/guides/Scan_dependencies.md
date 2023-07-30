@@ -20,7 +20,7 @@ In modern software development, leveraging third-party dependencies is a common 
 - [scan-vulnerabilities.sh](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
 - [.grype.yaml](../../scripts/config/.grype.yaml): A configuration file for the CVE scanner
 - [scan-dependencies.yaml](../../.github/workflows/scan-dependencies.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
-- [.gitignore](../../.gitignore): Excludes the `sbom-report*.json` and `vulnerabilities-report*.json` report files created during the process
+- [.gitignore](../../.gitignore): Excludes the `*sbom-report.json` and `*vulnerabilities-report.json` report files created during the process
 
 ## Configuration checklist
 
