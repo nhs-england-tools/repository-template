@@ -37,10 +37,10 @@ _install-dependency: # Install asdf dependency - mandatory: name=[listed in the 
 clean:: # Remove all generated and temporary files
 	rm -rf \
 		.scannerwork \
+		*sbom-report*.json \
+		*vulnerabilities-report*.json \
 		docs/diagrams/.*.bkp \
-		docs/diagrams/.*.dtmp \
-		sbom-report*.json \
-		vulnerabilities-report*.json
+		docs/diagrams/.*.dtmp
 
 help: # List Makefile targets
 	awk 'BEGIN {FS = ":.*?# "} /^[ a-zA-Z0-9_-]+:.*? # / {printf "\033[36m%-41s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort

@@ -18,14 +18,14 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v3
       - name: "Generate SBOM"
-        run: ./scripts/generate-sbom.sh
+        run: ./scripts/reports/generate-sbom.sh
       - name: "Upload SBOM report as an artefact"
         uses: actions/upload-artifact@v3
         with:
           name: sbom-report.json
           path: ./sbom-report.json
       - name: "Scan vulnerabilities"
-        run: ./scripts/scan-vulnerabilities.sh
+        run: ./scripts/reports/scan-vulnerabilities.sh
       - name: "Upload vulnerabilities report as an artefact"
         uses: actions/upload-artifact@v3
         with:
@@ -43,5 +43,5 @@ jobs:
       - name: "Send the SBOM and vulnerabilities reports to the central location"
         if: steps.check.outputs.secrets_exist == 'true'
         run: |
-          aws s3 cp ./sbom-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/sbom-report-${{ inputs.build_timestamp }}.json
-          aws s3 cp ./vulnerabilities-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/vulnerabilities-report-${{ inputs.build_timestamp }}.json
+          aws s3 cp ./sbom-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-sbom-report.json
+          aws s3 cp ./vulnerabilities-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-vulnerabilities-report.json
