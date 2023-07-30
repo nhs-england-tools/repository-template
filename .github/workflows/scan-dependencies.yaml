@@ -19,18 +19,22 @@ jobs:
         uses: actions/checkout@v3
       - name: "Generate SBOM"
         run: ./scripts/reports/generate-sbom.sh
+      - name: "Compress SBOM report"
+        run: zip sbom-report.json.zip sbom-report.json
       - name: "Upload SBOM report as an artefact"
         uses: actions/upload-artifact@v3
         with:
-          name: sbom-report.json
-          path: ./sbom-report.json
+          name: sbom-report.json.zip
+          path: ./sbom-report.json.zip
       - name: "Scan vulnerabilities"
         run: ./scripts/reports/scan-vulnerabilities.sh
+      - name: "Compress vulnerabilities report"
+        run: zip vulnerabilities-report.json.zip vulnerabilities-report.json
       - name: "Upload vulnerabilities report as an artefact"
         uses: actions/upload-artifact@v3
         with:
-          name: vulnerabilities-report.json
-          path: ./vulnerabilities-report.json
+          name: vulnerabilities-report.json.zip
+          path: ./vulnerabilities-report.json.zip
       - name: "Check prerequisites for sending the reports"
         id: check
         run: echo "secrets_exist=${{ secrets.IDP_AWS_ROLE_NAME != '' && secrets.IDP_SBOM_BUCKET_ENDPOINT != '' }}" >> $GITHUB_OUTPUT
@@ -43,5 +47,5 @@ jobs:
       - name: "Send the SBOM and vulnerabilities reports to the central location"
         if: steps.check.outputs.secrets_exist == 'true'
         run: |
-          aws s3 cp ./sbom-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-sbom-report.json
-          aws s3 cp ./vulnerabilities-report.json ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-vulnerabilities-report.json
+          aws s3 cp ./sbom-report.json.zip ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-sbom-report.json.zip
+          aws s3 cp ./vulnerabilities-report.json.zip ${{ secrets.IDP_SBOM_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-vulnerabilities-report.json.zip
