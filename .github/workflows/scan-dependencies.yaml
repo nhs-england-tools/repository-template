@@ -3,6 +3,10 @@ name: "Scan Dependencies"
 on:
   workflow_call:
     inputs:
+      build_datetime:
+        description: "Build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
       build_timestamp:
         description: "Build timestamp, set by the CI/CD pipeline workflow"
         required: true
@@ -18,7 +22,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v3
       - name: "Generate SBOM"
-        run: ./scripts/reports/generate-sbom.sh
+        run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/generate-sbom.sh
       - name: "Compress SBOM report"
         run: zip sbom-report.json.zip sbom-report.json
       - name: "Upload SBOM report as an artefact"
@@ -27,7 +31,7 @@ jobs:
           name: sbom-report.json.zip
           path: ./sbom-report.json.zip
       - name: "Scan vulnerabilities"
-        run: ./scripts/reports/scan-vulnerabilities.sh
+        run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/scan-vulnerabilities.sh
       - name: "Compress vulnerabilities report"
         run: zip vulnerabilities-report.json.zip vulnerabilities-report.json
       - name: "Upload vulnerabilities report as an artefact"
