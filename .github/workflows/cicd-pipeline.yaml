@@ -36,7 +36,12 @@ jobs:
   check-terraform-format:
     uses: ./.github/workflows/check-terraform-format.yaml
   cloc-repository:
+    needs: [get-metadata]
     uses: ./.github/workflows/cloc-repository.yaml
+    with:
+      build_datetime: "${{ needs.get-metadata.outputs.build_datetime }}"
+      build_timestamp: "${{ needs.get-metadata.outputs.build_timestamp }}"
+    secrets: inherit
   scan-dependencies:
     needs: [get-metadata]
     uses: ./.github/workflows/scan-dependencies.yaml
