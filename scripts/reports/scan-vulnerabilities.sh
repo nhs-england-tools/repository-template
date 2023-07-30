@@ -13,7 +13,7 @@ set -e
 # ==============================================================================
 
 # SEE: https://github.com/anchore/grype/pkgs/container/grype, use the `linux/amd64` os/arch
-image_version=v0.63.1@sha256:124447c7abae54d6fdad2d3a18c9c71d88af46404c55437c3acbf6dde524c417
+image_version=v0.64.2@sha256:f24e2282b5ff43a2a4df2280e9afcdac5a645df860b03db269049cbfb2cc25b4
 
 # ==============================================================================
 

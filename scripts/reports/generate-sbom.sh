@@ -14,7 +14,7 @@ set -e
 # ==============================================================================
 
 # SEE: https://github.com/anchore/syft/pkgs/container/syft, use the `linux/amd64` os/arch
-image_version=v0.84.1@sha256:9a8f80eee3984d4a3f9a86e4d66e739e30dfc34564d76d3574f98798db5d5b35
+image_version=v0.85.0@sha256:c4f8ac5bb873738d00019cfed80f80b60fa3a8773d4053f415972eb133284d0e
 
 # ==============================================================================
 
