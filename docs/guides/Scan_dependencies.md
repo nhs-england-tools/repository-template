@@ -63,7 +63,7 @@ cat vulnerabilities-report.json | jq
 
    While we indeed leverage GitHub Actions within our CI/CD pipeline, they don't serve as a comprehensive solution for dependency management. Additionally, the built-in security features of GitHub aren't advanced enough to meet our specific requirements. Syft, Grype, and Dependabot provide specialised functionality that we integrate into our pipeline via GitHub Actions. By managing these tools as separate components, we gain greater flexibility in our configuration and can make finer adjustments as required, such as data enrichment.
 
-3. _Is it feasible to consolidate this functionality into a custom GitHub action?_
+3. _Is it feasible to consolidate this functionality into a custom GitHub Action?_
 
    Although consolidating this functionality into a custom GitHub Action seems like an optimal approach, this functionality also needs to run as a Git hook. Hence, shell scripting is a more suitable method as it doesn't make assumptions about local environments or rely on third-party runners, providing quicker feedback. Additionally, incorporating shell scripts directly into the repository has several advantages, including:
 
