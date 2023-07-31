@@ -33,7 +33,8 @@ function create-report() {
     --volume $PWD:/usr/src \
     sonarsource/sonar-scanner-cli:$image_version \
       -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
-      -Dsonar.login="$(echo $SONAR_TOKEN)"
+      -Dsonar.branch.name="$(git rev-parse --abbrev-ref HEAD)" \
+      -Dsonar.token="$(echo $SONAR_TOKEN)"
 }
 
 function is_arg_true() {
