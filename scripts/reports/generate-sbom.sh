@@ -21,6 +21,7 @@ image_version=v0.85.0@sha256:c4f8ac5bb873738d00019cfed80f80b60fa3a8773d4053f4159
 
 function main() {
 
+  cd $(git rev-parse --show-toplevel)
   create-report
   enrich-report
 }

@@ -27,3 +27,10 @@ repos:
     entry: ./scripts/githooks/check-terraform-format.sh
     language: script
     pass_filenames: false
+- repo: local
+  hooks:
+  - id: scan-dependencies
+    name: Scan Dependencies
+    entry: ./scripts/githooks/scan-dependencies.sh
+    language: script
+    pass_filenames: false

@@ -20,6 +20,7 @@ image_version=v0.64.2@sha256:f24e2282b5ff43a2a4df2280e9afcdac5a645df860b03db2690
 
 function main() {
 
+  cd $(git rev-parse --show-toplevel)
   create-report
   enrich-report
 }
@@ -28,6 +29,7 @@ function create-report() {
 
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/scan \
+    --volume /tmp/grype/db:/.cache/grype/db \
     ghcr.io/anchore/grype:$image_version \
       sbom:/scan/sbom-report.json \
       --config /scan/scripts/config/.grype.yaml \
