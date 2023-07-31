@@ -38,7 +38,12 @@ jobs:
   cloc-repository:
     uses: ./.github/workflows/cloc-repository.yaml
   scan-dependencies:
+    needs: [get-metadata]
     uses: ./.github/workflows/scan-dependencies.yaml
+    with:
+      build_datetime: "${{ needs.get-metadata.outputs.build_datetime }}"
+      build_timestamp: "${{ needs.get-metadata.outputs.build_timestamp }}"
+    secrets: inherit
   perform-static-analysis:
     uses: ./.github/workflows/perform-static-analysis.yaml
     secrets: inherit
