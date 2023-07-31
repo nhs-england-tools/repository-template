@@ -9,7 +9,7 @@ set -e
 #   $ ./perform-static-analysis.sh
 #
 # Expects:
-#  SONAR_TOKEN    # SonarCloud token
+#  SONAR_TOKEN=token  # SonarCloud token
 #
 # Options:
 #   VERBOSE=true  # Show all the executed commands, default is `false`
@@ -17,11 +17,17 @@ set -e
 # ==============================================================================
 
 # SEE: https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags, use the `linux/amd64` os/arch
-image_version=4.8.0@sha256:71ffa933dfa3b58a77d62568dd2d2f41c87271ffe0f7ea7fddb26006d13625d5
+image_version=5.0.0@sha256:b53f26d0e4ddd549a4014d79007007303dc849eaa9764cf96ee2da8370ac8a7b
 
 # ==============================================================================
 
 function main() {
+
+  cd $(git rev-parse --show-toplevel)
+  create-report
+}
+
+function create-report() {
 
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/usr/src \
