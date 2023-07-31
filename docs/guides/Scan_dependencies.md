@@ -65,8 +65,10 @@ cat vulnerabilities-report.json | jq
 
 3. _Is it feasible to consolidate this functionality into a custom GitHub Action?_
 
-   Although consolidating this functionality into a custom GitHub Action seems like an optimal approach, this functionality also needs to run as a Git hook. Hence, shell scripting is a more suitable method as it doesn't make assumptions about local environments or rely on third-party runners, providing quicker feedback. Additionally, incorporating shell scripts directly into the repository has several advantages, including:
+   Although consolidating this functionality into a custom GitHub Action seems like an optimal approach, this functionality also needs to run as a Git hook. Hence, shell scripting is a more suitable method as it makes less assumptions about local environment configuration or rely on third-party runners, providing quicker feedback. Additionally, incorporating this functionality directly into the repository has several advantages, including:
 
    - Improved transparency and visibility of the implementation
    - Easier investigation of CVEs found in the repository, eliminating dependence on a third party like GitHub
    - Enhanced portability and flexibility, allowing the scans to run in diverse environments
+
+   However, this approach should be periodically reviewed as there is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub Actions portable.
