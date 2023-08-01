@@ -1,0 +1,58 @@
+name: "Commit Stage"
+
+on:
+  workflow_call:
+    inputs:
+      build_datetime:
+        description: "Build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_timestamp:
+        description: "Build timestamp, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_epoch:
+        description: "Build epoch, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      nodejs_version:
+        description: "Node.js version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      python_version:
+        description: "Python version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      terraform_version:
+        description: "Terraform version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      version:
+        description: "Version of the software, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+
+jobs:
+  scan-secrets:
+    uses: ./.github/workflows/job-scan-secrets.yaml
+  check-file-format:
+    uses: ./.github/workflows/job-check-file-format.yaml
+  check-markdown-format:
+    uses: ./.github/workflows/job-check-markdown-format.yaml
+  check-terraform-format:
+    uses: ./.github/workflows/job-check-terraform-format.yaml
+  cloc-repository:
+    uses: ./.github/workflows/job-cloc-repository.yaml
+    with:
+      build_datetime: "${{ inputs.build_datetime }}"
+      build_timestamp: "${{ inputs.build_timestamp }}"
+    secrets: inherit
+  scan-dependencies:
+    uses: ./.github/workflows/job-scan-dependencies.yaml
+    with:
+      build_datetime: "${{ inputs.build_datetime }}"
+      build_timestamp: "${{ inputs.build_timestamp }}"
+    secrets: inherit
+  perform-static-analysis:
+    uses: ./.github/workflows/job-perform-static-analysis.yaml
+    secrets: inherit

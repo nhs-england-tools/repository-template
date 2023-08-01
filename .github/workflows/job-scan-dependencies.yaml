@@ -15,12 +15,15 @@ on:
 jobs:
   scan-dependencies:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     permissions:
       id-token: write
       contents: read
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: "Generate SBOM"
         run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/generate-sbom.sh
       - name: "Compress SBOM report"

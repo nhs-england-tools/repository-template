@@ -1,0 +1,65 @@
+name: "Test Stage"
+
+on:
+  workflow_call:
+    inputs:
+      build_datetime:
+        description: "Build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_timestamp:
+        description: "Build timestamp, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_epoch:
+        description: "Build epoch, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      nodejs_version:
+        description: "Node.js version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      python_version:
+        description: "Python version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      terraform_version:
+        description: "Terraform version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      version:
+        description: "Version of the software, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: "Run unit test suite"
+        run: |
+          echo "Running unit test suite ..."
+          git symbolic-ref --short HEAD # TODO: Remove it
+      - name: "Save the result of unit test suite"
+        run: |
+          echo "Saveing the result of unit test suite ..."
+  other-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+        # with:
+        #   fetch-depth: 0
+      - name: "Run other test suite"
+        run: |
+          echo "Running other test suite ..."
+          git symbolic-ref --short HEAD # TODO: Remove it
+      - name: "Save the result of other test suite"
+        run: |
+          echo "Saveing the result of other test suite ..."

@@ -6,6 +6,7 @@ on:
 jobs:
   perform-static-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: "Check prerequisites for performing static analysis"
         id: check
