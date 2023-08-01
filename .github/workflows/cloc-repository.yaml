@@ -1,13 +1,45 @@
-name: Count Lines of Code of This Repository
+name: "Count Lines of Code of This Repository"
 
 on:
   workflow_call:
+    inputs:
+      build_datetime:
+        description: "Build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_timestamp:
+        description: "Build timestamp, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
 
 jobs:
   cloc-repository:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v3
-      - run: |
-          export FORMAT=default
-          ./scripts/cloc-repository.sh
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "CLOC repository"
+        run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/cloc-repository.sh
+      - name: "Compress CLOC report"
+        run: zip cloc-report.json.zip cloc-report.json
+      - name: "Upload CLOC report as an artefact"
+        uses: actions/upload-artifact@v3
+        with:
+          name: cloc-report.json.zip
+          path: ./cloc-report.json.zip
+      - name: "Check prerequisites for sending the report"
+        id: check
+        run: echo "secrets_exist=${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME != '' && secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT != '' }}" >> $GITHUB_OUTPUT
+      - name: "Authenticate to send the report"
+        if: steps.check.outputs.secrets_exist == 'true'
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}:role/${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}
+          aws-region: ${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}
+      - name: "Send the CLOC report to the central location"
+        if: steps.check.outputs.secrets_exist == 'true'
+        run: |
+          aws s3 cp ./cloc-report.json.zip ${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-cloc-report.json.zip
