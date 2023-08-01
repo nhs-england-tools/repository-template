@@ -39,12 +39,9 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: "Run unit test suite"
         run: |
           echo "Running unit test suite ..."
-          git symbolic-ref --short HEAD # TODO: Remove it
       - name: "Save the result of unit test suite"
         run: |
           echo "Saveing the result of unit test suite ..."
@@ -54,12 +51,9 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
-        # with:
-        #   fetch-depth: 0
       - name: "Run other test suite"
         run: |
           echo "Running other test suite ..."
-          git symbolic-ref --short HEAD # TODO: Remove it
       - name: "Save the result of other test suite"
         run: |
           echo "Saveing the result of other test suite ..."

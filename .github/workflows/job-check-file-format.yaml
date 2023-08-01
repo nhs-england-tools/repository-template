@@ -11,7 +11,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Full history is needed for git diff
       - run: |
           export BRANCH_NAME=origin/${{ github.event.repository.default_branch }}
           ./scripts/githooks/check-file-format.sh

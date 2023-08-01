@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: "Generate SBOM"
         run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/generate-sbom.sh
       - name: "Compress SBOM report"
