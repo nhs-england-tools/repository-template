@@ -25,6 +25,8 @@ image_version=v8.17.0@sha256:99e40155529614d09d264cc886c1326c9a4593ad851ccbeaaed
 
 function main() {
 
+  cd $(git rev-parse --show-toplevel)
+
   if is_arg_true "$ALL_FILES"; then
     # Scan whole git history
     cmd="detect --source /scan --verbose --redact"

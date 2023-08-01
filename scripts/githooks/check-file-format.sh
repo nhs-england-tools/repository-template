@@ -34,6 +34,8 @@ exit_code=0
 
 function main() {
 
+  cd $(git rev-parse --show-toplevel)
+
   if is-arg-true "$ALL_FILES"; then
 
     # Check all files

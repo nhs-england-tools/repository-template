@@ -33,6 +33,8 @@ image_version=v0.35.0@sha256:4ec089301e2e3e1298424f4d2b5d9e18af3aa005402590770c3
 
 function main() {
 
+  cd $(git rev-parse --show-toplevel)
+
   if is-arg-true "$ALL_FILES"; then
     # Check all files
     files="$(find ./ -type f -name "*.md")"

@@ -21,6 +21,8 @@ image_version=${terraform_version:-latest}
 
 function main() {
 
+  cd $(git rev-parse --show-toplevel)
+
   opts=
   if is-arg-true "$CHECK_ONLY"; then
     opts="-check"
