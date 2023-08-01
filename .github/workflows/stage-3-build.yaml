@@ -72,7 +72,7 @@ jobs:
       - name: "Check prerequisites for notification"
         id: check
         run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
-      - name: "Notify on build comletion"
+      - name: "Notify on build completion"
         if: steps.check.outputs.secret_exist == 'true'
         uses: nhs-england-tools/notify-msteams-action@v0.0.4
         with:
