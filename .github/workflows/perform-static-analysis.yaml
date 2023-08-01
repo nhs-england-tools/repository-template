@@ -1,4 +1,4 @@
-name: Perform Static Analysis
+name: "Perform Static Analysis"
 
 on:
   workflow_call:
@@ -7,9 +7,16 @@ jobs:
   perform-static-analysis:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: "Check prerequisites for performing static analysis"
+        id: check
+        run: echo "secret_exist=${{ secrets.SONAR_TOKEN != '' }}" >> $GITHUB_OUTPUT
+      - name: "Checkout code"
+        if: steps.check.outputs.secret_exist == 'true'
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - run: |
+      - name: "Perform Static Analysis"
+        if: steps.check.outputs.secret_exist == 'true'
+        run: |
           export SONAR_TOKEN=${{ secrets.SONAR_TOKEN }}
-          ./scripts/perform-static-analysis.sh
+          ./scripts/reports/perform-static-analysis.sh

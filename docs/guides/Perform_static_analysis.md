@@ -14,7 +14,7 @@ Static code analysis is an essential part of modern software development. It pro
 
 ## Key files
 
-- [perform-static-analysis.sh](../../scripts/perform-static-analysis.sh): A shell script that performs analysis
+- [perform-static-analysis.sh](../../scripts/reports/perform-static-analysis.sh): A shell script that performs analysis
 - [sonar-scanner.properties](../../scripts/config/sonar-scanner.properties): A configuration file that includes the project details
 - [perform-static-analysis.yaml](../../.github/workflows/perform-static-analysis.yaml): GitHub action to run the script as part of the CI/CD pipeline
 - [.gitignore](../../.gitignore): Excludes the `.scannerwork` temporary directory created during the process
