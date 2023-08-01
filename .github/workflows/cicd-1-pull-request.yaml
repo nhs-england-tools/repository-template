@@ -74,6 +74,7 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
+    secrets: inherit
   test-stage: # Recommended maximum execution time is 5 minutes
     needs: [metadata, commit-stage]
     uses: ./.github/workflows/stage-2-test.yaml
@@ -85,6 +86,7 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
+    secrets: inherit
   build-stage: # Recommended maximum execution time is 3 minutes
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-3-build.yaml
@@ -97,6 +99,7 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
+    secrets: inherit
   acceptance-stage: # Recommended maximum execution time is 10 minutes
     needs: [metadata, build-stage]
     uses: ./.github/workflows/stage-4-acceptance.yaml
@@ -109,3 +112,4 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
+    secrets: inherit
