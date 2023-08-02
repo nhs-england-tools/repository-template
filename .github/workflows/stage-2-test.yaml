@@ -33,27 +33,15 @@ on:
         type: string
 
 jobs:
-  unit-test:
+  test-unit:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
-      - name: "Run unit test suite"
+      - name: "Run fast test suite"
         run: |
-          echo "Running unit test suite ..."
-      - name: "Save the result of unit test suite"
+          make test-unit test-lint test-code-quality test-coverage
+      - name: "Save the result of fast test suite"
         run: |
-          echo "Saveing the result of unit test suite ..."
-  other-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v3
-      - name: "Run other test suite"
-        run: |
-          echo "Running other test suite ..."
-      - name: "Save the result of other test suite"
-        run: |
-          echo "Saveing the result of other test suite ..."
+          echo "Nothing to save"
