@@ -33,6 +33,27 @@ test-unit: # Run your unit tests from scripts/test/unit
 test-coverage: # Evaluate code coverage from scripts/test/coverage
 	make _test name="coverage"
 
+test-ui-performance: # Run UI render tests from scripts/test/ui-performance
+	make _test name="ui-performance"
+
+test-security: # Run your security tests from scripts/test/security
+	make _test name="security"
+
+test-load: # Run all your load tests
+	@make \
+	test-breakpoint \
+	test-endurance \
+	test-performance
+	# You may wish to add more here, depending on your app
+
+test-breakpoint: # Test what load level your app fails at from scripts/test/breakpoint
+	make _test name="breakpoint"
+
+test-endurance: # Test that resources don't get exhausted over time from scripts/test/endurance
+	make _test name="endurance"
+
+test-performance: # Test your API response times from scripts/test/performance
+	make _test name="performance"
 
 test: # Run all the test tasks
 	@make \
@@ -41,9 +62,12 @@ test: # Run all the test tasks
 	test-code-quality \
 	test-coverage \
 	test-contract \
+	test-security \
 	test-ui \
+	test-ui-performance \
 	test-integration \
-	test-accessibility
+	test-accessibility \
+	test-load
 
 _test:
 	set -e
@@ -57,10 +81,16 @@ _test:
 .SILENT: \
 	_test \
 	test-accessibility \
+	test-breakpoint \
 	test-code-quality \
 	test-contract \
 	test-coverage \
+	test-endurance \
 	test-integration \
 	test-lint \
+	test-load \
+	test-performance \
+	test-security \
 	test-ui \
+	test-ui-performance \
 	test-unit
