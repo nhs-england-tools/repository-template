@@ -8,32 +8,24 @@
 #   - secret scanning, which we expect to be a pre-commit hook
 #   - code review, which is outside the scope of automated testing for the moment
 
-test-integration: # Run your integration tests from scripts/test/integration
-	make _test name="integration"
-
-test-contract: # Run your contract tests from scripts/test/contract
-	make _test name="contract"
-
-test-ui: # Run your UI tests from scripts/test/ui
-	make _test name="ui"
-
-test-accessibility: # Run your accessibility tests from scripts/test/accessibility
-	make _test name="accessibility"
-
-test-lint: # Lint your code from scripts/test/lint
-	make _test name="lint"
 
 test-unit: # Run your unit tests from scripts/test/unit
 	make _test name="unit"
 
+test-lint: # Lint your code from scripts/test/lint
+	make _test name="lint"
+
 test-coverage: # Evaluate code coverage from scripts/test/coverage
 	make _test name="coverage"
 
-test-ui-performance: # Run UI render tests from scripts/test/ui-performance
-	make _test name="ui-performance"
+test-accessibility: # Run your accessibility tests from scripts/test/accessibility
+	make _test name="accessibility"
 
-test-security: # Run your security tests from scripts/test/security
-	make _test name="security"
+test-contract: # Run your contract tests from scripts/test/contract
+	make _test name="contract"
+
+test-integration: # Run your integration tests from scripts/test/integration
+	make _test name="integration"
 
 test-load: # Run all your load tests
 	make \
@@ -50,6 +42,15 @@ test-soak: # Test that resources don't get exhausted over time from scripts/test
 
 test-response-time: # Test your API response times from scripts/test/response-time
 	make _test name="response-time"
+
+test-security: # Run your security tests from scripts/test/security
+	make _test name="security"
+
+test-ui: # Run your UI tests from scripts/test/ui
+	make _test name="ui"
+
+test-ui-performance: # Run UI render tests from scripts/test/ui-performance
+	make _test name="ui-performance"
 
 test: # Run all the test tasks
 	make \
