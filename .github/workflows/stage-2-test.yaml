@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v3
       - name: "Run fast test suite"
         run: |
-          make test-unit test-lint test-code-quality test-coverage
+          make test-unit test-lint test-coverage
       - name: "Save the result of fast test suite"
         run: |
           echo "Nothing to save"

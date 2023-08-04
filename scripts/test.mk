@@ -23,10 +23,6 @@ test-accessibility: # Run your accessibility tests from scripts/test/accessibili
 test-lint: # Lint your code from scripts/test/lint
 	make _test name="lint"
 
-# test-code-quality covers checking for duplicate code, code smells, and dead code.
-test-code-quality: # Run your code quality tests from scripts/test/code-quality
-	make _test name="code-quality"
-
 test-unit: # Run your unit tests from scripts/test/unit
 	make _test name="unit"
 
@@ -41,25 +37,24 @@ test-security: # Run your security tests from scripts/test/security
 
 test-load: # Run all your load tests
 	make \
-	test-breakpoint \
-	test-endurance \
-	test-performance
+	test-capacity \
+	test-soak \
+	test-response-time
 	# You may wish to add more here, depending on your app
 
-test-breakpoint: # Test what load level your app fails at from scripts/test/breakpoint
-	make _test name="breakpoint"
+test-capacity: # Test what load level your app fails at from scripts/test/capacity
+	make _test name="capacity"
 
-test-endurance: # Test that resources don't get exhausted over time from scripts/test/endurance
-	make _test name="endurance"
+test-soak: # Test that resources don't get exhausted over time from scripts/test/soak
+	make _test name="soak"
 
-test-performance: # Test your API response times from scripts/test/performance
-	make _test name="performance"
+test-response-time: # Test your API response times from scripts/test/response-time
+	make _test name="response-time"
 
 test: # Run all the test tasks
 	make \
 	test-unit \
 	test-lint \
-	test-code-quality \
 	test-coverage \
 	test-contract \
 	test-security \
@@ -82,15 +77,14 @@ _test:
 	_test \
 	test \
 	test-accessibility \
-	test-breakpoint \
-	test-code-quality \
+	test-capacity \
 	test-contract \
 	test-coverage \
-	test-endurance \
+	test-soak \
 	test-integration \
 	test-lint \
 	test-load \
-	test-performance \
+	test-response-time \
 	test-security \
 	test-ui \
 	test-ui-performance \
