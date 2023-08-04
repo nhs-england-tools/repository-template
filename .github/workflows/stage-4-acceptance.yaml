@@ -137,7 +137,16 @@ jobs:
           echo "Nothing to save"
   environment-tear-down:
     runs-on: ubuntu-latest
-    needs: [accessibility-test, load-test, security-test]
+    needs:
+      [
+        test-accessibility,
+        test-contract,
+        test-integration,
+        test-load,
+        test-security,
+        test-ui-performance,
+        test-ui,
+      ]
     if: always()
     timeout-minutes: 5
     steps:

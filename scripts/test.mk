@@ -40,7 +40,7 @@ test-security: # Run your security tests from scripts/test/security
 	make _test name="security"
 
 test-load: # Run all your load tests
-	@make \
+	make \
 	test-breakpoint \
 	test-endurance \
 	test-performance
@@ -56,7 +56,7 @@ test-performance: # Test your API response times from scripts/test/performance
 	make _test name="performance"
 
 test: # Run all the test tasks
-	@make \
+	make \
 	test-unit \
 	test-lint \
 	test-code-quality \
@@ -71,7 +71,7 @@ test: # Run all the test tasks
 
 _test:
 	set -e
-	SCRIPT="scripts/test/${name}"
+	SCRIPT="./scripts/test/${name}.sh"
 	if [ -e "$${SCRIPT}" ]; then
 		exec $$SCRIPT
 	else
@@ -80,6 +80,7 @@ _test:
 
 .SILENT: \
 	_test \
+	test \
 	test-accessibility \
 	test-breakpoint \
 	test-code-quality \
