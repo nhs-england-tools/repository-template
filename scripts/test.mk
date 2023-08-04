@@ -71,7 +71,7 @@ test: # Run all the test tasks
 
 _test:
 	set -e
-	SCRIPT="./scripts/test/${name}.sh"
+	SCRIPT="./scripts/testhooks/${name}.sh"
 	if [ -e "$${SCRIPT}" ]; then
 		exec $$SCRIPT
 	else
