@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     outputs:
+      build_datetime_local: ${{ steps.variables.outputs.build_datetime_local }}
       build_datetime: ${{ steps.variables.outputs.build_datetime }}
       build_timestamp: ${{ steps.variables.outputs.build_timestamp }}
       build_epoch: ${{ steps.variables.outputs.build_epoch }}
@@ -29,6 +30,7 @@ jobs:
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
+          echo "build_datetime_local=$(TZ=Europe/London date --date=$datetime +'%Y-%m-%dT%H:%M:%S%z')" >> $GITHUB_OUTPUT
           echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
           echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
@@ -52,6 +54,7 @@ jobs:
           fi
       - name: "List variables"
         run: |
+          export BUILD_DATETIME_LOCAL="${{ steps.variables.outputs.build_datetime_local }}"
           export BUILD_DATETIME="${{ steps.variables.outputs.build_datetime }}"
           export BUILD_TIMESTAMP="${{ steps.variables.outputs.build_timestamp }}"
           export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
