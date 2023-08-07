@@ -6,6 +6,7 @@ on:
 jobs:
   perform-static-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: "Check prerequisites for performing static analysis"
         id: check
@@ -13,8 +14,6 @@ jobs:
       - name: "Checkout code"
         if: steps.check.outputs.secret_exist == 'true'
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: "Perform Static Analysis"
         if: steps.check.outputs.secret_exist == 'true'
         run: |

@@ -15,6 +15,7 @@ on:
 jobs:
   cloc-repository:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     permissions:
       id-token: write
       contents: read

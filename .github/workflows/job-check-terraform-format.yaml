@@ -1,4 +1,4 @@
-name: Check Terraform Format
+name: "Check Terraform Format"
 
 on:
   workflow_call:
@@ -6,8 +6,10 @@ on:
 jobs:
   check-terraform-format:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v3
+      - name: "Checkout code"
+        uses: actions/checkout@v3
       - run: |
           export CHECK_ONLY=true
           ./scripts/githooks/check-terraform-format.sh
