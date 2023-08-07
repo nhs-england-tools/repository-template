@@ -49,6 +49,8 @@ Requirements:
   - Listing environment variables
   - Making actions portable, e.g. allowing them to be run on a workstation or on Azure DevOps using external scripts
 
+![CD Pipeline Structure](../diagrams/CD%20Pipeline%20Structure.png)
+
 ## Decision
 
 ### Assumptions
