@@ -1,0 +1,12 @@
+name: "Check Terraform Format"
+description: "Check Terraform Format"
+runs:
+  using: "composite"
+  steps:
+    - name: "Checkout code"
+      uses: actions/checkout@v3
+    - name: "Check Terraform Format"
+      shell: bash
+      run: |
+        export CHECK_ONLY=true
+        ./scripts/githooks/check-terraform-format.sh
