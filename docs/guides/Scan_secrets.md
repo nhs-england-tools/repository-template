@@ -18,7 +18,7 @@ Scanning a repository for hardcoded secrets is a crucial security practice. "Har
 - [scan-secrets.sh](../../scripts/githooks/scan-secrets.sh): A shell script that scans the codebase for hardcoded secrets
 - [.gitleaks.toml](../../scripts/config/.gitleaks.toml): A configuration file for the secret scanner
 - [.gitleaksignore](../../.gitleaksignore): A list of fingerprints to ignore by the secret scanner
-- [scan-secrets.yaml](../../.github/workflows/scan-secrets.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
+- [job-scan-secrets.yaml](../../.github/workflows/job-scan-secrets.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
 - [.pre-commit.yaml](../../scripts/config/.pre-commit.yaml): Run the secret scanner as a pre-commit git hook
 
 ## Configuration checklist
