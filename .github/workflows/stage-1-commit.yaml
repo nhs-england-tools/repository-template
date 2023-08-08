@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Scan Secrets
     steps:
-      - uses: ./.github/actions/scan-secrets/action.yaml
+      - uses: ./.github/actions/scan-secrets
   # check-file-format:
   #   uses: ./.github/workflows/job-check-file-format.yaml
   # check-markdown-format:
