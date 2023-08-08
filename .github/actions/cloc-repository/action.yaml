@@ -7,6 +7,18 @@ inputs:
   build_timestamp:
     description: "Build timestamp, set by the CI/CD pipeline workflow"
     required: true
+  IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID:
+    description: "IDP AWS account ID"
+    required: true
+  IDP_AWS_REPORT_UPLOAD_REGION:
+    description: "IDP AWS account region"
+    required: true
+  IDP_AWS_REPORT_UPLOAD_ROLE_NAME:
+    description: "Role to upload the report"
+    required: true
+  IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT:
+    description: "Bucket endpoint for the report"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -27,17 +39,17 @@ runs:
       shell: bash
       id: check
       run: |
-        echo "secrets_exist=${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME != '' && secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT != '' }}" >> $GITHUB_OUTPUT
+        echo "secrets_exist=${{ inputs.IDP_AWS_REPORT_UPLOAD_ROLE_NAME != '' && inputs.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT != '' }}" >> $GITHUB_OUTPUT
     - name: "Authenticate to send the report"
       if: steps.check.outputs.secrets_exist == 'true'
       uses: aws-actions/configure-aws-credentials@v2
       with:
-        role-to-assume: arn:aws:iam::${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}:role/${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}
-        aws-region: ${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}
+        role-to-assume: arn:aws:iam::${{ inputs.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}:role/${{ inputs.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}
+        aws-region: ${{ inputs.IDP_AWS_REPORT_UPLOAD_REGION }}
     - name: "Send the CLOC report to the central location"
       shell: bash
       if: steps.check.outputs.secrets_exist == 'true'
       run: |
         aws s3 cp \
           ./cloc-report.json.zip \
-          ${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-cloc-report.json.zip
+          ${{ inputs.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}/${{ inputs.build_timestamp }}-cloc-report.json.zip
