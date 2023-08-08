@@ -1,4 +1,4 @@
-name: "CI/CD Deploy"
+name: "CI/CD deploy"
 
 on:
   workflow_dispatch:

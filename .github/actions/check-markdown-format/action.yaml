@@ -1,0 +1,10 @@
+name: "Check Markdown format"
+description: "Check Markdown format"
+runs:
+  using: "composite"
+  steps:
+    - name: "Check Markdown format"
+      shell: bash
+      run: |
+        export BRANCH_NAME=origin/${{ github.event.repository.default_branch }}
+        ./scripts/githooks/check-markdown-format.sh

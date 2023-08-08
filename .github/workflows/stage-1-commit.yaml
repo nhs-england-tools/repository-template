@@ -1,4 +1,4 @@
-name: "Commit Stage"
+name: "Commit stage"
 
 on:
   workflow_call:
@@ -34,25 +34,82 @@ on:
 
 jobs:
   scan-secrets:
-    uses: ./.github/workflows/job-scan-secrets.yaml
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    name: "Scan secrets"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Full history is needed to scan all commits
+      - name: "Scan secrets"
+        uses: ./.github/actions/scan-secrets
   check-file-format:
-    uses: ./.github/workflows/job-check-file-format.yaml
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    name: "Check file format"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Full history is needed to scan all commits
+      - name: "Check file format"
+        uses: ./.github/actions/check-file-format
   check-markdown-format:
-    uses: ./.github/workflows/job-check-markdown-format.yaml
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    name: "Check markdown format"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Full history is needed to scan all commits
+      - name: "Check markdown format"
+        uses: ./.github/actions/check-markdown-format
   check-terraform-format:
-    uses: ./.github/workflows/job-check-terraform-format.yaml
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    name: "Check Terraform format"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Check Terraform format"
+        uses: ./.github/actions/check-terraform-format
   cloc-repository:
-    uses: ./.github/workflows/job-cloc-repository.yaml
-    with:
-      build_datetime: "${{ inputs.build_datetime }}"
-      build_timestamp: "${{ inputs.build_timestamp }}"
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 2
+    name: "Count lines of code"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Count lines of code"
+        uses: ./.github/actions/cloc-repository
+        with:
+          build_datetime: "${{ inputs.build_datetime }}"
+          build_timestamp: "${{ inputs.build_timestamp }}"
+          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
+          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
+          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
+          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
   scan-dependencies:
-    uses: ./.github/workflows/job-scan-dependencies.yaml
-    with:
-      build_datetime: "${{ inputs.build_datetime }}"
-      build_timestamp: "${{ inputs.build_timestamp }}"
-    secrets: inherit
-  perform-static-analysis:
-    uses: ./.github/workflows/job-perform-static-analysis.yaml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 2
+    name: "Scan dependencies"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Scan dependencies"
+        uses: ./.github/actions/scan-dependencies
+        with:
+          build_datetime: "${{ inputs.build_datetime }}"
+          build_timestamp: "${{ inputs.build_timestamp }}"
+          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
+          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
+          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
+          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"

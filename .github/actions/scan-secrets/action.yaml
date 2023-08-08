@@ -1,0 +1,10 @@
+name: "Scan secrets"
+description: "Scan secrets"
+runs:
+  using: "composite"
+  steps:
+    - name: "Scan secrets"
+      shell: bash
+      run: |
+        export ALL_FILES=true
+        ./scripts/githooks/scan-secrets.sh

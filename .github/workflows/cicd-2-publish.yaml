@@ -1,4 +1,4 @@
-name: "CI/CD Publish"
+name: "CI/CD publish"
 
 on:
   pull_request:

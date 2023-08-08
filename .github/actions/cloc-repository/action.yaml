@@ -1,0 +1,55 @@
+name: "Count lines of code"
+description: "Count lines of code"
+inputs:
+  build_datetime:
+    description: "Build datetime, set by the CI/CD pipeline workflow"
+    required: true
+  build_timestamp:
+    description: "Build timestamp, set by the CI/CD pipeline workflow"
+    required: true
+  idp_aws_report_upload_account_id:
+    description: "IDP AWS account ID"
+    required: true
+  idp_aws_report_upload_region:
+    description: "IDP AWS account region"
+    required: true
+  idp_aws_report_upload_role_name:
+    description: "Role to upload the report"
+    required: true
+  idp_aws_report_upload_bucket_endpoint:
+    description: "Bucket endpoint for the report"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: "Create CLOC report"
+      shell: bash
+      run: |
+        export BUILD_DATETIME=${{ inputs.build_datetime }}
+        ./scripts/reports/cloc-repository.sh
+    - name: "Compress CLOC report"
+      shell: bash
+      run: zip cloc-report.json.zip cloc-report.json
+    - name: "Upload CLOC report as an artefact"
+      uses: actions/upload-artifact@v3
+      with:
+        name: cloc-report.json.zip
+        path: ./cloc-report.json.zip
+    - name: "Check prerequisites for sending the report"
+      shell: bash
+      id: check
+      run: |
+        echo "secrets_exist=${{ inputs.idp_aws_report_upload_role_name != '' && inputs.idp_aws_report_upload_bucket_endpoint != '' }}" >> $GITHUB_OUTPUT
+    - name: "Authenticate to send the report"
+      if: steps.check.outputs.secrets_exist == 'true'
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::${{ inputs.idp_aws_report_upload_account_id }}:role/${{ inputs.idp_aws_report_upload_role_name }}
+        aws-region: ${{ inputs.idp_aws_report_upload_region }}
+    - name: "Send the CLOC report to the central location"
+      shell: bash
+      if: steps.check.outputs.secrets_exist == 'true'
+      run: |
+        aws s3 cp \
+          ./cloc-report.json.zip \
+          ${{ inputs.idp_aws_report_upload_bucket_endpoint }}/${{ inputs.build_timestamp }}-cloc-report.json.zip
