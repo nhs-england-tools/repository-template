@@ -28,6 +28,7 @@ Static code analysis is an essential part of modern software development. It pro
   - `sonar.projectKey`
   - `sonar.[language].[coverage-tool].reportPaths` to ensure the unit test coverage is reported back to Sonar
 - Follow the documentation on [creating encrypted secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add the `SONAR_TOKEN` secret to your repository. The GitHub action is already configured to fetch that secret and pass it as a variable
+- Navigate to project `Administration > Analysis Method` and turn off the `Automatic Analysis` option
 - Confirm that the GitHub action is part of your GitHub CI/CD workflow and enforces the "Sonar Way" quality gates. You can find more information about this in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/sonarqube.md)
 
 ## Testing
