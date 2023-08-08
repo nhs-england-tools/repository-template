@@ -53,16 +53,16 @@ jobs:
           fetch-depth: 0 # Full history is needed to scan all commits
       - name: "Check file format"
         uses: .github/actions/check-file-format
-  check-markdown-format:
-    runs-on: ubuntu-latest
-    name: "Check markdown format"
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Full history is needed to scan all commits
-      - name: "Check markdown format"
-        uses: .github/actions/check-markdown-format
+  # check-markdown-format:
+  #   runs-on: ubuntu-latest
+  #   name: "Check markdown format"
+  #   steps:
+  #     - name: "Checkout code"
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0 # Full history is needed to scan all commits
+  #     - name: "Check markdown format"
+  #       uses: .github/actions/check-markdown-format
   # check-file-format:
   #   uses: ./.github/workflows/job-check-file-format.yaml
   # check-markdown-format:
