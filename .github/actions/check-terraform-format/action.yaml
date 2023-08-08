@@ -1,9 +1,9 @@
-name: "Check Terraform Format"
-description: "Check Terraform Format"
+name: "Check Terraform format"
+description: "Check Terraform format"
 runs:
   using: "composite"
   steps:
-    - name: "Check Terraform Format"
+    - name: "Check Terraform format"
       shell: bash
       run: |
         export CHECK_ONLY=true

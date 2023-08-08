@@ -1,9 +1,9 @@
-name: "Scan Secrets"
-description: "Scan Secrets"
+name: "Scan secrets"
+description: "Scan secrets"
 runs:
   using: "composite"
   steps:
-    - name: "Scan Secrets"
+    - name: "Scan secrets"
       shell: bash
       run: |
         export ALL_FILES=true

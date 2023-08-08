@@ -1,4 +1,4 @@
-name: "Build Stage"
+name: "Build stage"
 
 on:
   workflow_call:

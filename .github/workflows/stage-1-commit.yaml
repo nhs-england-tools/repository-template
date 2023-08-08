@@ -1,4 +1,4 @@
-name: "Commit Stage"
+name: "Commit stage"
 
 on:
   workflow_call:
@@ -36,13 +36,13 @@ jobs:
   scan-secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    name: "Scan Secrets"
+    name: "Scan secrets"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Full history is needed to scan all commits
-      - name: "Scan Secrets"
+      - name: "Scan secrets"
         uses: ./.github/actions/scan-secrets
   check-file-format:
     runs-on: ubuntu-latest
@@ -113,17 +113,3 @@ jobs:
           idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
           idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
           idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
-  perform-static-analysis:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    timeout-minutes: 2
-    name: "Perform static analysis"
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v3
-      - name: "Perform static analysis"
-        uses: ./.github/actions/perform-static-analysis
-        with:
-          sonar_token: "${{ secrets.SONAR_TOKEN }}"

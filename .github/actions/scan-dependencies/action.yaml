@@ -1,5 +1,5 @@
-name: "Scan Dependencies"
-description: "Check Dependencies"
+name: "Scan dependencies"
+description: "Scan dependencies"
 inputs:
   build_datetime:
     description: "Build datetime, set by the CI/CD pipeline workflow"

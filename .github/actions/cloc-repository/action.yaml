@@ -1,5 +1,5 @@
-name: "Count Lines of Code of This Repository"
-description: "Count Lines Of Code"
+name: "Count lines of code"
+description: "Count lines of code"
 inputs:
   build_datetime:
     description: "Build datetime, set by the CI/CD pipeline workflow"
@@ -22,7 +22,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: "CLOC repository"
+    - name: "Create CLOC report"
       shell: bash
       run: |
         export BUILD_DATETIME=${{ inputs.build_datetime }}

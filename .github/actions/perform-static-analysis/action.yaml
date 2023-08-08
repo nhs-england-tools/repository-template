@@ -1,5 +1,5 @@
-name: "Perform Static Analysis"
-description: "Perform Static Analysis"
+name: "Perform static analysis"
+description: "Perform static analysis"
 inputs:
   sonar_token:
     description: "Sonar token API key"
@@ -11,7 +11,7 @@ runs:
       shell: bash
       id: check
       run: echo "secret_exist=${{ inputs.sonar_token != '' }}" >> $GITHUB_OUTPUT
-    - name: "Perform Static Analysis"
+    - name: "Perform static analysis"
       shell: bash
       if: steps.check.outputs.secret_exist == 'true'
       run: |

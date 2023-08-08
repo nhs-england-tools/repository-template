@@ -1,4 +1,4 @@
-name: "Test Stage"
+name: "Test stage"
 
 on:
   workflow_call:
@@ -39,9 +39,49 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v3
-      - name: "Run fast test suite"
+      - name: "Run unit test suite"
         run: |
-          make test-unit test-lint test-coverage
+          make test-unit
       - name: "Save the result of fast test suite"
         run: |
           echo "Nothing to save"
+  test-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Run linting"
+        run: |
+          make test-lint
+      - name: "Save the linting result"
+        run: |
+          echo "Nothing to save"
+  test-coverage:
+    needs: [test-unit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Run test coverage check"
+        run: |
+          make test-coverage
+      - name: "Save the coverage check result"
+        run: |
+          echo "Nothing to save"
+  perform-static-analysis:
+    needs: [test-unit]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 5
+    name: "Perform static analysis"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Perform static analysis"
+        uses: ./.github/actions/perform-static-analysis
+        with:
+          sonar_token: "${{ secrets.SONAR_TOKEN }}"
