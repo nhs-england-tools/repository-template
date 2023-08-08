@@ -35,6 +35,7 @@ on:
 jobs:
   scan-secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     name: "Scan Secrets"
     steps:
       - name: "Checkout code"
@@ -42,9 +43,10 @@ jobs:
         with:
           fetch-depth: 0 # Full history is needed to scan all commits
       - name: "Scan Secrets"
-        uses: .github/actions/scan-secrets
+        uses: ./.github/actions/scan-secrets
   check-file-format:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     name: "Check file format"
     steps:
       - name: "Checkout code"
@@ -55,6 +57,7 @@ jobs:
         uses: ./.github/actions/check-file-format
   check-markdown-format:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     name: "Check markdown format"
     steps:
       - name: "Checkout code"
