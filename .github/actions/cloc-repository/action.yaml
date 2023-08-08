@@ -10,8 +10,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: "Checkout code"
-      uses: actions/checkout@v3
     - name: "CLOC repository"
       shell: bash
       run: |

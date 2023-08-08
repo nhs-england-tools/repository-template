@@ -66,14 +66,27 @@ jobs:
           fetch-depth: 0 # Full history is needed to scan all commits
       - name: "Check markdown format"
         uses: ./.github/actions/check-markdown-format
-  # check-terraform-format:
-  #   uses: ./.github/workflows/job-check-terraform-format.yaml
-  # cloc-repository:
-  #   uses: ./.github/workflows/job-cloc-repository.yaml
-  #   with:
-  #     build_datetime: "${{ inputs.build_datetime }}"
-  #     build_timestamp: "${{ inputs.build_timestamp }}"
-  #   secrets: inherit
+  check-terraform-format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    name: "Check Terraform format"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Check Terraform format"
+        uses: ./.github/actions/check-terraform-format
+  cloc-repository:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    name: "Count lines of code"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Count lines of code"
+        uses: ./.github/actions/cloc-repository.yaml
+        with:
+          build_datetime: "${{ inputs.build_datetime }}"
+          build_timestamp: "${{ inputs.build_timestamp }}"
   # scan-dependencies:
   #   uses: ./.github/workflows/job-scan-dependencies.yaml
   #   with:
