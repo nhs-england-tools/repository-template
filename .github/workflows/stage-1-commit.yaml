@@ -83,7 +83,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v3
       - name: "Count lines of code"
-        uses: ./.github/actions/cloc-repository.yaml
+        uses: ./.github/actions/cloc-repository
         with:
           build_datetime: "${{ inputs.build_datetime }}"
           build_timestamp: "${{ inputs.build_timestamp }}"
