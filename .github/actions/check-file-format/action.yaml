@@ -3,10 +3,6 @@ description: "Check File Format"
 runs:
   using: "composite"
   steps:
-    - name: "Checkout code"
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0 # Full history is needed for git diff
     - name: "Check File Format"
       shell: bash
       run: |
