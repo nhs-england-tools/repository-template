@@ -34,25 +34,28 @@ on:
 
 jobs:
   scan-secrets:
-    uses: ./.github/workflows/job-scan-secrets.yaml
-  check-file-format:
-    uses: ./.github/workflows/job-check-file-format.yaml
-  check-markdown-format:
-    uses: ./.github/workflows/job-check-markdown-format.yaml
-  check-terraform-format:
-    uses: ./.github/workflows/job-check-terraform-format.yaml
-  cloc-repository:
-    uses: ./.github/workflows/job-cloc-repository.yaml
-    with:
-      build_datetime: "${{ inputs.build_datetime }}"
-      build_timestamp: "${{ inputs.build_timestamp }}"
-    secrets: inherit
-  scan-dependencies:
-    uses: ./.github/workflows/job-scan-dependencies.yaml
-    with:
-      build_datetime: "${{ inputs.build_datetime }}"
-      build_timestamp: "${{ inputs.build_timestamp }}"
-    secrets: inherit
-  perform-static-analysis:
-    uses: ./.github/workflows/job-perform-static-analysis.yaml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    name: Scan Secrets
+    steps:
+      - uses: ./.github/actions/scan-secrets/action.yaml
+  # check-file-format:
+  #   uses: ./.github/workflows/job-check-file-format.yaml
+  # check-markdown-format:
+  #   uses: ./.github/workflows/job-check-markdown-format.yaml
+  # check-terraform-format:
+  #   uses: ./.github/workflows/job-check-terraform-format.yaml
+  # cloc-repository:
+  #   uses: ./.github/workflows/job-cloc-repository.yaml
+  #   with:
+  #     build_datetime: "${{ inputs.build_datetime }}"
+  #     build_timestamp: "${{ inputs.build_timestamp }}"
+  #   secrets: inherit
+  # scan-dependencies:
+  #   uses: ./.github/workflows/job-scan-dependencies.yaml
+  #   with:
+  #     build_datetime: "${{ inputs.build_datetime }}"
+  #     build_timestamp: "${{ inputs.build_timestamp }}"
+  #   secrets: inherit
+  # perform-static-analysis:
+  #   uses: ./.github/workflows/job-perform-static-analysis.yaml
+  #   secrets: inherit
