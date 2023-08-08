@@ -121,6 +121,9 @@ jobs:
     timeout-minutes: 2
     name: "Perform static analysis"
     steps:
-      - uses: ./.github/actions/perform-static-analysis
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Perform static analysis"
+        uses: ./.github/actions/perform-static-analysis
         with:
           sonar_token: "${{ secrets.SONAR_TOKEN }}"
