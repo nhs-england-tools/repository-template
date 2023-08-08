@@ -42,7 +42,7 @@ jobs:
         with:
           fetch-depth: 0 # Full history is needed to scan all commits
       - name: "Scan Secrets"
-        uses: .github/actions/scan-secrets
+        uses: ./.github/actions/scan-secrets
   check-file-format:
     runs-on: ubuntu-latest
     name: "Check file format"
