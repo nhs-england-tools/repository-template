@@ -90,16 +90,37 @@ jobs:
         with:
           build_datetime: "${{ inputs.build_datetime }}"
           build_timestamp: "${{ inputs.build_timestamp }}"
-          IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
-          IDP_AWS_REPORT_UPLOAD_REGION: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
-          IDP_AWS_REPORT_UPLOAD_ROLE_NAME: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
-          IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
-  # scan-dependencies:
-  #   uses: ./.github/workflows/job-scan-dependencies.yaml
-  #   with:
-  #     build_datetime: "${{ inputs.build_datetime }}"
-  #     build_timestamp: "${{ inputs.build_timestamp }}"
-  #   secrets: inherit
-  # perform-static-analysis:
-  #   uses: ./.github/workflows/job-perform-static-analysis.yaml
-  #   secrets: inherit
+          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
+          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
+          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
+          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
+  scan-dependencies:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 2
+    name: "Scan dependencies"
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+      - name: "Scan dependencies"
+        uses: ./.github/actions/scan-dependencies
+        with:
+          build_datetime: "${{ inputs.build_datetime }}"
+          build_timestamp: "${{ inputs.build_timestamp }}"
+          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
+          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
+          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
+          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
+  perform-static-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 2
+    name: "Perform static analysis"
+    steps:
+      - uses: ./.github/actions/perform-static-analysis
+        with:
+          sonar_token: "${{ secrets.SONAR_TOKEN }}"
