@@ -41,9 +41,9 @@ jobs:
       - name: "Check if pull request exists for this branch"
         id: pr_exists
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          branch_name=${GITHUB_REF#refs/heads/}
+          branch_name=${GITHUB_HEAD_REF:-$(echo $GITHUB_REF | sed 's#refs/heads/##')}
           echo "Current branch is '$branch_name'"
           if gh pr list --head $branch_name | grep -q .; then
             echo "Pull request exists"
