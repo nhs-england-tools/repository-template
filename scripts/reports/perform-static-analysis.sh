@@ -9,7 +9,8 @@ set -e
 #   $ ./perform-static-analysis.sh
 #
 # Expects:
-#  SONAR_TOKEN=token  # SonarCloud token
+#   BRANCH_NAME=branch-name # Branch to report on
+#   SONAR_TOKEN=token       # SonarCloud token
 #
 # Options:
 #   VERBOSE=true  # Show all the executed commands, default is `false`
@@ -33,7 +34,7 @@ function create-report() {
     --volume $PWD:/usr/src \
     sonarsource/sonar-scanner-cli:$image_version \
       -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
-      -Dsonar.branch.name="$(git rev-parse --abbrev-ref HEAD)" \
+      -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
       -Dsonar.token="$(echo $SONAR_TOKEN)"
 }
 

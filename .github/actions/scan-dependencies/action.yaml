@@ -24,7 +24,9 @@ runs:
   steps:
     - name: "Generate SBOM"
       shell: bash
-      run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/generate-sbom.sh
+      run: |
+        export BUILD_DATETIME=${{ inputs.build_datetime }}
+        ./scripts/reports/generate-sbom.sh
     - name: "Compress SBOM report"
       shell: bash
       run: zip sbom-report.json.zip sbom-report.json
@@ -35,7 +37,9 @@ runs:
         path: ./sbom-report.json.zip
     - name: "Scan vulnerabilities"
       shell: bash
-      run: BUILD_DATETIME=${{ inputs.build_datetime }} ./scripts/reports/scan-vulnerabilities.sh
+      run: |
+        export BUILD_DATETIME=${{ inputs.build_datetime }}
+        ./scripts/reports/scan-vulnerabilities.sh
     - name: "Compress vulnerabilities report"
       shell: bash
       run: zip vulnerabilities-report.json.zip vulnerabilities-report.json

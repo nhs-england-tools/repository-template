@@ -15,5 +15,6 @@ runs:
       shell: bash
       if: steps.check.outputs.secret_exist == 'true'
       run: |
+        export BRANCH_NAME=${GITHUB_HEAD_REF:-$(echo $GITHUB_REF | sed 's#refs/heads/##')}
         export SONAR_TOKEN=${{ inputs.sonar_token }}
         ./scripts/reports/perform-static-analysis.sh
