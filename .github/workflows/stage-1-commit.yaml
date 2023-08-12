@@ -52,7 +52,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Full history is needed to scan all commits
+          fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check file format"
         uses: ./.github/actions/check-file-format
   check-markdown-format:
@@ -63,7 +63,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Full history is needed to scan all commits
+          fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check markdown format"
         uses: ./.github/actions/check-markdown-format
   check-terraform-format:
