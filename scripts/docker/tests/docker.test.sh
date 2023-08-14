@@ -59,7 +59,7 @@ function test-docker-build() {
   # Act
   docker-build > /dev/null 2>&1
   # Assert
-  docker image inspect "${DOCKER_IMAGE}:$(cat .version)" > /dev/null 2>&1 && return 0 || return 1
+  docker image inspect "${DOCKER_IMAGE}:$(_get-version)" > /dev/null 2>&1 && return 0 || return 1
 }
 
 function test-docker-test() {
@@ -86,7 +86,7 @@ function test-docker-run() {
 function test-docker-clean() {
 
   # Arrange
-  version="$(cat .version)"
+  version="$(_get-version)"
   # Act
   docker-clean
   # Assert

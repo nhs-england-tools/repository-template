@@ -98,6 +98,8 @@ Usage of `Dockerfile`, `Dockerfile.metadata` and `Dockerfile.effective`
 
 Usage of `VERSION` and `.version` files
 
+- Multiple entries in `VERSION`
+
 Image versions
 
 ```text

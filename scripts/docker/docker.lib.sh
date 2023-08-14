@@ -14,8 +14,9 @@ set -euo pipefail
 #   DOCKER_TITLE="My Docker image"  # Docker image title
 
 # ==============================================================================
+# Functions to be used with custom images.
 
-# Build Docker image
+# Build Docker image.
 # Arguments (provided as environment variables):
 #   dir=[path to the Dockerfile to use, default is '.']
 function docker-build() {
@@ -39,11 +40,15 @@ function docker-build() {
     --rm \
     --file "${dir}/Dockerfile.effective" \
     .
+  # Tag the image with all the stated versions
+  for version in $(_get-all-versions); do
+    docker tag "${DOCKER_IMAGE}:$(_get-version)" "${DOCKER_IMAGE}:${version}"
+  done
   docker tag "${DOCKER_IMAGE}:$(_get-version)" "${DOCKER_IMAGE}:latest"
   docker rmi --force "$(docker images | grep "<none>" | awk '{print $3}')" 2> /dev/null ||:
 }
 
-# Check test Docker image
+# Check test Docker image.
 # Arguments (provided as environment variables):
 #   args=[arguments to pass to Docker to run the container, default is none/empty]
 #   cmd=[command to pass to the container for execution, default is none/empty]
@@ -60,7 +65,7 @@ function docker-check-test() {
   | grep -q "${check}" && echo PASS || echo FAIL
 }
 
-# Run Docker image
+# Run Docker image.
 # Arguments (provided as environment variables):
 #   args=[arguments to pass to Docker to run the container, default is none/empty]
 #   cmd=[command to pass to the container for execution, default is none/empty]
@@ -75,34 +80,43 @@ function docker-run() {
     ${cmd:-}
 }
 
-# Push Docker image
+# Push Docker image.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function docker-push() {
 
   local dir=${dir:-$PWD}
-  docker push "${DOCKER_IMAGE}:$(_get-version)"
+  # Push all the image tags based on the stated versions
+  for version in $(_get-all-versions); do
+    docker push "${DOCKER_IMAGE}:${version}"
+  done
   docker push "${DOCKER_IMAGE}:latest"
 }
 
-# Remove Docker resources
+# Remove Docker resources.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function docker-clean() {
 
   local dir=${dir:-$PWD}
-  docker rmi "${DOCKER_IMAGE}:$(_get-version 2> /dev/null)" > /dev/null 2>&1 ||:
   docker rmi "${DOCKER_IMAGE}:latest" > /dev/null 2>&1 ||:
+  for version in $(_get-all-versions); do
+    docker rmi "${DOCKER_IMAGE}:${version}" > /dev/null 2>&1 ||:
+  done
   rm -f \
     .version \
     Dockerfile.effective
 }
 
+# ==============================================================================
+# Functions to be used with external images.
+
 # Retrieve the Docker image version from the '.tool-versions' file and pull the
-# image if required. This function prevents Docker from downloading an image
-# each time it is used, since the digest is not stored locally for compressed
-# images. To optimise, the solution is to pull the image using its digest and
-# then tag it, checking this tag for existence for any subsequent use.
+# image if required. This function is to be used in conjunction with the
+# external images and it prevents Docker from downloading an image each time it
+# is used, since the digest is not stored locally for compressed images. To
+# optimise, the solution is to pull the image using its digest and then tag it,
+# checking this tag for existence for any subsequent use.
 # Arguments (provided as environment variables):
 #   name=[full name of the Docker image]
 function docker-get-image-version-and-pull() {
@@ -141,8 +155,9 @@ function docker-get-image-version-and-pull() {
 }
 
 # ==============================================================================
+# "Private" functions.
 
-# Create effective Dockerfile
+# Create effective Dockerfile.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function _create-effective-dockerfile() {
@@ -153,7 +168,7 @@ function _create-effective-dockerfile() {
   _append-metadata
 }
 
-# Replace image:latest by a specific version
+# Replace image:latest by a specific version.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function _replace-image-latest-by-specific-version() {
@@ -173,7 +188,7 @@ function _replace-image-latest-by-specific-version() {
   fi
 }
 
-# Append metadata to the end of Dockerfile
+# Append metadata to the end of Dockerfile.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function _append-metadata() {
@@ -186,7 +201,7 @@ function _append-metadata() {
   mv "$dir/Dockerfile.effective.tmp" "$dir/Dockerfile.effective"
 }
 
-# Create effective version from the VERSION file
+# Create effective version from the VERSION file.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function _create-effective-version() {
@@ -207,7 +222,26 @@ function _create-effective-version() {
   fi
 }
 
-# Print Git branch name. Check the GitHub variables first and then the local Git repo.
+# Print top Docker image version.
+# Arguments (provided as environment variables):
+#   dir=[path to the image directory where the Dockerfile is located, default is '.']
+function _get-version() {
+
+  local dir=${dir:-$PWD}
+  head -n 1 "${dir}/.version"
+}
+
+# Print all Docker image versions.
+# Arguments (provided as environment variables):
+#   dir=[path to the image directory where the Dockerfile is located, default is '.']
+function _get-all-versions() {
+
+  local dir=${dir:-$PWD}
+  cat "${dir}/.version"
+}
+
+# Print Git branch name. Check the GitHub variables first and then the local Git
+# repo.
 function _get-git-branch-name() {
 
   branch_name=$(git rev-parse --abbrev-ref HEAD)
@@ -219,12 +253,4 @@ function _get-git-branch-name() {
   fi
 
   echo "$branch_name"
-}
-
-# Print Docker image version.
-# Arguments (provided as environment variables):
-#   dir=[path to the image directory where the Dockerfile is located, default is '.']
-function _get-version() {
-
-  cat "${dir}/.version"
 }
