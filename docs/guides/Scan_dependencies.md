@@ -20,7 +20,7 @@ In modern software development, leveraging third-party dependencies is a common 
 - [scan-vulnerabilities.sh](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
 - [.grype.yaml](../../scripts/config/.grype.yaml): A configuration file for the CVE scanner
 - [scan-dependencies/action.yaml](../../.github/actions/scan-dependencies/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
-- [.gitignore](../../.gitignore): Excludes the `*sbom-report.json` and `*vulnerabilities-report.json` report files created during the process
+- [.gitignore](../../.gitignore): Excludes the `*sbom*report.json` and `*vulnerabilities*report.json` report files created during the process
 - [scan-dependencies.sh](../../scripts/githooks/scan-dependencies.sh): a Git hook to scan dependencies upon each commit. For a more comprehensive information of how these Git hooks operate, please refer to the [Run Git hooks on commit](./Run_Git_hooks_on_commit.md) guide
 
 ## Configuration checklist
@@ -43,14 +43,14 @@ SBOM generator
 
 ```shell
 ./scripts/reports/generate-sbom.sh
-cat sbom-report.json | jq
+cat sbom-repository-report.json | jq
 ```
 
 CVE scanner
 
 ```shell
 ./scripts/reports/scan-vulnerabilities.sh
-cat vulnerabilities-report.json | jq
+cat vulnerabilities-repository-reportc.json | jq
 ```
 
 ## FAQ

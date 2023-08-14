@@ -35,6 +35,7 @@ runs:
       with:
         name: cloc-report.json.zip
         path: ./cloc-report.json.zip
+        retention-days: 21
     - name: "Check prerequisites for sending the report"
       shell: bash
       id: check

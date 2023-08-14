@@ -31,10 +31,10 @@ function create-report() {
     --volume $PWD:/scan \
     --volume /tmp/grype/db:/.cache/grype/db \
     ghcr.io/anchore/grype:$image_version \
-      sbom:/scan/sbom-report.json \
+      sbom:/scan/sbom-repository-report.json \
       --config /scan/scripts/config/.grype.yaml \
       --output json \
-      --file /scan/vulnerabilities-report.tmp.json
+      --file /scan/vulnerabilities-repository-report.tmp.json
 }
 
 function enrich-report() {
@@ -53,9 +53,9 @@ function enrich-report() {
     --workdir /repo \
     ghcr.io/make-ops-tools/jq:latest \
       '.creationInfo |= . + {"created":"'${build_datetime}'","repository":{"url":"'${git_url}'","branch":"'${git_branch}'","tags":['${git_tags}'],"commitHash":"'${git_commit_hash}'"},"pipeline":{"id":'${pipeline_run_id}',"number":'${pipeline_run_number}',"attempt":'${pipeline_run_attempt}'}}' \
-      vulnerabilities-report.tmp.json \
-        > vulnerabilities-report.json
-  rm -f vulnerabilities-report.tmp.json
+      vulnerabilities-repository-report.tmp.json \
+        > vulnerabilities-repository-report.json
+  rm -f vulnerabilities-repository-report.tmp.json
 }
 
 function is_arg_true() {

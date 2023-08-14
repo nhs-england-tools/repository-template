@@ -38,8 +38,8 @@ clean:: # Remove all generated and temporary files
 	rm -rf \
 		.scannerwork \
 		*cloc-report*.json \
-		*sbom-report*.json \
-		*vulnerabilities-report*.json \
+		*sbom*report*.json \
+		*vulnerabilities*report*.json \
 		docs/diagrams/.*.bkp \
 		docs/diagrams/.*.dtmp
 
