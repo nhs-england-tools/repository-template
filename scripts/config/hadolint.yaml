@@ -1,0 +1,5 @@
+# SEE: https://github.com/hadolint/hadolint#configure
+
+trustedRegistries:
+  - docker.io
+  - "*.gcr.io"
