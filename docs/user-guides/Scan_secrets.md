@@ -16,14 +16,14 @@ Scanning a repository for hardcoded secrets is a crucial security practice. "Har
 ## Key files
 
 - [scan-secrets.sh](../../scripts/githooks/scan-secrets.sh): A shell script that scans the codebase for hardcoded secrets
-- [.gitleaks.toml](../../scripts/config/.gitleaks.toml): A configuration file for the secret scanner
+- [gitleaks.toml](../../scripts/config/gitleaks.toml): A configuration file for the secret scanner
 - [.gitleaksignore](../../.gitleaksignore): A list of fingerprints to ignore by the secret scanner
 - [scan-secrets/action.yaml](../../.github/actions/scan-secrets/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
-- [.pre-commit.yaml](../../scripts/config/.pre-commit.yaml): Run the secret scanner as a pre-commit git hook
+- [pre-commit.yaml](../../scripts/config/pre-commit.yaml): Run the secret scanner as a pre-commit git hook
 
 ## Configuration checklist
 
-- [Add custom secret patterns](../../scripts/config/.gitleaks.toml) to the configuration file to align with your project's specific requirements
+- [Add custom secret patterns](../../scripts/config/gitleaks.toml) to the configuration file to align with your project's specific requirements
 - [Create a secret scan baseline](https://github.com/gitleaks/gitleaks/blob/master/README.md#gitleaksignore) for your repository by adding false-positive fingerprints to the ignore list
 - Ensure that the GitHub action, which incorporates Gitleaks, forms part of your GitHub CI/CD workflow. It is designed to run a full scan as a part of the pipeline, providing additional protection against hardcoded secrets that might have been included prior to the rule additions or by bypassing the scanner
 - Further details on this topic can be found in the [decision record](https://github.com/nhs-england-tools/repository-template/blob/main/docs/adr/ADR-002_Scan_repository_for_hardcoded_secrets.md) as well as in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets) where a usage of an alternative tool is shown

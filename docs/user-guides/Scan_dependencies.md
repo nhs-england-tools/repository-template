@@ -16,16 +16,16 @@ In modern software development, leveraging third-party dependencies is a common 
 ## Key files
 
 - [generate-sbom.sh](../../scripts/reports/generate-sbom.sh): A shell script that generates SBOM (Software Bill of Materials)
-- [.syft.yaml](../../scripts/config/.syft.yaml): A configuration file for the SBOM generator
+- [syft.yaml](../../scripts/config/syft.yaml): A configuration file for the SBOM generator
 - [scan-vulnerabilities.sh](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
-- [.grype.yaml](../../scripts/config/.grype.yaml): A configuration file for the CVE scanner
+- [grype.yaml](../../scripts/config/grype.yaml): A configuration file for the CVE scanner
 - [scan-dependencies/action.yaml](../../.github/actions/scan-dependencies/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
 - [.gitignore](../../.gitignore): Excludes the `*sbom*report.json` and `*vulnerabilities*report.json` report files created during the process
 - [scan-dependencies.sh](../../scripts/githooks/scan-dependencies.sh): a Git hook to scan dependencies upon each commit. For a more comprehensive information of how these Git hooks operate, please refer to the [Run Git hooks on commit](./Run_Git_hooks_on_commit.md) guide
 
 ## Configuration checklist
 
-- [Adjust the configuration settings](../../scripts/config/.grype.yaml) to align with your project's specific requirements
+- [Adjust the configuration settings](../../scripts/config/grype.yaml) to align with your project's specific requirements
 - [Create a dependency baseline](https://github.com/anchore/grype#specifying-matches-to-ignore) for your repository excluding false-positives from the scanning process
 - Make sure the GitHub action, which incorporates Syft and Grype, is part of your GitHub CI/CD workflow. More details on this can be found in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/dependency-scan/README.md)
 - It is crucial to ensure that both, the SBOM and the vulnerabilities reports are uploaded to the central repository or a designated location for streamlined reporting and easy access. Here are the secret variables that has to be set for this functionality to work:

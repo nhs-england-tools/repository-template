@@ -48,7 +48,7 @@ function main() {
       --volume $PWD:/workdir \
       ghcr.io/igorshubovych/markdownlint-cli:$image_version \
         $files \
-        --config /workdir/scripts/config/.markdownlint.yaml
+        --config /workdir/scripts/config/markdownlint.yaml
   fi
 }
 

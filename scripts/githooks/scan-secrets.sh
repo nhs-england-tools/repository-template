@@ -47,7 +47,7 @@ function main() {
     --workdir /scan \
     ghcr.io/gitleaks/gitleaks:$image_version \
       $cmd \
-      --config /scan/scripts/config/.gitleaks.toml
+      --config /scan/scripts/config/gitleaks.toml
 }
 
 function is_arg_true() {

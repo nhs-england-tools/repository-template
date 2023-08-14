@@ -20,7 +20,7 @@ The [pre-commit](https://pre-commit.com/) framework is a powerful tool for manag
   - [scan-dependencies.sh](../../scripts/githooks/scan-dependencies.sh)
   - [scan-secrets.sh](../../scripts/githooks/scan-secrets.sh)
 - Configuration
-  - [.pre-commit.yaml](../../scripts/config/.pre-commit.yaml)
+  - [pre-commit.yaml](../../scripts/config/pre-commit.yaml)
   - [init.mk](../../scripts/init.mk): make targets
 
 ## Testing

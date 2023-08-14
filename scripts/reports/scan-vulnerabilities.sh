@@ -32,7 +32,7 @@ function create-report() {
     --volume /tmp/grype/db:/.cache/grype/db \
     ghcr.io/anchore/grype:$image_version \
       sbom:/scan/sbom-repository-report.json \
-      --config /scan/scripts/config/.grype.yaml \
+      --config /scan/scripts/config/grype.yaml \
       --output json \
       --file /scan/vulnerabilities-repository-report.tmp.json
 }

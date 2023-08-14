@@ -32,7 +32,7 @@ function create-report() {
     --volume $PWD:/scan \
     ghcr.io/anchore/syft:$image_version \
       packages dir:/scan \
-      --config /scan/scripts/config/.syft.yaml \
+      --config /scan/scripts/config/syft.yaml \
       --output spdx-json=/scan/sbom-repository-report.tmp.json
 }
 
