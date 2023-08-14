@@ -1,9 +1,10 @@
 # This file is for you! Edit it to implement your own Docker make targets.
 
+# ==============================================================================
+# Custom implementation
+
 DOCKER_IMAGE := ghcr.io/org/repo
 DOCKER_TITLE := My Docker image
-
-# ==============================================================================
 
 docker-build: # Build Docker image - optional: dir=[path to the Dockerfile to use, default is '.']
 	source ./scripts/docker/docker.lib.sh
@@ -14,6 +15,7 @@ clean:: # Remove Docker resources
 	docker-clean
 
 # ==============================================================================
+# Module tests and examples
 
 docker-test-suite-run: # Run Docker test suite
 	./scripts/docker/tests/docker.test.sh

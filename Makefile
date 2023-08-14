@@ -4,18 +4,21 @@
 include ./scripts/init.mk
 include ./scripts/test.mk
 
-# Example targets are: dependencies, build, deploy, clean, etc.
+# Example targets are: dependencies, build, publish, deploy, clean, etc.
 
-dependencies:
+dependencies: # Install dependencies needed to build and test the project
 	# TODO: Implement installation of your project dependencies
 
-build:
-	# TODO: Implement artefact build step
+build: # Build the project artefact
+	# TODO: Implement the artefact build step
 
-deploy:
-	# TODO: Implement artefact deployment step
+publish: # Publish the project artefact
+	# TODO: Implement the artefact publishing step
 
-clean::
+deploy: # Deploy the project artefact to the target environment
+	# TODO: Implement the artefact deployment step
+
+clean:: # Clean-up project resources
 	# TODO: Implement project resources clean-up step
 
 config:: # Configure development environment
