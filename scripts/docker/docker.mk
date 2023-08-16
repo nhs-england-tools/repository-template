@@ -42,6 +42,14 @@ docker-example-run: # Run Docker example
 	docker-run
 
 # ==============================================================================
+# Quality checks
+
+docker-shellscript-lint: # Lint all Docker module shell scripts
+	for file in $$(find ./scripts/docker -type f -name "*.sh"); do
+		file=$$file ./scripts/shellscript-linter.sh
+	done
+
+# ==============================================================================
 
 .SILENT: \
 	clean \
@@ -49,4 +57,5 @@ docker-example-run: # Run Docker example
 	docker-example-build \
 	docker-example-lint \
 	docker-example-run \
+	docker-shellscript-lint \
 	docker-test-suite-run

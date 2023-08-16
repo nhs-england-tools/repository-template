@@ -46,7 +46,9 @@ In summary, Docker provides a consistent, efficient and scalable environment for
 - Automated test suite for the Docker scripts
 - Usage example
 
-TODO: What problem does the Docker capability implemented in the Repository Template solves?
+TODO: What problem does the Docker module implemented in the Repository Template solve?
+
+TODO: Alternatives to Docker, i.e. Podman
 
 ## Key files
 

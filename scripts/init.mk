@@ -80,6 +80,7 @@ endif
 	_install-dependency \
 	asdf-install \
 	clean \
+	config \
 	githooks-install \
 	githooks-run \
 	help \
