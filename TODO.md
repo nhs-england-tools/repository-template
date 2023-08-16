@@ -1,5 +1,6 @@
 # TODO
 
+- Produce `.version` file on the GH workflow `metadata` job run
 - Docker scripts
   - Make it working with [Podman](https://podman.io/)
   - Add image spec test functionality, e.g. [dgoss](https://github.com/goss-org/goss/tree/master/extras/dgoss)
