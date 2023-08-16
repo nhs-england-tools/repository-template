@@ -32,33 +32,29 @@ Docker is a tool for implementing, shipping, and running applications inside con
 - **Security**: Docker provides features like secure namespaces and cgroups which isolate applications. Additionally, you can define fine-grained access controls and policies for your containers.
 - **Reusable components**: Docker images can be used as base images for other projects, allowing for reusable components. For example, if you have a base image with a configured web server, other teams or projects can use that image as a starting point.
 
-In summary, Docker provides a consistent, efficient and scalable environment for developing and deploying applications. While it is not a silver bullet for all use cases, its benefits make it a valuable tool in many development workflows.
-
 ## Features
 
+- Implementation of the most common Docker routines
 - Use digest `sha256` for image versioning
+- Pull image only once by its digest
 - Store image versions in a single file, `.tool-versions`
 - Build process optimisation for `amd64` architecture
-- Pull image only once by its digest
 - Image versioning automatically applied based on a pattern
-- Dockerfile metadata
+- Dockerfile labels (metadata)
 - Dockerfile linting
 - Automated test suite for the Docker scripts
 - Usage example
 
-TODO: What problem does the Docker module implemented in the Repository Template solve?
-
-TODO: Alternatives to Docker, i.e. Podman
-
 ## Key files
 
 - Scripts
-  - [docker.lib.sh](../../scripts/docker/docker.lib.sh): library loded by the make targets and commands
-  - [docker.mk](../../scripts/docker/docker.mk): it is loaded by the `scripts/init.mk` file
-  - [docker-lint.sh](../../scripts/docker/docker.lib.sh): command
+  - [docker.lib.sh](../../scripts/docker/docker.lib.sh): A library code loaded by custom make targets and CLI scripts
+  - [docker.mk](../../scripts/docker/docker.mk): Customised implementation of the Docker routines loaded by the `scripts/init.mk` file
+  - [dgoss.sh](../../scripts/docker/dgoss.sh): Docker image spec test framework
+  - [dockerfile-linter.sh](../../scripts/docker/dockerfile-linter.sh): Dockerfile linter
 - Configuration
-  - [.tool-versions](../../.tool-versions)
-  - [hadolint.yaml](../../scripts/config/hadolint.yaml)
+  - [.tool-versions](../../.tool-versions): Docker image versions
+  - [hadolint.yaml](../../scripts/config/hadolint.yaml): Dockerfile linter configuration file
   - [Dockerfile.metadata](../../scripts/docker/Dockerfile.metadata)
 - Test suite
   - [docker.test.sh](../../scripts/docker/tests/docker.test.sh)
@@ -183,7 +179,7 @@ foo=bar make some-target
 
 1. _We built our serverless workloads based on AWS Lambda and package them as `.zip` archives. Why do we need Docker?_
 
-   Building AWS Lambdas as `.zip` archives is like buying a car without wheels and borrowing them when going for a spin. [Working with Lambda container images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html). See also the benefits of using Docker that are listed in above in the [Overview section](#overview).
+   [Working with Lambda container images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html). See also the benefits of using Docker that are listed in above in the [Overview section](#overview).
 
 2. _Should we use custom images for AWS Lambdas?_
 
