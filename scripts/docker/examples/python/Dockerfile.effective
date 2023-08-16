@@ -1,3 +1,5 @@
+# `*:latest` will be replaced with a corresponding version stored in the '.tool-versions' file
+# hadolint ignore=DL3007
 FROM python:3.10.12-alpine3.18@sha256:268ba060f59c005d099661a70f53c353f2acd1401ca90f81869a04600cdae6f4 as base
 
 # === Builder ==================================================================
