@@ -39,7 +39,6 @@ RUN set -eux; \
 
 # === Runtime ==================================================================
 
-# NOSONAR
 FROM base
 ENV \
     LANG="C.UTF-8" \
@@ -61,5 +60,6 @@ RUN set -eux; \
     addgroup -S -g $SYSTEM_USER_GID $SYSTEM_USER && \
     adduser -H -D -s /bin/false -g "" -h /tmp -G $SYSTEM_USER -u $SYSTEM_USER_UID $SYSTEM_USER && \
     gosu nobody true
+USER $SYSTEM_USER
 CMD [ "python", "app.py" ]
 EXPOSE 8000
