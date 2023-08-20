@@ -22,6 +22,10 @@
       - [GitHub App](#github-app)
     - [Rationale](#rationale)
   - [Notes](#notes)
+    - [Example 1: Bash](#example-1-bash)
+    - [Example 2: Python](#example-2-python)
+    - [Example 3: Golang](#example-3-golang)
+    - [Example 3: Node.js (TypeScript)](#example-3-nodejs-typescript)
   - [Tags](#tags)
 
 ## Context
@@ -117,7 +121,107 @@ This guide describes the essence of the fundamental aspects of GitHub authentica
 
 ## Notes
 
-TODO: Demonstrate a sample setup
+### Example 1: Bash
+
+Dependencies are `openssl`, `curl`, `jq` and `gh`.
+
+```bash
+export GITHUB_APP_ID=...
+export GITHUB_APP_PK_FILE=...
+export GITHUB_ORG="nhs-england-tools"
+```
+
+```bash
+$ cd docs/adr/ADR-003/examples/bash
+$ ./script.sh
+GITHUB_TOKEN=ghs_...
+```
+
+```bash
+$ GITHUB_TOKEN=ghs_...; echo "$GITHUB_TOKEN" | gh auth login --with-token
+$ gh auth status
+github.com
+  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
+  ✓ Git operations for github.com configured to use https protocol.
+  ✓ Token: ghs_************************************
+```
+
+### Example 2: Python
+
+Dependencies are listed in the `requirements.txt` file.
+
+```bash
+export GITHUB_APP_ID=...
+export GITHUB_APP_PK_FILE=...
+export GITHUB_ORG="nhs-england-tools"
+```
+
+```bash
+$ cd docs/adr/ADR-003/examples/python
+$ pip install -r requirements.txt
+$ python main.py
+GITHUB_TOKEN=ghs_...
+```
+
+```bash
+$ GITHUB_TOKEN=ghs_...;; echo "$GITHUB_TOKEN" | gh auth login --with-token
+$ gh auth status
+github.com
+  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
+  ✓ Git operations for github.com configured to use https protocol.
+  ✓ Token: ghs_************************************
+```
+
+### Example 3: Golang
+
+Dependencies are listed in the `go.mod` file.
+
+```bash
+export GITHUB_APP_ID=...
+export GITHUB_APP_PK_FILE=...
+export GITHUB_ORG="nhs-england-tools"
+```
+
+```bash
+$ cd docs/adr/ADR-003/examples/golang
+$ go run main.go
+GITHUB_TOKEN=ghs_...
+```
+
+```bash
+$ GITHUB_TOKEN=ghs_...; echo "$GITHUB_TOKEN" | gh auth login --with-token
+$ gh auth status
+github.com
+  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
+  ✓ Git operations for github.com configured to use https protocol.
+  ✓ Token: ghs_************************************
+```
+
+### Example 3: Node.js (TypeScript)
+
+Dependencies are listed in the `package.json` file.
+
+```bash
+export GITHUB_APP_ID=...
+export GITHUB_APP_PK_FILE=...
+export GITHUB_ORG="nhs-england-tools"
+```
+
+```bash
+$ cd docs/adr/ADR-003/examples/nodejs
+$ npm install
+$ npm start -s
+GITHUB_TOKEN=ghs_...
+```
+
+```bash
+$ GITHUB_TOKEN=ghs_...; echo "$GITHUB_TOKEN" | gh auth login --with-token
+$ gh auth status
+github.com
+  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
+  ✓ Git operations for github.com configured to use https protocol.
+  ✓ Token: ghs_************************************
+```
 
 ## Tags
 
