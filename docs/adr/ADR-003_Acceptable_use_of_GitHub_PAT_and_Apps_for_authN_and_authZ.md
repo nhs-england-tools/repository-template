@@ -2,10 +2,10 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `07/06/2023` |
+>| Date         | `20/08/2023` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
->| Significance | `Dependencies, Interfaces` |
+>| Significance | `Construction techniques` |
 >| Owners       | `Dan Stefaniuk, ?` |
 
 ---
@@ -21,11 +21,14 @@
       - [GitHub PAT (Personal Access Token)](#github-pat-personal-access-token)
       - [GitHub App](#github-app)
     - [Rationale](#rationale)
-  - [Notes](#notes)
-    - [Example 1: Bash](#example-1-bash)
-    - [Example 2: Python](#example-2-python)
-    - [Example 3: Golang](#example-3-golang)
-    - [Example 3: Node.js (TypeScript)](#example-3-nodejs-typescript)
+  - [GitHub App notes](#github-app-notes)
+    - [Limits](#limits)
+    - [Setup](#setup)
+    - [Examples of acquiring the GitHub App access token](#examples-of-acquiring-the-github-app-access-token)
+      - [Bash](#bash)
+      - [Python](#python)
+      - [Golang](#golang)
+      - [Node.js (TypeScript)](#nodejs-typescript)
   - [Tags](#tags)
 
 ## Context
@@ -119,9 +122,32 @@ Use app when:
 
 This guide describes the essence of the fundamental aspects of GitHub authentication and authorisation mechanisms along with the common use cases.
 
-## Notes
+## GitHub App notes
 
-### Example 1: Bash
+### Limits
+
+- Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
+- The app name cannot exceed 34 character
+- [Access rate limits apply](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps) depending on the number of repositories or users within organisation
+
+### Setup
+
+To be executed by a GitHub Administrator:
+
+- Identify the GitHub repository name for which the team has requested a GitHub App integration
+- Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net)
+  - Delegate access to this mailbox for the GitHub organisation owners, administrators and the engineering team
+- Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above
+- Register a GitHub App under the `[repository-name]-app` bot account with the name `[Team] [Repository Name] [Purpose]`
+  - Set the relevant permissions based on the team's requirements
+
+To be executed by a GitHub organisation owner:
+
+- Install the `[Team] [Repository Name] [Purpose]` app and set repository access to the `[repository-name]`
+
+### Examples of acquiring the GitHub App access token
+
+#### Bash
 
 Dependencies are `openssl`, `curl`, `jq` and `gh`.
 
@@ -130,6 +156,8 @@ export GITHUB_APP_ID=...
 export GITHUB_APP_PK_FILE=...
 export GITHUB_ORG="nhs-england-tools"
 ```
+
+[script.sh](./assets/ADR-003/examples/bash/script.sh)
 
 ```bash
 $ cd docs/adr/ADR-003/examples/bash
@@ -146,7 +174,7 @@ github.com
   ✓ Token: ghs_************************************
 ```
 
-### Example 2: Python
+#### Python
 
 Dependencies are listed in the `requirements.txt` file.
 
@@ -155,6 +183,8 @@ export GITHUB_APP_ID=...
 export GITHUB_APP_PK_FILE=...
 export GITHUB_ORG="nhs-england-tools"
 ```
+
+[main.py](./assets/ADR-003/examples/python/main.py)
 
 ```bash
 $ cd docs/adr/ADR-003/examples/python
@@ -172,7 +202,7 @@ github.com
   ✓ Token: ghs_************************************
 ```
 
-### Example 3: Golang
+#### Golang
 
 Dependencies are listed in the `go.mod` file.
 
@@ -181,6 +211,8 @@ export GITHUB_APP_ID=...
 export GITHUB_APP_PK_FILE=...
 export GITHUB_ORG="nhs-england-tools"
 ```
+
+[main.go](./assets/ADR-003/examples/golang/main.go)
 
 ```bash
 $ cd docs/adr/ADR-003/examples/golang
@@ -197,7 +229,7 @@ github.com
   ✓ Token: ghs_************************************
 ```
 
-### Example 3: Node.js (TypeScript)
+#### Node.js (TypeScript)
 
 Dependencies are listed in the `package.json` file.
 
@@ -206,6 +238,8 @@ export GITHUB_APP_ID=...
 export GITHUB_APP_PK_FILE=...
 export GITHUB_ORG="nhs-england-tools"
 ```
+
+[main.ts](./assets/ADR-003/examples/nodejs/main.ts)
 
 ```bash
 $ cd docs/adr/ADR-003/examples/nodejs
