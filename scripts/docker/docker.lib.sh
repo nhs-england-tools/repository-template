@@ -99,8 +99,7 @@ function docker-push() {
 function docker-clean() {
 
   local dir=${dir:-$PWD}
-  docker rmi "${DOCKER_IMAGE}:latest" > /dev/null 2>&1 ||:
-  for version in $(_get-all-versions); do
+  for version in $(_get-all-versions) latest; do
     docker rmi "${DOCKER_IMAGE}:${version}" > /dev/null 2>&1 ||:
   done
   rm -f \

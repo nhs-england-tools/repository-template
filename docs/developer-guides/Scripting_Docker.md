@@ -17,7 +17,7 @@
 
 ## Overview
 
-Docker is a tool for implementing, shipping, and running applications inside containers for Serverless and Kubernetes-based workloads. It has grown in popularity due to its ability to address several challenges faced by engineers, like:
+Docker is a tool for developing, shipping, and running applications inside containers for Serverless and Kubernetes-based workloads. It has grown in popularity due to its ability to address several challenges faced by engineers, like:
 
 - **Consistency across environments**: One of the common challenges in software development is the "it works on my machine" problem. Docker containers ensure that applications run the same regardless of where the container is run, be it a developer's local machine, a test environment, or a production server.
 - **Isolation**: Docker containers are isolated from each other and from the host system. This means that you can run multiple versions of the same software (like databases or libraries) on the same machine without them interfering with each other.
@@ -106,7 +106,7 @@ Image versions
 
 ### Make
 
-```shell
+```makefile
 some-target: # Short target description - mandatory: foo=[description]; optional: baz=[description, default is 'qux']
     # Recipe implementation...
 ```
@@ -116,7 +116,7 @@ foo=bar make some-target # Environment variable is passed to the make target exe
 make some-target foo=bar # Make argument is passed to the make target execution
 ```
 
-Lowercase variables, explain how and why
+By convention we use upper-case variables for global settings that you would ordinarily associate with environment variables. We use lower-case variables as arguments to specific functions (or targets, in this case).
 
 `.SILENT` section of `make` file
 
@@ -153,7 +153,7 @@ export foo=bar
 foo=bar ./scripts/a-shell-script
 ```
 
-Lowercase variables, explain how and why
+By convention we use upper-case variables for global settings that you would ordinarily associate with environment variables. We use lower-case variables as arguments to specific functions (or targets, in this case).
 
 `set -euo pipefail` in Bash script
 
@@ -161,7 +161,7 @@ Lowercase variables, explain how and why
 
 ### Make and Bash working together
 
-```shell
+```makefile
 some-target: # Run shell function - mandatory: foo=[description]
     source ./scripts/a-suite-of-shell-function
     some-shell-function # 'foo' is passed to the function by 'make'
@@ -179,8 +179,8 @@ foo=bar make some-target
 
 1. _We built our serverless workloads based on AWS Lambda and package them as `.zip` archives. Why do we need Docker?_
 
-   [Working with Lambda container images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html). See also the benefits of using Docker that are listed in above in the [Overview section](#overview).
+   The primary use case for Docker and the thing it was invented for, is as a tool for aligning development environments. If you have no need for containers as a deployment artefact it is still worth using Docker as a development tool to ensure that everyone working on the project has the same versions of all dependencies, no matter what is installed on your individual machine.
 
 2. _Should we use custom images for AWS Lambdas?_
 
-   Answer.
+   There should be few cases where this is necessary. Using the AWS-provided images should be the first preference, to minimise the amount of code and infrastructure effort we need to exert. However, there will be cases where the provided images do not work for you. If you think this applies - for instance, if you have inherited a deployable that requires an unsupported runtime - speak to Engineering so that we have awareness of the impact to you and your project and can try to help. See [Working with Lambda container images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html).
