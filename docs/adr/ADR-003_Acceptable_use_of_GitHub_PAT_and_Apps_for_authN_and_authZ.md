@@ -23,7 +23,8 @@
     - [Rationale](#rationale)
   - [Notes](#notes)
     - [GitHub App setup](#github-app-setup)
-    - [GitHub App limits](#github-app-limits)
+    - [Diagram](#diagram)
+    - [Limitations](#limitations)
     - [Examples of acquiring access token](#examples-of-acquiring-access-token)
   - [Tags](#tags)
 
@@ -135,13 +136,54 @@ To be executed by a GitHub organisation administrator:
   - Delegate access to this mailbox for the GitHub organisation owners, administrators and the engineering team
 - Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above
 - [Register new GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) under the `[repository-name]-app` bot account with a name following the `[Team] [Repository Name] [Purpose]` pattern
-  - Set the relevant permissions based on the team's requirements
+  - Make note of the `App ID`
+  - Generate and store securely a `Private key` for the app
+  - Provide a `Homepage URL` to the repository this app will operate on
+  - Make this app `public`
+  - Set the relevant `Repository permissions` based on the team's requirements. There should be no organisation or account permissions set at all
 
 To be executed by a GitHub organisation owner:
 
 - Install the `[Team] [Repository Name] [Purpose]` app on the GitHub organisation and set repository access to the `[repository-name]` only
 
-### GitHub App limits
+### Diagram
+
+```mermaid
+C4Context
+  title Context diagram showing the GitHub App setup
+  Enterprise_Boundary(b0, "Internal Developer Platform, part of the NHS England CoE") {
+
+    Boundary(b1, "Engineering Team", "boundary") {
+      System(repo, "Repository", "Repository<br>[repository-name]")
+      System(github_app_runner, "GitHub App (runner)", "Bot app runner<br>for the repository")
+    }
+    Rel(repo, github_app_runner, "Is managed by")
+
+    Boundary(b2, "Bot", "boundary") {
+      System(email_account, "NHSmail shared account", "Bot email<br>england.[repository-name]-app@nhs.net")
+      System(github_account, "GitHub account", "Bot user<br>[repository-name]-app")
+      System(github_app_registration, "GitHub App (registration)", "Bot app registration<br>[repository-name]-app")
+    }
+    Rel(github_account, email_account, "Belongs to")
+    Rel(github_app_registration, github_account, "Is registered by")
+
+    Boundary(b3, "GitHub Admins", "boundary") {
+      System(github_org, "GitHub organisation", "Org")
+      System(github_app_installation, "GitHub App (installation)", "Bot app installation<br>for the repository")
+    }
+    Rel(github_app_installation, github_org, "Is installed within")
+
+    Rel(repo, github_org, "Belongs to")
+    Rel(repo, github_account, "Can accept contributions from")
+    Rel(github_app_runner, github_app_installation, "Authenticates via")
+    Rel(github_app_installation, github_app_registration, "Is an app installation of")
+
+    UpdateElementStyle(repo, $bgColor="grey")
+    UpdateElementStyle(github_app_runner, $bgColor="grey")
+  }
+```
+
+### Limitations
 
 - Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
 - [Access rate limits apply](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps) depending on the number of repositories or users within organisation
