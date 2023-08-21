@@ -191,6 +191,12 @@ C4Context
   }
 ```
 
+Please, see the above being implemented for the _update from template_ capability:
+
+- [Repository and GitHub App (runner)](https://github.com/nhs-england-tools/update-from-template-app) for the "Update from Template" app. The runner is built on a GitHub Action but it can be a serverless workload or self-hosted compute
+- [GitHub account (bot)](https://github.com/update-from-template-app) linked to an `nhs.net` email address, but not part of any GitHub organisation
+- [GitHub App (registration)](https://github.com/apps/nhs-england-update-from-template) to be installed within the GitHub organisations in use, e.g. `nhs-england-tools`
+
 ### Limitations
 
 - Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
