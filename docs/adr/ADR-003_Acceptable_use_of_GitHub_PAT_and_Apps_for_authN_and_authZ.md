@@ -29,7 +29,7 @@
 
 ## Context
 
-As teams increasingly adopt GitHub and invest in refining development processes, there is a growing need to facilitate automated bot access to repositories, for tasks such as managing Pull Requests or integrating self-hosted runners with preferred Cloud providers. While GitHub's official documentation provides detailed technical instructions, it might not always offer a clear and holistic understanding of the platform's authentication and authorisation mechanisms. This document seeks to bridge that gap. It elucidates not just the "how," but also the "why," "when," and "what" behind these mechanisms, aiming to promote both effective and secure usage.
+As teams increasingly adopt GitHub and invest in refining development processes, there is a growing need to facilitate automated bot access to repositories, for tasks such as managing Pull Requests or integrating self-hosted runners with preferred Cloud providers. While GitHub's official documentation provides detailed technical instructions, it might not always offer a clear and holistic understanding of the platform's authentication and authorisation mechanisms. This document seeks to bridge that gap. It elucidates not just the "_how_" but also the "_why_", "_when_", and "_what_" behind these mechanisms, aiming to promote both effective and secure usage.
 
 ## Decision
 
