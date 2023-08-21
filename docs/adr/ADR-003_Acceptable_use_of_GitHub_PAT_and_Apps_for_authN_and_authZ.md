@@ -136,7 +136,7 @@ To be executed by a GitHub organisation administrator:
 - Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net) by filling in the `New shared mailbox request` form using the Internal Portal (ServiceNow)
   - Delegate access to this mailbox for the GitHub organisation owners, administrators and the engineering team
 - Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above
-- [Register new GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) under the `[repository-name]-app` bot account with a name following the `[Team] [Repository Name] [Purpose]` pattern
+- [Register new GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) under the `[repository-name]-app` bot account with a name following a pattern that could include information like `[Team] [Repository Name] [Purpose]`, which would help to search for and identify owners of the app once it is installed within the GitHub organisation
   - Make note of the `App ID`
   - Generate and store securely a `Private key` for the app
   - Provide a `Homepage URL` to the repository this app will operate on
@@ -163,7 +163,7 @@ C4Context
     Boundary(b2, "Bot", "boundary") {
       System(email_account, "NHSmail shared account", "Bot email<br>england.[repository-name]-app@nhs.net")
       System(github_account, "GitHub account", "Bot user<br>[repository-name]-app")
-      System(github_app_registration, "GitHub App (registration)", "Bot app registration<br>[repository-name]-app")
+      System(github_app_registration, "GitHub App (registration)", "Bot app registration<br>'[Team] [Repository Name] [Purpose]'")
     }
     Rel(github_account, email_account, "Belongs to")
     Rel(github_app_registration, github_account, "Is registered by")
