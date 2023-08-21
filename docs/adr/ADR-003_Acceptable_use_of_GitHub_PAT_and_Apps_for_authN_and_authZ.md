@@ -6,7 +6,7 @@
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
->| Owners       | `Dan Stefaniuk, ?` |
+>| Owners       | `?` |
 
 ---
 
@@ -22,9 +22,9 @@
       - [GitHub App](#github-app)
     - [Rationale](#rationale)
   - [Notes](#notes)
-    - [GitHub App limits](#github-app-limits)
     - [GitHub App setup](#github-app-setup)
-    - [Examples of acquiring GitHub App access token](#examples-of-acquiring-github-app-access-token)
+    - [GitHub App limits](#github-app-limits)
+    - [Examples of acquiring access token](#examples-of-acquiring-access-token)
   - [Tags](#tags)
 
 ## Context
@@ -118,17 +118,13 @@ Use app when:
 
 - **Server-to-server communication**: Unlike users, GitHub Apps have their own identities and can perform actions directly on a repository without a user action triggering them. They are associated with the GitHub account (individual or organisation) that owns the app, not necessarily the account that installed the app. In this model the GitHub App can perform actions based on the permissions it was given during setup. These permissions are separate from any user permissions and allow the app to interact with the GitHub API directly. For example, an app might be set up to automatically run a test suite whenever code is pushed to a repository. This action would happen regardless of which user pushed the code.
 
+This method of authentication and authorisation is <u>intended for the engineering teams</u> to implement and support automated processes. The GitHub App OAuth access is outside the scope of this document, as this mechanism is not employed in the context of automation.
+
 ### Rationale
 
 This guide describes the essence of the fundamental aspects of GitHub authentication and authorisation mechanisms along with the common use cases identified by the GitHub organisation administrators of the NHS England.
 
 ## Notes
-
-### GitHub App limits
-
-- Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
-- [Access rate limits apply](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps) depending on the number of repositories or users within organisation
-- The app name cannot exceed 34 character
 
 ### GitHub App setup
 
@@ -145,7 +141,13 @@ To be executed by a GitHub organisation owner:
 
 - Install the `[Team] [Repository Name] [Purpose]` app on the GitHub organisation and set repository access to the `[repository-name]` only
 
-### Examples of acquiring GitHub App access token
+### GitHub App limits
+
+- Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
+- [Access rate limits apply](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps) depending on the number of repositories or users within organisation
+- The app name cannot exceed 34 character
+
+### Examples of acquiring access token
 
 - [Bash](./assets/ADR-003/examples/bash/README.md)
 - [Golang](./assets/ADR-003/examples/golang/README.md)
