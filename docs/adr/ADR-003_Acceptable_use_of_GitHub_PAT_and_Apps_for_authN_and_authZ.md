@@ -118,7 +118,7 @@ Use app when:
 
 - **Server-to-server communication**: Unlike users, GitHub Apps have their own identities and can perform actions directly on a repository without a user action triggering them. They are associated with the GitHub account (individual or organisation) that owns the app, not necessarily the account that installed the app. In this model the GitHub App can perform actions based on the permissions it was given during setup. These permissions are separate from any user permissions and allow the app to interact with the GitHub API directly. For example, an app might be set up to automatically run a test suite whenever code is pushed to a repository. This action would happen regardless of which user pushed the code.
 
-This method of authentication and authorisation is <u>intended for the engineering teams</u> to implement and support automated processes. The GitHub App OAuth access is outside the scope of this document, as this mechanism is not employed in the context of automation.
+This method of authentication and authorisation is <u>intended for the engineering teams</u> to implement and support automated processes. Setting up the [GitHub OAuth App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps) access is outside the scope of this document as this mechanism should not be employed in the context of development process automation.
 
 ### Rationale
 
