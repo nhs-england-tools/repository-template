@@ -21,33 +21,29 @@
       - [GitHub PAT (Personal Access Token)](#github-pat-personal-access-token)
       - [GitHub App](#github-app)
     - [Rationale](#rationale)
-  - [GitHub App notes](#github-app-notes)
-    - [Limits](#limits)
-    - [Setup](#setup)
-    - [Examples of acquiring the GitHub App access token](#examples-of-acquiring-the-github-app-access-token)
-      - [Bash](#bash)
-      - [Python](#python)
-      - [Golang](#golang)
-      - [Node.js (TypeScript)](#nodejs-typescript)
+  - [Notes](#notes)
+    - [GitHub App limits](#github-app-limits)
+    - [GitHub App setup](#github-app-setup)
+    - [Examples of acquiring GitHub App access token](#examples-of-acquiring-github-app-access-token)
   - [Tags](#tags)
 
 ## Context
 
-TODO: Context, e.g. it is not clear when to use which mechanism and how
+As teams increasingly adopt GitHub and invest in refining development processes, there is a growing need to facilitate automated bot access to repositories, for tasks such as managing Pull Requests or integrating self-hosted runners with preferred Cloud providers. While GitHub's official documentation provides detailed technical instructions, it might not always offer a clear and holistic understanding of the platform's authentication and authorisation mechanisms. This document seeks to bridge that gap. It elucidates not just the "how," but also the "why," "when," and "what" behind these mechanisms, aiming to promote both effective and secure usage.
 
 ## Decision
 
 ### Assumptions
 
-_A **GitHub App** is a type of integration that you can build to interact with and extend the functionality of GitHub. You can build a GitHub App to provide flexibility and reduce friction in your processes, without needing to sign in a user or create a service account._
+_A **GitHub App** is a type of integration that you can build to interact with and extend the functionality of GitHub. You can build a GitHub App to provide flexibility and reduce friction in your processes, without needing to sign in a user or create a service account._ [^1]
 
-_**Personal access tokens** are an alternative to using passwords for authentication to GitHub when using the GitHub API or the command line. Personal access tokens are intended to access GitHub resources on behalf of yourself._
+_**Personal access tokens** are an alternative to using passwords for authentication to GitHub when using the GitHub API or the command line. Personal access tokens are intended to access GitHub resources on behalf of yourself._ [^2]
 
-_When you enable GitHub Actions, GitHub installs a GitHub App on your repository. The **GITHUB_TOKEN** secret is a GitHub App installation access token. You can use the installation access token to authenticate on behalf of the GitHub App installed on your repository._
+_When you enable GitHub Actions, GitHub installs a GitHub App on your repository. The **GITHUB_TOKEN** secret is a GitHub App installation access token. You can use the installation access token to authenticate on behalf of the GitHub App installed on your repository._ [^3]
 
 ### Drivers
 
-The aim of this decision record, or more precisely, this guide, is to provide clear guidelines on the appropriate use of GitHub's authentication and authorisation mechanisms. Our objective is to ensure that any automated process utilises correct authentication when executing GitHub actions and workflows. These processes underpin the implementation of the CI/CD pipeline. By adhering to these guidelines, we can maintain robust, secure and effective operations.
+The aim of this decision record, or more precisely, this guide, is to provide clear guidelines on the appropriate use of GitHub's authentication and authorisation mechanisms. Our objective is to ensure that any automated process utilises correct authentication when executing GitHub Actions and Workflows. These processes underpin the implementation of the CI/CD (Continuous Integration and Continuous Delivery) pipeline. By adhering to these guidelines, we can maintain robust, secure and effective operations.
 
 ### Options
 
@@ -83,14 +79,16 @@ There are three options available to support automated GitHub Action and Workflo
 
 A `GITHUB_TOKEN` is automatically generated and used within GitHub Action and Workflow for tasks related to the current repository such as creating or updating issues, pushing commits, etc.
 
-- **Scope**: The `GITHUB_TOKEN` is automatically created by GitHub in each run of a GitHub Action and Workflow, with its scope restricted to the repository initiating the workflow. The permissions of the `GITHUB_TOKEN` are limited to read and write access to the repository.
+- **Scope**: The `GITHUB_TOKEN` is automatically created by GitHub in each run of a GitHub Action and Workflow, with its scope restricted to the repository initiating the workflow. The permissions of the `GITHUB_TOKEN` are limited to read and write access to the repository files, with an exception of write access to the `.github/workflows` directory.
 - **Life Span**: The `GITHUB_TOKEN` has a temporary lifespan automatically expiring after the completion of the job that initiated its creation.
+
+This method <u>enables basic operations</u> expected from the repository pipeline, like accessing GitHub secret variables.
 
 #### GitHub PAT (Personal Access Token)
 
 Use personal access token when:
 
-- **Scripted access**: When you are writing scripts that automate tasks related to your repositories, PATs can be an excellent choice. These tokens can authenticate your script with GitHub allowing it to perform various operations like cloning repositories, creating issues, or fetching data from the API. Since PATs can act with nearly all the same scopes as a user, they can be a versatile tool for script-based interactions with your repositories.
+- **Scripted access**: When you are writing scripts that automate tasks related to your repositories PATs can be a good choice. These tokens can authenticate your script with GitHub allowing it to perform various operations like cloning repositories, creating issues, or fetching data from the API. Since PATs can act with nearly all the same scopes as a user, they can be a versatile tool for script-based interactions with your repositories.
 
 - **Command-line access**: If you are directly using the GitHub API from the command-line (e.g. with `curl`), PATs provide a convenient way to authenticate. They allow you to perform a wide range of actions, including getting the number of stars on a repository, posting a comment on an issue or triggering a new build or deployment. In this use case a common task that a contributor has to perform daily can be automated using a PAT generated with a scope specifically for it.
 
@@ -100,11 +98,13 @@ Do not use it when:
 
 - **Sharing your account**: PATs should never be used to provide access to your GitHub account to others. Instead, use GitHub's built-in features for collaboration and access management, such as adding collaborators to repositories or using organisations and teams.
 
-- **Public repositories or code**: PATs provide broad access to your account, so you should never embed them in your code, especially if that code is public. This could allow someone to take control of your account, modify your repositories or steal your data. The [secret scan pre-commit hook](../../scripts/githooks/secret-scan-pre-commit.sh) that is part of this repository template should prevent you from doing so anyway.
+- **Public repositories or code**: PATs provide broad access to your account, so you should never embed them in your code, especially if that code is public. This could allow someone to take control of your account, modify your repositories or steal your data. The [scan secrets functionality](../../docs/user-guides/Scan_secrets.md) that is part of this repository template should prevent you from doing so anyway.
 
 - **Broad permissions**: While PATs can have broad permissions, you should aim to restrict each token's scope to what is necessary for its purpose. For instance, a token used only for reading repository metadata does not need write or admin access.
 
 - **Long-term usage without rotation**: To limit potential exposure of your PAT, it is recommended to periodically change or "rotate" your tokens. This is a common security best practice for all kinds of secret keys or tokens.
+
+This method of authentication and authorisation using the fine-grained PAT for the purpose of automation should mostly be <u>used by the GitHub organisation owners, administrators and maintainers</u>.
 
 #### GitHub App
 
@@ -112,7 +112,7 @@ Use app when:
 
 - **Acting on behalf of a user or an organisation**: GitHub Apps can be installed directly onto an organisation or a user account and can access specific repositories. They act as separate entities and do not need a specific user to authenticate actions, thus separating the app's actions from individual users and preventing user-related issues (like a user leaving the organisation) from disrupting the app's operation. In this model, a GitHub App can act on behalf of a user to perform actions that the user has permissions for. For example, if a GitHub App is used to manage issues in a repository, it can act on behalf of a user to open, close, or comment on issues. The actions the app can perform are determined by the user's permissions and the permissions granted to the app during its installation.
 
-- **When you need fine-grained permissions**: GitHub Apps provide more detailed control over permissions than PATs. You can set access permissions on a per-resource basis (issues, pull requests, repositories, etc.). This allows you to follow the principle of least privilege, granting your app only the permissions it absolutely needs.
+- **When you need fine-grained permissions**: GitHub Apps provide more detailed control over permissions than the classic PAT. You can set access permissions on a per-resource basis (issues, pull requests, repositories, etc.). This allows you to follow the principle of least privilege, granting your app only the permissions it absolutely needs.
 
 - **Webhook events**: GitHub Apps can be configured to receive a variety of webhook events. Unlike personal tokens, apps can receive granular event data and respond accordingly. For instance, an app can listen for `push` events to trigger a CI/CD pipeline or `issue_comment` events to moderate comments.
 
@@ -120,143 +120,42 @@ Use app when:
 
 ### Rationale
 
-This guide describes the essence of the fundamental aspects of GitHub authentication and authorisation mechanisms along with the common use cases.
+This guide describes the essence of the fundamental aspects of GitHub authentication and authorisation mechanisms along with the common use cases identified by the GitHub organisation administrators of the NHS England.
 
-## GitHub App notes
+## Notes
 
-### Limits
+### GitHub App limits
 
 - Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
-- The app name cannot exceed 34 character
 - [Access rate limits apply](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps) depending on the number of repositories or users within organisation
+- The app name cannot exceed 34 character
 
-### Setup
+### GitHub App setup
 
-To be executed by a GitHub Administrator:
+To be executed by a GitHub organisation administrator:
 
 - Identify the GitHub repository name for which the team has requested a GitHub App integration
-- Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net)
+- Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net) by filling in the `New shared mailbox request` form using the Internal Portal (ServiceNow)
   - Delegate access to this mailbox for the GitHub organisation owners, administrators and the engineering team
 - Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above
-- Register a GitHub App under the `[repository-name]-app` bot account with the name `[Team] [Repository Name] [Purpose]`
+- [Register new GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) under the `[repository-name]-app` bot account with a name following the `[Team] [Repository Name] [Purpose]` pattern
   - Set the relevant permissions based on the team's requirements
 
 To be executed by a GitHub organisation owner:
 
-- Install the `[Team] [Repository Name] [Purpose]` app and set repository access to the `[repository-name]`
+- Install the `[Team] [Repository Name] [Purpose]` app on the GitHub organisation and set repository access to the `[repository-name]` only
 
-### Examples of acquiring the GitHub App access token
+### Examples of acquiring GitHub App access token
 
-#### Bash
-
-Dependencies are `openssl`, `curl`, `jq` and `gh`.
-
-```bash
-export GITHUB_APP_ID=...
-export GITHUB_APP_PK_FILE=...
-export GITHUB_ORG="nhs-england-tools"
-```
-
-[script.sh](./assets/ADR-003/examples/bash/script.sh)
-
-```bash
-$ cd docs/adr/ADR-003/examples/bash
-$ ./script.sh
-GITHUB_TOKEN=ghs_...
-```
-
-```bash
-$ GITHUB_TOKEN=ghs_...; echo "$GITHUB_TOKEN" | gh auth login --with-token
-$ gh auth status
-github.com
-  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
-  ✓ Git operations for github.com configured to use https protocol.
-  ✓ Token: ghs_************************************
-```
-
-#### Python
-
-Dependencies are listed in the `requirements.txt` file.
-
-```bash
-export GITHUB_APP_ID=...
-export GITHUB_APP_PK_FILE=...
-export GITHUB_ORG="nhs-england-tools"
-```
-
-[main.py](./assets/ADR-003/examples/python/main.py)
-
-```bash
-$ cd docs/adr/ADR-003/examples/python
-$ pip install -r requirements.txt
-$ python main.py
-GITHUB_TOKEN=ghs_...
-```
-
-```bash
-$ GITHUB_TOKEN=ghs_...;; echo "$GITHUB_TOKEN" | gh auth login --with-token
-$ gh auth status
-github.com
-  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
-  ✓ Git operations for github.com configured to use https protocol.
-  ✓ Token: ghs_************************************
-```
-
-#### Golang
-
-Dependencies are listed in the `go.mod` file.
-
-```bash
-export GITHUB_APP_ID=...
-export GITHUB_APP_PK_FILE=...
-export GITHUB_ORG="nhs-england-tools"
-```
-
-[main.go](./assets/ADR-003/examples/golang/main.go)
-
-```bash
-$ cd docs/adr/ADR-003/examples/golang
-$ go run main.go
-GITHUB_TOKEN=ghs_...
-```
-
-```bash
-$ GITHUB_TOKEN=ghs_...; echo "$GITHUB_TOKEN" | gh auth login --with-token
-$ gh auth status
-github.com
-  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
-  ✓ Git operations for github.com configured to use https protocol.
-  ✓ Token: ghs_************************************
-```
-
-#### Node.js (TypeScript)
-
-Dependencies are listed in the `package.json` file.
-
-```bash
-export GITHUB_APP_ID=...
-export GITHUB_APP_PK_FILE=...
-export GITHUB_ORG="nhs-england-tools"
-```
-
-[main.ts](./assets/ADR-003/examples/nodejs/main.ts)
-
-```bash
-$ cd docs/adr/ADR-003/examples/nodejs
-$ npm install
-$ npm start -s
-GITHUB_TOKEN=ghs_...
-```
-
-```bash
-$ GITHUB_TOKEN=ghs_...; echo "$GITHUB_TOKEN" | gh auth login --with-token
-$ gh auth status
-github.com
-  ✓ Logged in to github.com as nhs-england-update-from-template[bot] (keyring)
-  ✓ Git operations for github.com configured to use https protocol.
-  ✓ Token: ghs_************************************
-```
+- [Bash](./assets/ADR-003/examples/bash/README.md)
+- [Golang](./assets/ADR-003/examples/golang/README.md)
+- [Node.js (TypeScript)](./assets/ADR-003/examples/nodejs/README.md)
+- [Python](./assets/ADR-003/examples/python/README.md)
 
 ## Tags
 
 `#maintainability, #security`
+
+[^1]: [About creating GitHub Apps](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps)
+[^2]: [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+[^3]: [Publishing and installing a package with GitHub Actions](https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions)
