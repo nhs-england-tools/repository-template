@@ -26,7 +26,7 @@
     - [Diagram](#diagram)
     - [Limitations](#limitations)
     - [Examples of acquiring access token](#examples-of-acquiring-access-token)
-    - [Actions](#actions)
+  - [Actions](#actions)
   - [Tags](#tags)
   - [Footnotes](#footnotes)
 
@@ -204,7 +204,7 @@ C4Context
 - [Node.js (TypeScript)](./assets/ADR-003/examples/nodejs/README.md)
 - [Python](./assets/ADR-003/examples/python/README.md)
 
-### Actions
+## Actions
 
 - [ ] Provide an example of commit signing by bot in the unattended mode, i.e. include a link on how this is implemented in the [Update from Template](https://github.com/nhs-england-tools/update-from-template-app/blob/c1b87f3aaa568caf4a8bfdd5b07d0c4ef88a2e4a/entrypoint.sh#L81) app.
 
