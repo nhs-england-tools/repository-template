@@ -2,7 +2,7 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `20/08/2023` |
+>| Date         | `21/08/2023` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
@@ -27,6 +27,7 @@
     - [Limitations](#limitations)
     - [Examples of acquiring access token](#examples-of-acquiring-access-token)
   - [Tags](#tags)
+  - [Footnotes](#footnotes)
 
 ## Context
 
@@ -199,6 +200,8 @@ C4Context
 ## Tags
 
 `#maintainability, #security`
+
+## Footnotes
 
 [^1]: [About creating GitHub Apps](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps)
 [^2]: [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
