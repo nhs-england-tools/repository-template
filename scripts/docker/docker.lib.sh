@@ -76,7 +76,7 @@ function docker-run() {
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
     ${args:-} \
-    "${DOCKER_IMAGE}:$(_get-version)" \
+    "${DOCKER_IMAGE}:$(dir="$dir" _get-version)" \
     ${cmd:-}
 }
 
@@ -87,10 +87,9 @@ function docker-push() {
 
   local dir=${dir:-$PWD}
   # Push all the image tags based on the stated versions
-  for version in $(_get-all-versions); do
+  for version in $(dir="$dir" _get-all-versions) latest; do
     docker push "${DOCKER_IMAGE}:${version}"
   done
-  docker push "${DOCKER_IMAGE}:latest"
 }
 
 # Remove Docker resources.
@@ -99,7 +98,7 @@ function docker-push() {
 function docker-clean() {
 
   local dir=${dir:-$PWD}
-  for version in $(_get-all-versions) latest; do
+  for version in $(dir="$dir" _get-all-versions) latest; do
     docker rmi "${DOCKER_IMAGE}:${version}" > /dev/null 2>&1 ||:
   done
   rm -f \
