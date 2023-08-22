@@ -128,9 +128,14 @@ function docker-get-image-version-and-pull() {
     [ -n "$line" ] && version=$(echo "$line" | awk '{print $2}')
   fi
 
-  # Split the image version into two, tag name and digest sha256
-  tag="${version%%@*}"
-  digest="${version##*@}"
+  # Split the image version into two, tag name and digest sha256.
+  # E.g. for the given entry "docker/image 1.2.3@sha256:hash" in the
+  # '.tool-versions' file, the following variables will be set:
+  #   version="1.2.3@sha256:hash"
+  #   tag="1.2.3"
+  #   digest="sha256:hash"
+  tag="$(echo "$version" | sed 's/@.*$//')"
+  digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already
   if ! docker images | grep -q "${name}:${tag}"; then
