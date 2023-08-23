@@ -2,3 +2,11 @@ nodejs 18.16.0
 python 3.10.12
 terraform 1.5.0
 pre-commit 3.3.3
+
+# The section below is reserved for Docker image versions.
+
+# docker/koalaman/shellcheck latest@sha256:0b341f80c643aa5160815746421d22f189ed8d427fe66d639e8b79b15f8b5bf6
+# docker/hadolint/hadolint 2.12.0-alpine@sha256:7dba9a9f1a0350f6d021fb2f6f88900998a4fb0aaf8e4330aa8c38544f04db42
+
+# docker/alpine 3.18.3@sha256:c5c5fda71656f28e49ac9c5416b3643eaa6a108a8093151d6d1afc9463be8e33
+# docker/python 3.10.12-alpine3.18@sha256:268ba060f59c005d099661a70f53c353f2acd1401ca90f81869a04600cdae6f4

@@ -1,0 +1,55 @@
+# `*:latest` will be replaced with a corresponding version stored in the '.tool-versions' file
+# hadolint ignore=DL3007
+FROM python:3.10.12-alpine3.18@sha256:268ba060f59c005d099661a70f53c353f2acd1401ca90f81869a04600cdae6f4 as base
+
+# === Builder ==================================================================
+
+FROM base AS builder
+COPY ./assets/hello_world/requirements.txt /requirements.txt
+WORKDIR /packages
+RUN set -eux; \
+    \
+    # Install dependencies
+    pip install \
+        --requirement /requirements.txt \
+        --prefix=/packages \
+        --no-warn-script-location \
+        --no-cache-dir
+
+# === Runtime ==================================================================
+
+FROM base
+ENV \
+    LANG="C.UTF-8" \
+    LC_ALL="C.UTF-8" \
+    PYTHONDONTWRITEBYTECODE="1" \
+    PYTHONUNBUFFERED="1" \
+    TZ="UTC"
+COPY --from=builder /packages /usr/local
+COPY ./assets/hello_world /hello_world
+WORKDIR /hello_world
+USER nobody
+CMD [ "python", "app.py" ]
+EXPOSE 8000
+
+# === Metadata =================================================================
+
+ARG IMAGE
+ARG TITLE
+ARG DESCRIPTION
+ARG LICENCE
+ARG GIT_URL
+ARG GIT_BRANCH
+ARG GIT_COMMIT_HASH
+ARG BUILD_DATE
+ARG BUILD_VERSION
+LABEL \
+    org.opencontainers.image.base.name=$IMAGE \
+    org.opencontainers.image.title="$TITLE" \
+    org.opencontainers.image.description="$DESCRIPTION" \
+    org.opencontainers.image.licenses="$LICENCE" \
+    org.opencontainers.image.url=$GIT_URL \
+    org.opencontainers.image.ref.name=$GIT_BRANCH \
+    org.opencontainers.image.revision=$GIT_COMMIT_HASH \
+    org.opencontainers.image.created=$BUILD_DATE \
+    org.opencontainers.image.version=$BUILD_VERSION
