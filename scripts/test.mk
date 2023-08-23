@@ -88,4 +88,4 @@ _test:
 	test-security \
 	test-ui \
 	test-ui-performance \
-	test-unit
+	test-unit \

@@ -58,4 +58,4 @@ docker-shellscript-lint: # Lint all Docker module shell scripts
 	docker-example-lint \
 	docker-example-run \
 	docker-shellscript-lint \
-	docker-test-suite-run
+	docker-test-suite-run \

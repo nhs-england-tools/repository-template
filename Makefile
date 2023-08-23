@@ -33,4 +33,4 @@ config:: # Configure development environment
 	clean \
 	config \
 	dependencies \
-	deploy
+	deploy \
