@@ -1,8 +1,14 @@
 name: "Perform static analysis"
 description: "Perform static analysis"
 inputs:
+  sonar_organisation_key:
+    description: "Sonar organisation key, used to identify the project"
+    required: false
+  sonar_project_key:
+    description: "Sonar project key, used to identify the project"
+    required: false
   sonar_token:
-    description: "Sonar token API key"
+    description: "Sonar token, the API key"
     required: false
 runs:
   using: "composite"
@@ -16,5 +22,7 @@ runs:
       if: steps.check.outputs.secret_exist == 'true'
       run: |
         export BRANCH_NAME=${GITHUB_HEAD_REF:-$(echo $GITHUB_REF | sed 's#refs/heads/##')}
+        export SONAR_ORGANISATION_KEY=${{ inputs.sonar_organisation_key }}
+        export SONAR_PROJECT_KEY=${{ inputs.sonar_project_key }}
         export SONAR_TOKEN=${{ inputs.sonar_token }}
         ./scripts/reports/perform-static-analysis.sh

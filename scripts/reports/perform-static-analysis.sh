@@ -35,6 +35,8 @@ function create-report() {
     sonarsource/sonar-scanner-cli:$image_version \
       -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
       -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
+      -Dsonar.organization="$(echo $SONAR_ORGANISATION_KEY)" \
+      -Dsonar.projectKey="$(echo $SONAR_PROJECT_KEY)" \
       -Dsonar.token="$(echo $SONAR_TOKEN)"
 }
 
