@@ -12,6 +12,7 @@
     - [Make](#make)
     - [Bash](#bash)
     - [Make and Bash working together](#make-and-bash-working-together)
+    - [Global variables](#global-variables)
   - [FAQ](#faq)
 
 ## Overview
@@ -195,6 +196,11 @@ Run it:
 ```shell
 foo=bar make some-target
 ```
+
+### Global variables
+
+- Explain usage of `VERBOSE` variable
+- Explain usage of `FORCE_USE_DOCKER` variable
 
 ## FAQ
 

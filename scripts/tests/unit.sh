@@ -13,7 +13,7 @@ cd "$(git rev-parse --show-toplevel)"
 #   python manage.py test
 #   npm run test
 #
-# or whatever is appropriate to your project.  You should *only* run your fast
+# or whatever is appropriate to your project. You should *only* run your fast
 # tests from here. If you want to run other test suites, see the predefined
 # tasks in scripts/test.mk.
 

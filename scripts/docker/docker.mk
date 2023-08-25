@@ -1,21 +1,31 @@
 # This file is for you! Edit it to implement your own Docker make targets.
 
 # ==============================================================================
-# Custom implementation
+# Custom implementation - implementation of a make target should not exceed 5 lines of effective code.
+# In most cases there should be no need to modify the existing make targets.
 
-DOCKER_IMAGE := ghcr.io/org/repo
-DOCKER_TITLE := My Docker image
+# Your default 'DOCKER_IMAGE' and 'DOCKER_TITLE' are passed to the functions as environment variables
+DOCKER_IMAGE := $(or $(or $(DOCKER_IMAGE), $(IMAGE)), ghcr.io/org/repo)
+DOCKER_TITLE := $(or $(or $(DOCKER_TITLE), $(TITLE)), My Docker image)
 
 docker-build: # Build Docker image - optional: dir=[path to the Dockerfile to use, default is '.']
 	source ./scripts/docker/docker.lib.sh
-	docker-build
+	docker-build # 'dir' is passed to the function as environment variables, if set
 
-clean:: # Remove Docker resources
+clean:: # Remove Docker resources - optional: dir=[path to the image directory where the Dockerfile is located, default is '.']
 	source ./scripts/docker/docker.lib.sh
-	docker-clean
+	docker-clean # 'dir' is passed to the function as environment variables, if set
 
 # ==============================================================================
-# Module tests and examples
+# Quality checks - please, DO NOT edit this section!
+
+docker-shellscript-lint: # Lint all Docker module shell scripts
+	for file in $$(find ./scripts/docker -type f -name "*.sh"); do
+		file=$$file ./scripts/shellscript-linter.sh
+	done
+
+# ==============================================================================
+# Module tests and examples - please, DO NOT edit this section!
 
 docker-test-suite-run: # Run Docker test suite
 	./scripts/docker/tests/docker.test.sh
@@ -41,13 +51,11 @@ docker-example-run: # Run Docker example
 	"
 	docker-run
 
-# ==============================================================================
-# Quality checks
-
-docker-shellscript-lint: # Lint all Docker module shell scripts
-	for file in $$(find ./scripts/docker -type f -name "*.sh"); do
-		file=$$file ./scripts/shellscript-linter.sh
-	done
+docker-example-clean: # Remove Docker example resources
+	source ./scripts/docker/docker.lib.sh
+	cd ./scripts/docker/examples/python
+	DOCKER_IMAGE=repository-template/docker-example-python
+	docker-clean
 
 # ==============================================================================
 
@@ -55,6 +63,7 @@ docker-shellscript-lint: # Lint all Docker module shell scripts
 	clean \
 	docker-build \
 	docker-example-build \
+	docker-example-clean \
 	docker-example-lint \
 	docker-example-run \
 	docker-shellscript-lint \

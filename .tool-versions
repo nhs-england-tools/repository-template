@@ -1,12 +1,25 @@
-nodejs 18.16.0
-python 3.10.12
-terraform 1.5.0
+nodejs 18.17.1 # Always check AWS and Azure runtime support
+python 3.11.4 # Always check AWS and Azure runtime support
+terraform 1.5.6
 pre-commit 3.3.3
 
+# ==============================================================================
 # The section below is reserved for Docker image versions.
 
-# docker/koalaman/shellcheck latest@sha256:0b341f80c643aa5160815746421d22f189ed8d427fe66d639e8b79b15f8b5bf6
-# docker/hadolint/hadolint 2.12.0-alpine@sha256:7dba9a9f1a0350f6d021fb2f6f88900998a4fb0aaf8e4330aa8c38544f04db42
-
+# alpine, SEE: https://hub.docker.com/_/alpine/tags
 # docker/alpine 3.18.3@sha256:c5c5fda71656f28e49ac9c5416b3643eaa6a108a8093151d6d1afc9463be8e33
-# docker/python 3.10.12-alpine3.18@sha256:268ba060f59c005d099661a70f53c353f2acd1401ca90f81869a04600cdae6f4
+
+# nodejs, SEE: https://hub.docker.com/_/node/tags
+# docker/node 18.17.1-alpine3.18@sha256:982b5b6f07cd9241c9ebb163829067deac8eaefc57cfa8f31927f4b18943d971
+
+# python, SEE: https://hub.docker.com/_/python/tags
+# docker/python 3.11.4-alpine3.18@sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86
+
+# terraform, SEE: https://hub.docker.com/r/hashicorp/terraform/tags
+# docker/hashicorp/terraform 1.5.6@sha256:180a7efa983386a27b43657ed610e9deed9e6c3848d54f9ea9b6cb8a5c8c25f5
+
+# shellcheck, SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
+# docker/koalaman/shellcheck latest@sha256:e40388688bae0fcffdddb7e4dea49b900c18933b452add0930654b2dea3e7d5c
+
+# hadolint, SEE: https://hub.docker.com/r/hadolint/hadolint/tags
+# docker/hadolint/hadolint 2.12.0-alpine@sha256:7dba9a9f1a0350f6d021fb2f6f88900998a4fb0aaf8e4330aa8c38544f04db42

@@ -2,9 +2,10 @@
 # the project as automated steps to be executed on locally and in the CD pipeline.
 
 include ./scripts/init.mk
-include ./scripts/test.mk
 
-# Example targets are: dependencies, build, publish, deploy, clean, etc.
+# ==============================================================================
+
+# Example CI/CD targets are: dependencies, build, publish, deploy, clean, etc.
 
 dependencies: # Install dependencies needed to build and test the project
 	# TODO: Implement installation of your project dependencies
@@ -27,6 +28,8 @@ config:: # Configure development environment
 		nodejs-install \
 		python-install \
 		terraform-install
+
+# ==============================================================================
 
 .SILENT: \
 	build \
