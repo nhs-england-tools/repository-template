@@ -211,6 +211,8 @@ function _replace-image-latest-by-specific-version() {
       sed -i "s;FROM ${name}:latest;FROM ${name}:${version};g" "${dir}/Dockerfile.effective"
     done
   fi
+  # Do not ignore the issue if 'latest' is used in the effective image
+  sed -Ei "/# hadolint ignore=DL3007$/d" "${dir}/Dockerfile.effective"
 }
 
 # Append metadata to the end of Dockerfile.

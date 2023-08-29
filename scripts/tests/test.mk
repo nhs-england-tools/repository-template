@@ -66,11 +66,11 @@ test: # Run all the test tasks
 
 _test:
 	set -e
-	SCRIPT="./scripts/tests/${name}.sh"
-	if [ -e "$${SCRIPT}" ]; then
-		exec $$SCRIPT
+	script="./scripts/tests/${name}.sh"
+	if [ -e "$${script}" ]; then
+		exec $${script}
 	else
-		echo "make test-${name} not implemented: $${SCRIPT} not found" >&2
+		echo "make test-${name} not implemented: $${script} not found" >&2
 	fi
 
 .SILENT: \

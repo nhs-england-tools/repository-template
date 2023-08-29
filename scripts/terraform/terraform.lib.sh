@@ -16,14 +16,9 @@ set -euo pipefail
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
 #   opts=[options to pass to the Terraform init command, default is none/empty]
-# shellcheck disable=SC2001,SC2155
 function terraform-init() {
 
-  local dir="$(echo "${dir:-$PWD}" | sed "s#$PWD#.#")"
-  local cmd="-chdir=$dir init ${opts:-}"
-  local project_dir="$(git rev-parse --show-toplevel)"
-
-  cmd="$cmd" "$project_dir/scripts/terraform/terraform.sh"
+  _terraform init # 'dir' and 'opts' are passed to the function as environment variables, if set
 }
 
 # Plan Terraform changes.
@@ -32,11 +27,7 @@ function terraform-init() {
 #   opts=[options to pass to the Terraform plan command, default is none/empty]
 function terraform-plan() {
 
-  local dir="$(echo "${dir:-$PWD}" | sed "s#$PWD#.#")"
-  local cmd="-chdir=$dir plan ${opts:-}"
-  local project_dir="$(git rev-parse --show-toplevel)"
-
-  cmd="$cmd" "$project_dir/scripts/terraform/terraform.sh"
+  _terraform plan # 'dir' and 'opts' are passed to the function as environment variables, if set
 }
 
 # Apply Terraform changes.
@@ -45,11 +36,7 @@ function terraform-plan() {
 #   opts=[options to pass to the Terraform apply command, default is none/empty]
 function terraform-apply() {
 
-  local dir="$(echo "${dir:-$PWD}" | sed "s#$PWD#.#")"
-  local cmd="-chdir=$dir apply ${opts:-}"
-  local project_dir="$(git rev-parse --show-toplevel)"
-
-  cmd="$cmd" "$project_dir/scripts/terraform/terraform.sh"
+  _terraform apply # 'dir' and 'opts' are passed to the function as environment variables, if set
 }
 
 # Destroy Terraform resources.
@@ -58,36 +45,32 @@ function terraform-apply() {
 #   opts=[options to pass to the Terraform destroy command, default is none/empty]
 function terraform-destroy() {
 
-    local dir="$(echo "${dir:-$PWD}" | sed "s#$PWD#.#")"
-    local cmd="-chdir=$dir apply -destroy ${opts:-}"
-    local project_dir="$(git rev-parse --show-toplevel)"
-
-    cmd="$cmd" "$project_dir/scripts/terraform/terraform.sh"
+    _terraform apply -destroy # 'dir' and 'opts' are passed to the function as environment variables, if set
 }
 
 # Format Terraform code.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
 #   opts=[options to pass to the Terraform fmt command, default is '-recursive']
-# shellcheck disable=SC2001,SC2155
 function terraform-fmt() {
 
-  local dir="$(echo "${dir:-$PWD}" | sed "s#$PWD#.#")"
-  local cmd="-chdir=$dir fmt -recursive ${opts:-}"
-  local project_dir="$(git rev-parse --show-toplevel)"
-
-  cmd="$cmd" "$project_dir/scripts/terraform/terraform.sh"
+  _terraform fmt -recursive # 'dir' and 'opts' are passed to the function as environment variables, if set
 }
 
 # Validate Terraform code.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
 #   opts=[options to pass to the Terraform validate command, default is none/empty]
-# shellcheck disable=SC2001,SC2155
 function terraform-validate() {
 
+  _terraform validate # 'dir' and 'opts' are passed to the function as environment variables, if set
+}
+
+# shellcheck disable=SC2001,SC2155
+function _terraform() {
+
   local dir="$(echo "${dir:-$PWD}" | sed "s#$PWD#.#")"
-  local cmd="-chdir=$dir validate ${opts:-}"
+  local cmd="-chdir=$dir $* ${opts:-}"
   local project_dir="$(git rev-parse --show-toplevel)"
 
   cmd="$cmd" "$project_dir/scripts/terraform/terraform.sh"
@@ -98,11 +81,13 @@ function terraform-validate() {
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
 function terraform-clean() {
 
-  cd "${dir:-$PWD}"
-  rm -rf \
-    .terraform \
-    terraform.log \
-    terraform.tfplan \
-    terraform.tfstate \
-    terraform.tfstate.backup
+  (
+    cd "${dir:-$PWD}"
+    rm -rf \
+      .terraform \
+      terraform.log \
+      terraform.tfplan \
+      terraform.tfstate \
+      terraform.tfstate.backup
+  )
 }
