@@ -16,5 +16,5 @@ runs:
       run: |
         stacks=${{ inputs.root-modules }}
         for dir in $(find infrastructure/environments -maxdepth 1 -mindepth 1 -type d; echo ${stacks//,/$'\n'}); do
-          echo dir=$dir make terraform-validate
+          dir=$dir make terraform-validate
         done
