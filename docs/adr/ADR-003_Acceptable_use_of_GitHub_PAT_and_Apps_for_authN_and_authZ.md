@@ -24,6 +24,8 @@
   - [Notes](#notes)
     - [GitHub App setup](#github-app-setup)
     - [Diagram](#diagram)
+      - [Context diagram showing the GitHub App setup](#context-diagram-showing-the-github-app-setup)
+      - [Authentication flow diagram](#authentication-flow-diagram)
     - [Limitations](#limitations)
     - [Examples of acquiring access token](#examples-of-acquiring-access-token)
   - [Actions](#actions)
@@ -156,9 +158,10 @@ To be executed by a GitHub organisation owner:
 
 ### Diagram
 
+#### Context diagram showing the GitHub App setup
+
 ```mermaid
 C4Context
-  title Context diagram showing the GitHub App setup
   Enterprise_Boundary(b0, "Internal Developer Platform, part of the NHS England CoE") {
 
     Boundary(b1, "Engineering Team", "boundary") {
@@ -196,6 +199,18 @@ Please, see the above being implemented for the _update from template_ capabilit
 - [Repository and GitHub App (runner)](https://github.com/nhs-england-tools/update-from-template-app) for the "Update from Template" app. The runner is built on a GitHub Action but it can be a serverless workload or self-hosted compute
 - [GitHub account (bot)](https://github.com/update-from-template-app) linked to an `nhs.net` email address, but not part of any GitHub organisation
 - [GitHub App (registration)](https://github.com/apps/nhs-england-update-from-template) to be installed within the GitHub organisations in use, e.g. `nhs-england-tools`
+
+#### Authentication flow diagram
+
+The diagram below represents all the steps needed for an app implementation to be authenticated and authorised to perform operations defined by the GitHub App registration and installation.
+
+```mermaid
+graph LR
+  A[Initialisation] -- App ID, App PK --> B[Generate JWT]
+  B -- JWT, Org name --> C[Get installation ID]
+  C -- JWT, Installation ID --> D[Generate Access Token]
+  D -- GITHUB_TOKEN --> E[Perform actions]
+```
 
 ### Limitations
 
