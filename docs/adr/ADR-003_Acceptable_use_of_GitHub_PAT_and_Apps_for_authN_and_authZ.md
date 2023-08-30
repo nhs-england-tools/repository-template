@@ -202,7 +202,7 @@ Please, see the above being implemented for the _update from template_ capabilit
 
 #### Authentication flow diagram
 
-The diagram below represents all the steps needed for an app implementation to be authenticated and authorised to perform operations defined by the GitHub App registration and installation.
+The diagram below represents all the steps needed for an app implementation (aka app runner) to be authenticated and authorised to perform operations defined by the GitHub App registration and installation.
 
 ```mermaid
 graph LR
