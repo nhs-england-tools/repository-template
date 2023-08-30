@@ -13,7 +13,7 @@ export GITHUB_ORG="nhs-england-tools"
 Run script:
 
 ```bash
-$ cd docs/assets/adr/ADR-003/examples/bash
+$ cd docs/adr/assets/ADR-003/examples/bash
 $ ./script.sh
 GITHUB_TOKEN=ghs_...
 ```

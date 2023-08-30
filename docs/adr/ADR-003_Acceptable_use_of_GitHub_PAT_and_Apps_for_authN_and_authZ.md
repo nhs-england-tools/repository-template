@@ -2,11 +2,11 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `21/08/2023` |
+>| Date         | `30/08/2023` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
->| Owners       | `?` |
+>| Owners       | `Amaan Ibn-Nasar, Jacob Gill, Dan Stefaniuk` |
 
 ---
 
@@ -136,7 +136,7 @@ To be executed by a GitHub organisation administrator:
 - Identify the GitHub repository name for which the team has requested a GitHub App integration
 - Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net) by filling in the `New shared mailbox request` form using the Internal Portal (ServiceNow)
   - Delegate access to this mailbox for the GitHub organisation owners, administrators and the engineering team
-- Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above
+- Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above. The bot account should not be added to the organisation; therefore, **no GitHub seat will be taken**. It serves as an identity, but authentication and authorisation are handled via the GitHub App. This avoids granting the bot admin permissions to the repository, enabling commits to be signed by that bot account. Access is controlled solely through the GitHub App.
   - Use the `nhs.net` email address as the default and only email
   - Set the email address as private
   - Make profile private and hide any activity
@@ -201,7 +201,7 @@ Please, see the above being implemented for the _update from template_ capabilit
 
 - Only 100 app registrations are allowed per user or organisation, but there is [no limit on the number of installed apps](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#about-registering-github-apps)
 - [Access rate limits apply](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps) depending on the number of repositories or users within organisation
-- The app name cannot exceed 34 character
+- The app name cannot exceed 34 characters
 
 ### Examples of acquiring access token
 

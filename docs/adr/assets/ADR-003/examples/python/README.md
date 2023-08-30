@@ -13,7 +13,7 @@ export GITHUB_ORG="nhs-england-tools"
 Run script:
 
 ```bash
-$ cd docs/assets/adr/ADR-003/examples/python
+$ cd docs/adr/assets/ADR-003/examples/python
 $ pip install -r requirements.txt
 $ python main.py
 GITHUB_TOKEN=ghs_...

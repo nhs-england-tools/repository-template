@@ -13,9 +13,9 @@ export GITHUB_ORG="nhs-england-tools"
 Run script:
 
 ```bash
-$ cd docs/assets/adr/ADR-003/examples/nodejs
-$ npm install
-$ npm start -s
+$ cd docs/adr/assets/ADR-003/examples/nodejs
+$ yarn install
+$ yarn start
 GITHUB_TOKEN=ghs_...
 ```
 
