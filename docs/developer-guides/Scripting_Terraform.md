@@ -64,6 +64,8 @@ Here are some key features built into this repository's Terraform module:
 
 Run the example:
 
+TODO: vscode integration ?
+
 ```shell
 # AWS console access setup
 export AWS_ACCESS_KEY_ID="..."
@@ -94,6 +96,8 @@ Apply complete! Resources: 0 added, 0 changed, 5 destroyed.
 ### Your stack implementation
 
 Always follow [best practices for using Terraform](https://cloud.google.com/docs/terraform/best-practices-for-terraform) while providing infrastructure as code (IaC) for your service.
+
+TODO: Extend the wording ?
 
 Directory structure:
 

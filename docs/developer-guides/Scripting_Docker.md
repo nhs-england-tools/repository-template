@@ -172,6 +172,7 @@ Support for multiple version entries is provided. For instance, if the `VERSION`
 
 ```text
 yyyymmdd
+yyyymmddHHMM - TODO: comment on that ...
 yyyymmdd-hash
 squirrel
 ```
