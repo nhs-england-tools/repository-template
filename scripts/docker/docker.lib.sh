@@ -159,7 +159,7 @@ function docker-get-image-version-and-pull() {
   digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already
-  if ! docker images | grep -q "${name}.*${tag}"; then
+  if ! docker images | awk '{ print $1 ":" $2 }' | grep "^${name}:${tag}$"; then
     if [ "$digest" != "latest" ]; then
       # Pull image by the digest sha256 and tag it
       docker pull \
