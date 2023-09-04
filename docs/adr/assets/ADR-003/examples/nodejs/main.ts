@@ -1,5 +1,4 @@
 import { Octokit } from "octokit";
-import { Octokit as RestOctokit } from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
 import * as fs from "fs";
 
@@ -7,7 +6,7 @@ export const getOctokit = async (
   appId: string,
   privateKey: string,
   orgName: string
-): Promise<RestOctokit> => {
+): Promise<Octokit> => {
   const appOctokit = new Octokit({
     authStrategy: createAppAuth,
     auth: {
@@ -20,7 +19,7 @@ export const getOctokit = async (
     //@ts-ignore
     if (d.account.login === orgName) {
       const installationId = d.id;
-      const installationOctokit = new RestOctokit({
+      const installationOctokit = new Octokit({
         authStrategy: createAppAuth,
         auth: {
           appId,
@@ -47,7 +46,7 @@ const ghOrg = process.env.GITHUB_ORG;
   }
   const octokit = await getOctokit(
     ghAppId,
-    fs.readFileSync(ghAppPkFile!, "utf8"),
+    fs.readFileSync(ghAppPkFile, "utf8"),
     ghOrg
   );
   const repos = await octokit.request("GET /orgs/{org}/repos", {
