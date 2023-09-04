@@ -39,7 +39,7 @@ jobs:
     name: "Scan secrets"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history is needed to scan all commits
       - name: "Scan secrets"
@@ -50,7 +50,7 @@ jobs:
     name: "Check file format"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check file format"
@@ -61,7 +61,7 @@ jobs:
     name: "Check markdown format"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check markdown format"
@@ -72,7 +72,7 @@ jobs:
     name: "Check Terraform format"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Check Terraform format"
         uses: ./.github/actions/check-terraform-format
   cloc-repository:
@@ -84,7 +84,7 @@ jobs:
     name: "Count lines of code"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Count lines of code"
         uses: ./.github/actions/cloc-repository
         with:
@@ -103,7 +103,7 @@ jobs:
     name: "Scan dependencies"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Scan dependencies"
         uses: ./.github/actions/scan-dependencies
         with:
