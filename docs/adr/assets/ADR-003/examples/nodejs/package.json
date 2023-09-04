@@ -4,12 +4,11 @@
     "start": "ts-node main.ts"
   },
   "dependencies": {
-    "axios": "1.4.0",
-    "jsonwebtoken": "9.0.1"
+    "@octokit/auth-app": "^3.5.4",
+    "octokit": "^3.1.0",
+    "@octokit/rest": "^18.11.0"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "9.0.1",
-    "@types/node": "20.5.1",
     "ts-node": "10.9.1",
     "typescript": "5.1.6"
   }

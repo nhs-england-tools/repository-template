@@ -164,7 +164,7 @@ To be executed by a GitHub organisation owner:
 C4Context
   Enterprise_Boundary(b0, "Internal Developer Platform, part of the NHS England CoE") {
 
-    Boundary(b1, "Engineering Team", "boundary") {
+    Boundary(b1, "Service", "boundary") {
       System(repo, "Repository", "Repository<br>[repository-name]")
       System(github_app_runner, "GitHub App (runner)", "Bot app runner<br>for the repository")
     }
@@ -200,6 +200,8 @@ Please, see the above being implemented for the _update from template_ capabilit
 - [GitHub account (bot)](https://github.com/update-from-template-app) linked to an `nhs.net` email address, but not part of any GitHub organisation
 - [GitHub App (registration)](https://github.com/apps/nhs-england-update-from-template) to be installed within the GitHub organisations in use, e.g. `nhs-england-tools`
 
+<span style="color:red">A recommendation for GitHub Admins:</span> It is advisable to create a separate bot account for each service. This approach fosters responsible ownership practices. It also allows the team to use the bot's identity for signing commits and integrating their service with other SaaS products, such as SonarCloud, without relying on individual team member accounts. Exceptions can be made on a case-by-case basis, allowing for the use of a central organisation account instead.
+
 #### Authentication flow diagram
 
 The diagram below represents all the steps needed for an app implementation (aka app runner) to be authenticated and authorised to perform operations defined by the GitHub App registration and installation.
@@ -222,7 +224,7 @@ graph LR
 
 - [Bash](./assets/ADR-003/examples/bash/README.md)
 - [Golang](./assets/ADR-003/examples/golang/README.md)
-- [Node.js (TypeScript)](./assets/ADR-003/examples/nodejs/README.md)
+- [Node.js TypeScript (Octokit)](./assets/ADR-003/examples/nodejs/README.md) - This is our preferred method for implementing GitHub Apps. It is supported by the Octokit library, which is an official client for the GitHub API.
 - [Python](./assets/ADR-003/examples/python/README.md)
 
 ## Actions
