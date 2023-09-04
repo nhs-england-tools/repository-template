@@ -102,7 +102,7 @@ Press CTRL+C to quit
 
 ### Your image implementation
 
-Always follow [Docker best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) while developing images. Start with creating your base image for the service and store it in the `infrastructure/images` directory.
+Always follow [Docker best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) while developing images. Start with creating your container definition for the service and store it in the `infrastructure/images` directory.
 
 Here is a step-by-step guide:
 
@@ -166,7 +166,11 @@ Here is a step-by-step guide:
 
 ### Versioning
 
-To specify the image version for the automated build process, the `VERSION` file is utilised. This file must be located adjacent to the `Dockerfile`, where the image is defined. The version contained in this file is used to tag the image. It may be a "_statically defined_" version, such as `1.2.3`, `20230601`, etc., or a "_dynamic pattern_" based on the current time and commit hash, e.g. `${yyyy}${mm}${dd}${HH}${MM}${SS}-${hash}`. This pattern will be substituted during the build process. As a result, a `.version` file is created in the same directory, containing effective content like `20230601153000-123abcd`. This file is utilised by functions defined in [docker.lib.sh](../../scripts/docker/docker.lib.sh) but should be ignored by Git, and not checked in with other files.
+You can specify the version tags that the automated build process applies to your images with a `VERSION` file. This file must be located adjacent to the `Dockerfile` where each image is defined.
+
+It may be a "_statically defined_" version, such as `1.2.3`, `20230601`, etc., or a "_dynamic pattern_" based on the current time and commit hash, e.g. `${yyyy}${mm}${dd}${HH}${MM}${SS}-${hash}`. This pattern will be substituted during the build process to create a `.version` file in the same directory, containing effective content like `20230601153000-123abcd`. See [this function](https://github.com/nhs-england-tools/repository-template/blob/main/scripts/docker/docker.lib.sh#L118) for what template substitutions are available.
+
+This file is then used by functions defined in [docker.lib.sh](../../scripts/docker/docker.lib.sh) but is ignored by Git, and is not checked in with other files.
 
 Support for multiple version entries is provided. For instance, if the `VERSION` file contains:
 
@@ -197,6 +201,8 @@ Base image versions are maintained in the [.tool-versions](../../.tool-versions)
 ```
 
 This method facilitates dependency management through a single file. The `docker-build` function will replace any instance of `FROM image/name:latest` with `FROM image/name:1.0.0@sha256:1234567890...abcdef`. Additionally, the [Dockerfile.metadata](../../scripts/docker/Dockerfile.metadata) file will be appended to the end of the `Dockerfile.effective` created by the process.
+
+The reason we do this is so that the deployment version is source-controlled, but the tooling does not interfere with using a more recent Docker image during local development before the new version can be added to the `.tool-versions` file. It also serves as a clean way of templating Docker image definition.
 
 ### Variables
 

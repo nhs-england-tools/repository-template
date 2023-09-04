@@ -28,7 +28,9 @@ make some-target foo=bar # Make argument is passed to the make target execution 
 
 By convention we use uppercase variables for global settings that you would ordinarily associate with environment variables. We use lower-case variables as arguments to call functions or make targets, in this case.
 
-All the make targets should be added to the `.SILENT` section of `make` file which causes make not to print any commands before executing them.
+All the make targets should be added to the `.SILENT` section of `make` file which causes make not to print any commands before executing them. If you explicitly want output from a certain line, use `echo`.
+
+It is worth noting that by default, `make` creates a new system process to execute each line of a recipe. This is not the desired behaviour for us and the entire content of a make recipe (a target) should be run in a single shell invocation. This has been configured in this repository by setting the [`.ONESHELL:`](https://www.gnu.org/software/make/manual/html_node/One-Shell.html) special target in the `scripts/init.mk` file.
 
 ## Using Bash
 
@@ -78,11 +80,15 @@ baz=qux \
 
 By convention we use uppercase variables for global settings that you would ordinarily associate with environment variables. We use lower-case variables as arguments to be passed into specific functions we call, usually on the same line, right before the function name.
 
-The command `set -euo pipefail` is commonly used in the Bash scripts, to configure the behavior of the script in a way that makes it more robust and easier to debug.
+The command `set -euo pipefail` is commonly used in the Bash scripts, to configure the behavior of the script in a way that makes it more robust and easier to debug. Here is a breakdown of each option switch:
+
+- `-e`: Ensures that the script exits immediately if any command returns a non-zero exit status.
+- `-u`: Makes the script exit if there is an attempt to use an uninitialised variable.
+- `-o pipefail`: ensures that if any command in a pipeline fails (i.e., returns a non-zero exit status), then the entire pipeline will return that non-zero status. By default, a pipeline returns the exit status of the last command.
 
 ## Make and Bash working together
 
-Sample make target calling a Bash function. Notice that `bar` is going to be accessible to the function as it is executed in the same operating system process:
+Sample make target calling a Bash function. Notice that `baz` is going to be accessible to the function as it is executed in the same operating system process:
 
 ```makefile
 some-target: # Run shell function - mandatory: foo=[description]
@@ -91,7 +97,7 @@ some-target: # Run shell function - mandatory: foo=[description]
   some-shell-function # 'foo' and 'baz' are accessible by the function
 ```
 
-Sample make target calling another make target. In this case `bar` has to be passed to the make target as a variable, which is executed in a child process:
+Sample make target calling another make target. In this case a parameter `baz` has to be passed as a variable to the make target, which is executed in a child process:
 
 ```makefile
 some-target: # Call another target - mandatory: foo=[description]
