@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Run unit test suite"
         run: |
           make test-unit
@@ -50,7 +50,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Run linting"
         run: |
           make test-lint
@@ -63,7 +63,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Run test coverage check"
         run: |
           make test-coverage
@@ -80,7 +80,7 @@ jobs:
     name: "Perform static analysis"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history is needed to improving relevancy of reporting
       - name: "Perform static analysis"

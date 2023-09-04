@@ -23,7 +23,7 @@ jobs:
       tag: ${{ steps.variables.outputs.tag }}
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -54,5 +54,5 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
   # TODO: More jobs or/and steps here
