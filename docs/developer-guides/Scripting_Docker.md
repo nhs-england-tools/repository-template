@@ -122,7 +122,7 @@ Here is a step-by-step guide:
 3. Create `infrastructure/images/cypress/VERSION`
 
    ```text
-   yyyymmdd-hash
+   ${yyyy}${mm}${dd}-${hash}
    ```
 
 4. Add make target to the `Makefile`
@@ -166,14 +166,14 @@ Here is a step-by-step guide:
 
 ### Versioning
 
-To specify the image version for the automated build process, the `VERSION` file is utilised. This file must be located adjacent to the `Dockerfile`, where the image is defined. The version contained in this file is used to tag the image. It may be a "_statically defined_" version, such as `1.2.3`, `20230601`, etc., or a "_dynamic pattern_" based on the current time and commit hash, e.g. `yyyymmddHHMMSS-hash`. This pattern will be substituted during the build process. As a result, a `.version` file is created in the same directory, containing effective content like `20230601153000-123abcd`. This file is utilised by functions defined in [docker.lib.sh](../../scripts/docker/docker.lib.sh) but should be ignored by Git, and not checked in with other files.
+To specify the image version for the automated build process, the `VERSION` file is utilised. This file must be located adjacent to the `Dockerfile`, where the image is defined. The version contained in this file is used to tag the image. It may be a "_statically defined_" version, such as `1.2.3`, `20230601`, etc., or a "_dynamic pattern_" based on the current time and commit hash, e.g. `${yyyy}${mm}${dd}${HH}${MM}${SS}-${hash}`. This pattern will be substituted during the build process. As a result, a `.version` file is created in the same directory, containing effective content like `20230601153000-123abcd`. This file is utilised by functions defined in [docker.lib.sh](../../scripts/docker/docker.lib.sh) but should be ignored by Git, and not checked in with other files.
 
 Support for multiple version entries is provided. For instance, if the `VERSION` file contains:
 
 ```text
-yyyymmdd
-yyyymmddHHMM - TODO: comment on that ...
-yyyymmdd-hash
+${yyyy}${mm}${dd}
+${yyyy}${mm}${dd}${HH}${MM}
+${yyyy}${mm}${dd}-${hash}
 squirrel
 ```
 
@@ -186,6 +186,9 @@ squirrel
 ```
 
 In this case, the image is automatically tagged as `20230601`, `20230601-123abcd`, `squirrel` and `latest`, which can be then pushed to a registry by running the `docker-push` function. This versioning approach is particularly useful for projects with multiple deployments per day.
+
+> [!NOTE]<br>
+> The preferred pattern for versioning is `${yyyy}${mm}${dd}${HH}${MM}` or/and `${yyyy}${mm}${dd}-${hash}` for projects with a cadence of multiple deployments per day. This is compatible with the [Calendar Versioning / CalVer](https://calver.org/) convention.
 
 Base image versions are maintained in the [.tool-versions](../../.tool-versions) file located in the project's top-level directory. The format is as follows:
 
