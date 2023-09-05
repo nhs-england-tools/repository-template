@@ -1,3 +1,3 @@
 ${yyyy}${mm}${dd}-${hash}
-${yyyy}${mm}${dd}
+$yyyy.$mm.$dd-$hash
 somme-name-yyyyeah

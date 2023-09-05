@@ -70,7 +70,8 @@ function test-docker-version() {
   # Depends on 'test-docker-build'
   # Assert
   (
-      cat .version | grep -q "20230904" &&
+      cat .version | grep -q "20230904-" &&
+      cat .version | grep -q "2023.09.04-" &&
       cat .version | grep -q "somme-name-yyyyeah"
   ) && return 0 || return 1
 }

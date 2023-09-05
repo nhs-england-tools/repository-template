@@ -116,13 +116,13 @@ function version-create-effective-file() {
   if [ -f "$dir/VERSION" ]; then
     # shellcheck disable=SC2002
     cat "$dir/VERSION" | \
-      sed "s/\${yyyy}/$(date --date="${build_datetime}" -u +"%Y")/g" | \
-      sed "s/\${mm}/$(date --date="${build_datetime}" -u +"%m")/g" | \
-      sed "s/\${dd}/$(date --date="${build_datetime}" -u +"%d")/g" | \
-      sed "s/\${HH}/$(date --date="${build_datetime}" -u +"%H")/g" | \
-      sed "s/\${MM}/$(date --date="${build_datetime}" -u +"%M")/g" | \
-      sed "s/\${SS}/$(date --date="${build_datetime}" -u +"%S")/g" | \
-      sed "s/\${hash}/$(git rev-parse --short HEAD)/g" \
+      sed "s/\(\${yyyy}\|\$yyyy\)/$(date --date="${build_datetime}" -u +"%Y")/g" | \
+      sed "s/\(\${mm}\|\$mm\)/$(date --date="${build_datetime}" -u +"%m")/g" | \
+      sed "s/\(\${dd}\|\$dd\)/$(date --date="${build_datetime}" -u +"%d")/g" | \
+      sed "s/\(\${HH}\|\$HH\)/$(date --date="${build_datetime}" -u +"%H")/g" | \
+      sed "s/\(\${MM}\|\$MM\)/$(date --date="${build_datetime}" -u +"%M")/g" | \
+      sed "s/\(\${SS}\|\$SS\)/$(date --date="${build_datetime}" -u +"%S")/g" | \
+      sed "s/\(\${hash}\|\$hash\)/$(git rev-parse --short HEAD)/g" \
     > "$dir/.version"
   fi
 }
