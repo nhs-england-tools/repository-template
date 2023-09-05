@@ -73,7 +73,7 @@ _test:
 		echo "make test-${name} not implemented: $${script} not found" >&2
 	fi
 
-.SILENT: \
+${VERBOSE}.SILENT: \
 	_test \
 	test \
 	test-accessibility \

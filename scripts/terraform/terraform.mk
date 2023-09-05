@@ -65,7 +65,7 @@ terraform-install: # Install Terraform
 
 # ==============================================================================
 
-.SILENT: \
+${VERBOSE}.SILENT: \
 	_terraform \
 	clean \
 	terraform-apply \

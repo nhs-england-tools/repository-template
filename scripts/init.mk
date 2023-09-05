@@ -85,7 +85,7 @@ else
 	.SHELLFLAGS := -ce
 endif
 
-.SILENT: \
+${VERBOSE}.SILENT: \
 	_install-dependency \
 	asdf-install \
 	clean \

@@ -64,8 +64,6 @@ Here are some key features built into this repository's Terraform module:
 
 Run the example:
 
-TODO: vscode integration ?
-
 ```shell
 # AWS console access setup
 export AWS_ACCESS_KEY_ID="..."

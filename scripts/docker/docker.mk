@@ -60,7 +60,7 @@ docker-example-clean: # Remove Docker example resources
 
 # ==============================================================================
 
-.SILENT: \
+${VERBOSE}.SILENT: \
 	_docker \
 	clean \
 	docker-build \

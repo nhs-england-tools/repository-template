@@ -31,7 +31,7 @@ config:: # Configure development environment
 
 # ==============================================================================
 
-.SILENT: \
+${VERBOSE}.SILENT: \
 	build \
 	clean \
 	config \

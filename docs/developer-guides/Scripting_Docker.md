@@ -133,7 +133,7 @@ Here is a step-by-step guide:
      docker_title="Browser testing" \
        make docker-build dir=infrastructure/images/cypress
 
-   .SILENT: \
+   ${VERBOSE}.SILENT: \
      build-cypress-image \
    ```
 

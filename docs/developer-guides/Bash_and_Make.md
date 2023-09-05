@@ -6,7 +6,6 @@
   - [Make and Bash working together](#make-and-bash-working-together)
   - [Conventions](#conventions)
     - [Debugging](#debugging)
-    - [Paths](#paths)
     - [Scripts](#scripts)
   - [TODO](#todo)
 
@@ -28,7 +27,7 @@ make some-target foo=bar # Make argument is passed to the make target execution 
 
 By convention we use uppercase variables for global settings that you would ordinarily associate with environment variables. We use lower-case variables as arguments to call functions or make targets, in this case.
 
-All the make targets should be added to the `.SILENT` section of `make` file which causes make not to print any commands before executing them. If you explicitly want output from a certain line, use `echo`.
+All make targets should be added to the `${VERBOSE}.SILENT:` section of the `make` file, which prevents `make` from printing commands before executing them. The `${VERBOSE}` prefix on the `.SILENT:` special target allows toggling it if needed. If you explicitly want output from a certain line, use `echo`.
 
 It is worth noting that by default, `make` creates a new system process to execute each line of a recipe. This is not the desired behaviour for us and the entire content of a make recipe (a target) should be run in a single shell invocation. This has been configured in this repository by setting the [`.ONESHELL:`](https://www.gnu.org/software/make/manual/html_node/One-Shell.html) special target in the `scripts/init.mk` file.
 
@@ -128,10 +127,6 @@ for Bash scripts
 ```shell
 VERBOSE=1 scripts/shellscript-linter.sh
 ```
-
-### Paths
-
-Do not prefix the directory path with `./` when referring to files from the top-level directory, unless necessary for clarity. For example, when calling the ShellScript linter from the root directory of your project, always use `scripts/shellscript-linter.sh` rather than `./scripts/shellscript-linter.sh`.
 
 ### Scripts
 
