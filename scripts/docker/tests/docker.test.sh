@@ -32,12 +32,14 @@ function main() {
     test-docker-run \
     test-docker-clean \
   )
+  status=0
   for test in "${tests[@]}"; do
-    (
+    {
       echo -n "$test"
-      $test && echo " PASS" || echo " FAIL"
-    )
+      $test && echo " PASS" || { echo " FAIL"; ((status++)); }
+    }
   done
+  echo "Total: ${#tests[@]}, Passed: $(( ${#tests[@]} - status )), Failed: $status"
   test-docker-suite-teardown
 }
 
@@ -67,7 +69,10 @@ function test-docker-build() {
 
 function test-docker-version() {
 
-  # Depends on 'test-docker-build'
+  # Arrange
+  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  # Act
+  version-create-effective-file
   # Assert
   (
       cat .version | grep -q "20230904-" &&

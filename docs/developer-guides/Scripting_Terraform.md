@@ -95,8 +95,6 @@ Apply complete! Resources: 0 added, 0 changed, 5 destroyed.
 
 Always follow [best practices for using Terraform](https://cloud.google.com/docs/terraform/best-practices-for-terraform) while providing infrastructure as code (IaC) for your service.
 
-TODO: Extend the wording ?
-
 Directory structure:
 
 ```shell
@@ -123,6 +121,8 @@ service-repository/
    |     ├─ ...
    └─ .gitignore
 ```
+
+At its core, the structure of the Terraform setup consists of two main parts. The `modules` section is designed to house the shared or common configurations for a service. Meanwhile, the individual folders for each environment, like `dev` (ephemeral environments), `nonprod`, `prod` and so on, invoke these shared modules while also defining their unique variables and parameters. By arranging resources in distinct Terraform directories for every component, we ensure clarity and promote cohesion. Each environment directory not only references shared code from the `modules` section but also represents a default Terraform workspace as a deployment of the service to the designated environment.
 
 Stack management:
 
