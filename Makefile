@@ -4,15 +4,34 @@
 include ./scripts/init.mk
 include ./scripts/test.mk
 
+# This dependency list means that `make build` will only rebuild if
+# any of the Dockerfiles in the `infrastructure/images` directory are
+# newer than a timestamp file we leave under tmp/.  We're looking for
+# 'Dockerfile*' so that, for instance, `Dockerfile.test` is spotted
+SOURCES:=$(shell find infrastructure/images -name 'Dockerfile*') docker-compose.yaml
+
 # Example targets are: dependencies, build, publish, deploy, clean, etc.
 
 dependencies: # Install dependencies needed to build and test the project
 	# TODO: Implement installation of your project dependencies
 
-build: # Build the project artefact
-	# TODO: Implement the artefact build step
+tmp/build_timestamp: $(SOURCES)
+	make _project name="build"
+	mkdir -p tmp
+	touch tmp/build_timestamp
 
-publish: # Publish the project artefact
+build: tmp/build_timestamp # Build the project for local execution
+
+up: build # Run your code
+	make _project name="up"
+
+down: # Stop your code
+	make _project name="down"
+
+sh: up # Get a shell inside your running project, running it first if necessary
+	make _project name="sh"
+
+zpublish: # Publish the project artefact
 	# TODO: Implement the artefact publishing step
 
 deploy: # Deploy the project artefact to the target environment
@@ -28,9 +47,23 @@ config:: # Configure development environment
 		python-install \
 		terraform-install
 
+_project:
+	set -e
+	SCRIPT="./scripts/projecthooks/${name}.sh"
+	if [ -e "$${SCRIPT}" ]; then
+		exec $$SCRIPT
+	else
+		echo "make ${name} not implemented: $${SCRIPT} not found" >&2
+	fi
+
 .SILENT: \
+	_project \
 	build \
 	clean \
 	config \
 	dependencies \
 	deploy \
+	down \
+	sh \
+	tmp/build_timestamp \
+	up \

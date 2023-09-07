@@ -1,0 +1,9 @@
+# This file is for you!  Edit it as you wish.
+version: "3.8"
+
+services:
+  # This service is an example. Remove and edit for your own purposes.
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
