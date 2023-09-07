@@ -113,7 +113,7 @@ Here is a step-by-step guide:
    FROM cypress/browsers:latest
    ```
 
-2. Add the following entry to the `.tool-versions` file, this will be used to replace the `latest` version placeholder in the Dockerfile
+2. Add the following entry to the `.tool-versions` file. This will be used to replace the `latest` version placeholder in the Dockerfile.
 
    ```text
    # docker/cypress/browsers node-20.5.0-chrome-114.0.5735.133-1-ff-114.0.2-edge-114.0.1823.51-1@sha256:8b899d0292e700c80629d13a98ae309295e719f5b4f9aa50a98c6cdd2b6c5215
