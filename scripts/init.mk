@@ -27,26 +27,26 @@ shellscript-lint-all: # Lint all shell scripts in this project, do not fail on e
 		file=$${file} scripts/shellscript-linter.sh ||:
 	done
 
-nodejs-install: # Install Node.js
+nodejs-install: #@Install Install Node.js
 	make _install-dependency name="nodejs"
 	make _install-dependency name="yarn" version=latest
 
-python-install: # Install Python
+python-install: #@Install Install Python
 	make _install-dependency name="python"
 	make _install-dependency name="poetry" version=latest
 
-githooks-install: # Install git hooks configured in this repository
+githooks-install: #@Configure Install git hooks configured in this repository
 	make _install-dependency name="pre-commit"
 	pre-commit install \
 		--config scripts/config/pre-commit.yaml \
 		--install-hooks
 
-githooks-run: # Run git hooks configured in this repository
+githooks-run: #@Operations Run git hooks configured in this repository
 	pre-commit run \
 		--config scripts/config/pre-commit.yaml \
 		--all-files
 
-asdf-install: # Install asdf from https://asdf-vm.com/
+asdf-install: #@Install Install asdf from https://asdf-vm.com/
 	if [ -d "${HOME}/.asdf" ]; then
 		( cd "${HOME}/.asdf"; git pull )
 	else
@@ -58,7 +58,7 @@ _install-dependency: # Install asdf dependency - mandatory: name=[listed in the 
 	asdf plugin add ${name} ||:
 	asdf install ${name} $(or ${version},)
 
-clean:: # Remove all generated and temporary files
+clean:: #@Operations Remove all generated and temporary files
 	rm -rf \
 		.scannerwork \
 		*cloc-report*.json \
@@ -69,15 +69,18 @@ clean:: # Remove all generated and temporary files
 		docs/diagrams/.*.dtmp \
 		.version
 
-config:: # Configure development environment
+config:: #@Configure Configure development environment
 	make \
 		asdf-install \
 		githooks-install
 
-help: # List Makefile targets
-	awk 'BEGIN {FS = ":.*?# "} /^[ a-zA-Z0-9_-]+:.*? # / {printf "\033[36m%-41s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
+help: #@Help List Makefile targets
+	printf "\n"
+	perl -e '$(HELP_SCRIPT)' $(MAKEFILE_LIST)
+	printf "\nUsage: \033[0;33m[arg1=val1] [arg2=val2]\033[0m make \033[0;36m<command>\033[0m\n\n"
+	#awk 'BEGIN {FS = ":.*?# "} /^[ a-zA-Z0-9-]+:.*? # / {printf "\033[36m%-41s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 
-list-variables: # List all the variables available to make
+list-variables: #@Operations List all the variables available to make
 	$(foreach v, $(sort $(.VARIABLES)),
 		$(if $(filter-out default automatic, $(origin $v)),
 			$(if $(and $(patsubst %_PASSWORD,,$v), $(patsubst %_PASS,,$v), $(patsubst %_KEY,,$v), $(patsubst %_SECRET,,$v)),
@@ -99,6 +102,19 @@ ifeq (true, $(shell [[ "${VERBOSE}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]] && 
 else
 	.SHELLFLAGS := -ce
 endif
+HELP_SCRIPT = \
+	%help; \
+	while(<>){ \
+		push @{$$help{$$2//'Others'}}, [$$1,$$3] \
+		if /^([\w-_]+)\s*:.*\#(?:@(\w+))?\s(.*)$$/; \
+	} \
+	for my $$category (sort keys %help) { \
+		print "$$category:\n"; \
+		for my $$item (sort { $$a->[0] cmp $$b->[0] } @{$$help{$$category}}) { \
+			printf "  \033[36m%-38s\033[0m%s\n", $$item->[0], $$item->[1]; \
+		} \
+		print "\n"; \
+	}
 
 ${VERBOSE}.SILENT: \
 	_install-dependency \
