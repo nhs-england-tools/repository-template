@@ -1,0 +1,20 @@
+name: "Lint Terraform"
+description: "Lint Terraform"
+inputs:
+  root-modules:
+    description: "Comma separated list of root module directories to validate, content of the 'infrastructure/environments' is checked by default"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: "Check Terraform format"
+      shell: bash
+      run: |
+        check_only=true scripts/githooks/check-terraform-format.sh
+    - name: "Validate Terraform"
+      shell: bash
+      run: |
+        stacks=${{ inputs.root-modules }}
+        for dir in $(find infrastructure/environments -maxdepth 1 -mindepth 1 -type d; echo ${stacks//,/$'\n'}); do
+          dir=$dir make terraform-validate
+        done

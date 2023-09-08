@@ -27,17 +27,21 @@ function main() {
   test-docker-suite-setup
   tests=( \
     test-docker-build \
+    test-docker-version \
     test-docker-test \
     test-docker-run \
     test-docker-clean \
   )
+  status=0
   for test in "${tests[@]}"; do
-    (
+    {
       echo -n "$test"
-      $test && echo " PASS" || echo " FAIL"
-    )
+      $test && echo " PASS" || { echo " FAIL"; ((status++)); }
+    }
   done
+  echo "Total: ${#tests[@]}, Passed: $(( ${#tests[@]} - status )), Failed: $status"
   test-docker-suite-teardown
+  [ $status -gt 0 ] && return 1 || return 0
 }
 
 # ==============================================================================
@@ -56,10 +60,26 @@ function test-docker-suite-teardown() {
 
 function test-docker-build() {
 
+  # Arrange
+  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
   # Act
   docker-build > /dev/null 2>&1
   # Assert
   docker image inspect "${DOCKER_IMAGE}:$(_get-version)" > /dev/null 2>&1 && return 0 || return 1
+}
+
+function test-docker-version() {
+
+  # Arrange
+  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  # Act
+  version-create-effective-file
+  # Assert
+  (
+      cat .version | grep -q "20230904-" &&
+      cat .version | grep -q "2023.09.04-" &&
+      cat .version | grep -q "somme-name-yyyyeah"
+  ) && return 0 || return 1
 }
 
 function test-docker-test() {

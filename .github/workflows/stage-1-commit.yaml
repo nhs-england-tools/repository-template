@@ -66,15 +66,15 @@ jobs:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check markdown format"
         uses: ./.github/actions/check-markdown-format
-  check-terraform-format:
+  lint-terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    name: "Check Terraform format"
+    name: "Lint Terraform"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v4
-      - name: "Check Terraform format"
-        uses: ./.github/actions/check-terraform-format
+        uses: actions/checkout@v3
+      - name: "Lint Terraform"
+        uses: ./.github/actions/lint-terraform
   cloc-repository:
     runs-on: ubuntu-latest
     permissions:

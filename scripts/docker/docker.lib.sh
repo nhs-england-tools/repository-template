@@ -49,8 +49,8 @@ function docker-build() {
 
 # Check test Docker image.
 # Arguments (provided as environment variables):
-#   args=[arguments to pass to Docker to run the container, default is none/empty]
-#   cmd=[command to pass to the container for execution, default is none/empty]
+#   args=[arguments to pass to Docker to run the container, default is none/empty]
+#   cmd=[command to pass to the container for execution, default is none/empty]
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 #   check=[output string to search for]
 function docker-check-test() {
@@ -66,8 +66,8 @@ function docker-check-test() {
 
 # Run Docker image.
 # Arguments (provided as environment variables):
-#   args=[arguments to pass to Docker to run the container, default is none/empty]
-#   cmd=[command to pass to the container for execution, default is none/empty]
+#   args=[arguments to pass to Docker to run the container, default is none/empty]
+#   cmd=[command to pass to the container for execution, default is none/empty]
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
 function docker-run() {
 
@@ -116,13 +116,13 @@ function version-create-effective-file() {
   if [ -f "$dir/VERSION" ]; then
     # shellcheck disable=SC2002
     cat "$dir/VERSION" | \
-      sed "s/yyyy/$(date --date="${build_datetime}" -u +"%Y")/g" | \
-      sed "s/mm/$(date --date="${build_datetime}" -u +"%m")/g" | \
-      sed "s/dd/$(date --date="${build_datetime}" -u +"%d")/g" | \
-      sed "s/HH/$(date --date="${build_datetime}" -u +"%H")/g" | \
-      sed "s/MM/$(date --date="${build_datetime}" -u +"%M")/g" | \
-      sed "s/SS/$(date --date="${build_datetime}" -u +"%S")/g" | \
-      sed "s/hash/$(git rev-parse --short HEAD)/g" \
+      sed "s/\(\${yyyy}\|\$yyyy\)/$(date --date="${build_datetime}" -u +"%Y")/g" | \
+      sed "s/\(\${mm}\|\$mm\)/$(date --date="${build_datetime}" -u +"%m")/g" | \
+      sed "s/\(\${dd}\|\$dd\)/$(date --date="${build_datetime}" -u +"%d")/g" | \
+      sed "s/\(\${HH}\|\$HH\)/$(date --date="${build_datetime}" -u +"%H")/g" | \
+      sed "s/\(\${MM}\|\$MM\)/$(date --date="${build_datetime}" -u +"%M")/g" | \
+      sed "s/\(\${SS}\|\$SS\)/$(date --date="${build_datetime}" -u +"%S")/g" | \
+      sed "s/\(\${hash}\|\$hash\)/$(git rev-parse --short HEAD)/g" \
     > "$dir/.version"
   fi
 }
@@ -138,6 +138,7 @@ function version-create-effective-file() {
 # checking this tag for existence for any subsequent use.
 # Arguments (provided as environment variables):
 #   name=[full name of the Docker image]
+# shellcheck disable=SC2001
 function docker-get-image-version-and-pull() {
 
   # Get the image full version from the '.tool-versions' file
@@ -150,7 +151,7 @@ function docker-get-image-version-and-pull() {
 
   # Split the image version into two, tag name and digest sha256.
   # E.g. for the given entry "docker/image 1.2.3@sha256:hash" in the
-  # '.tool-versions' file, the following variables will be set:
+  # '.tool-versions' file, the following variables will be set:
   #   version="1.2.3@sha256:hash"
   #   tag="1.2.3"
   #   digest="sha256:hash"
@@ -158,7 +159,7 @@ function docker-get-image-version-and-pull() {
   digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already
-  if ! docker images | grep -q "${name}:${tag}"; then
+  if ! docker images | awk '{ print $1 ":" $2 }' | grep "^${name}:${tag}$"; then
     if [ "$digest" != "latest" ]; then
       # Pull image by the digest sha256 and tag it
       docker pull \
@@ -210,6 +211,8 @@ function _replace-image-latest-by-specific-version() {
       sed -i "s;FROM ${name}:latest;FROM ${name}:${version};g" "${dir}/Dockerfile.effective"
     done
   fi
+  # Do not ignore the issue if 'latest' is used in the effective image
+  sed -Ei "/# hadolint ignore=DL3007$/d" "${dir}/Dockerfile.effective"
 }
 
 # Append metadata to the end of Dockerfile.
@@ -231,7 +234,7 @@ function _append-metadata() {
 function _get-version() {
 
   local dir=${dir:-$PWD}
-  head -n 1 "${dir}/.version"
+  head -n 1 "${dir}/.version" 2> /dev/null ||:
 }
 
 # Print all Docker image versions.
@@ -240,7 +243,7 @@ function _get-version() {
 function _get-all-versions() {
 
   local dir=${dir:-$PWD}
-  cat "${dir}/.version"
+  cat "${dir}/.version" 2> /dev/null ||:
 }
 
 # Print Git branch name. Check the GitHub variables first and then the local Git
