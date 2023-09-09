@@ -18,11 +18,12 @@
     - [Options](#options)
     - [Outcome](#outcome)
       - [Built-in authentication using `GITHUB_TOKEN` secret](#built-in-authentication-using-github_token-secret)
-      - [GitHub PAT (Personal Access Token)](#github-pat-personal-access-token)
+      - [GitHub PAT (fine-grained Personal Access Token)](#github-pat-fine-grained-personal-access-token)
       - [GitHub App](#github-app)
     - [Rationale](#rationale)
   - [Notes](#notes)
     - [GitHub App setup](#github-app-setup)
+      - [Recommendation for GitHub Admins](#recommendation-for-github-admins)
     - [Diagram](#diagram)
       - [Context diagram showing the GitHub App setup](#context-diagram-showing-the-github-app-setup)
       - [Authentication flow diagram](#authentication-flow-diagram)
@@ -61,21 +62,20 @@ There are three options available to support automated GitHub Action and Workflo
    - ➖ **The token can only access a repository containing the workflow file**. If you need to access other private repositories or require write access to other public repositories this token will not be sufficient.
    - ➖ **The token cannot trigger other workflows**. If you have a workflow that creates a release and another workflow that runs when someone creates a release, the first workflow will not trigger the second workflow if it utilises this token based mechanism for authentication.
 
-2. [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) (Personal Access Token)
+2. [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) (fine-grained Personal Access Token)
 
-   - ➕ **Simple to set up**. You can create a [fine-grained personal access token](https://github.com/settings/tokens?type=beta) with a repository scope or a [classic personal access token](https://github.com/settings/tokens) with a wider permission model that extends beyond a single repository.
+   - ➕ **Simple to set up**. You can create a [fine-grained personal access token](https://github.com/settings/tokens?type=beta) with a repository scope. Classic personal access token should never be used.
+   - ➕ **GitHub PAT provides a more fine-grained permission model** than the built-in `GITHUB_TOKEN`
    - ➕ **The token can trigger other workflows**.
-   - ➕ **It can access all repositories you have access to** (using a classic PAT). This is convenient because you can access other repositories without any additional setup.
-   - ➖ **It can access all your repositories you have access to** (using a classic PAT). You do not have fine-grained control over which repositories this token can access because this token represents you.
    - ➖ **It is bound to a person**. The owner of the token leaving the organisation can cause your workflow to break.
 
 3. [GitHub App](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps)
 
    - ➕ **You can control which repositories your token has access to** by installing the GitHub App to selected repositories.
    - ➕ **An organisation can own multiple GitHub Apps** and they do not consume a team seat.
-   - ➕ **GitHub App provides a more fine-grained permission model**.
+   - ➕ **GitHub App provides a more fine-grained permission model** than the built-in `GITHUB_TOKEN`
    - ➕ **The token can trigger other workflows**.
-   - ➖ **Not very well documented**.
+   - ➖ **Not very well documented**. Despite the extensive content of the GitHub documentation, it does not effectively communicate the pros & cons, use-cases and comparison of each authentication method. This was one of the reasons we created this ADR.
    - ➖ **The setup is a bit more complicated**.
 
 ### Outcome
@@ -89,7 +89,7 @@ A `GITHUB_TOKEN` is automatically generated and used within GitHub Action and Wo
 
 This method <u>enables basic operations</u> expected from the repository pipeline, like accessing GitHub secret variables.
 
-#### GitHub PAT (Personal Access Token)
+#### GitHub PAT (fine-grained Personal Access Token)
 
 Use personal access token when:
 
@@ -117,7 +117,7 @@ Use app when:
 
 - **Acting on behalf of a user or an organisation**: GitHub Apps can be installed directly onto an organisation or a user account and can access specific repositories. They act as separate entities and do not need a specific user to authenticate actions, thus separating the app's actions from individual users and preventing user-related issues (like a user leaving the organisation) from disrupting the app's operation. In this model, a GitHub App can act on behalf of a user to perform actions that the user has permissions for. For example, if a GitHub App is used to manage issues in a repository, it can act on behalf of a user to open, close, or comment on issues. The actions the app can perform are determined by the user's permissions and the permissions granted to the app during its installation.
 
-- **When you need fine-grained permissions**: GitHub Apps provide more detailed control over permissions than the classic PAT. You can set access permissions on a per-resource basis (issues, pull requests, repositories, etc.). This allows you to follow the principle of least privilege, granting your app only the permissions it absolutely needs.
+- **When you need fine-grained permissions**: GitHub Apps provide more detailed control over permissions than the classic PAT, which should no longer be used. You can set access permissions on a per-resource basis (issues, pull requests, repositories, etc.). This allows you to follow the principle of least privilege, granting your app only the permissions it absolutely needs.
 
 - **Webhook events**: GitHub Apps can be configured to receive a variety of webhook events. Unlike personal tokens, apps can receive granular event data and respond accordingly. For instance, an app can listen for `push` events to trigger a CI/CD pipeline or `issue_comment` events to moderate comments.
 
@@ -155,6 +155,10 @@ To be executed by a GitHub organisation administrator:
 To be executed by a GitHub organisation owner:
 
 - Install the `[Team] [Repository Name] [Purpose]` app on the GitHub organisation and set repository access to the `[repository-name]` only
+
+#### Recommendation for GitHub Admins
+
+It is advisable to create a separate bot account for each service or programme. This approach fosters responsible ownership practices. It also allows the team to use the bot's identity for signing commits and integrating their service with other SaaS products, such as SonarCloud, without relying on individual team member accounts. Exceptions can be made on a case-by-case basis, allowing for the use of a central organisation account instead.
 
 ### Diagram
 
@@ -199,8 +203,6 @@ Please, see the above being implemented for the _update from template_ capabilit
 - [Repository and GitHub App (runner)](https://github.com/nhs-england-tools/update-from-template-app) for the "Update from Template" app. The runner is built on a GitHub Action but it can be a serverless workload or self-hosted compute
 - [GitHub account (bot)](https://github.com/update-from-template-app) linked to an `nhs.net` email address, but not part of any GitHub organisation
 - [GitHub App (registration)](https://github.com/apps/nhs-england-update-from-template) to be installed within the GitHub organisations in use, e.g. `nhs-england-tools`
-
-<span style="color:red">A recommendation for GitHub Admins:</span> It is advisable to create a separate bot account for each service. This approach fosters responsible ownership practices. It also allows the team to use the bot's identity for signing commits and integrating their service with other SaaS products, such as SonarCloud, without relying on individual team member accounts. Exceptions can be made on a case-by-case basis, allowing for the use of a central organisation account instead.
 
 #### Authentication flow diagram
 

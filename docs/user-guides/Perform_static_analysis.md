@@ -21,17 +21,18 @@ Static code analysis is an essential part of modern software development. It pro
 
 ## Configuration checklist
 
-- Create your [SonarCloud](https://sonarcloud.io) project
+- Contact the GitHub Admins via email to have your [SonarCloud](https://sonarcloud.io) project created within the organisation space
+- Create a bot account for your service. For more details, please see this [note](../../docs/adr/ADR-003_Acceptable_use_of_GitHub_PAT_and_Apps_for_authN_and_authZ.md#recommendation-for-github-admins). This account should be given access to your project and must own the `SONAR_TOKEN` for security reasons. Use this account to complete the rest of the activities in the Sonar service
 - Navigate to project `Administration > Analysis Method > Manually` and select `Other (for JS, TS, Go, Python, PHP, ...)`
-- In the [sonar-scanner.properties](../../scripts/config/sonar-scanner.properties) file, set the following properties according to the information provided above
-  - `sonar.[language].[coverage-tool].reportPaths` to ensure the unit test coverage is reported back to Sonar
+- In the [sonar-scanner.properties](../../scripts/config/sonar-scanner.properties) file in your repository, set the following properties according to the information provided above
+  - Set `sonar.[language].[coverage-tool].reportPaths` to ensure the unit test coverage is reported back to Sonar
   - Do not set the `sonar.organization` and `sonar.projectKey` properties in this file; do the next step instead
 - Follow the documentation on [creating encrypted secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add the `SONAR_TOKEN` secret to your repository. The GitHub action is already configured to fetch that secret and pass it as a variable. In addition to that:
   - Add `SONAR_ORGANISATION_KEY` variable (not a secret)
   - Add `SONAR_PROJECT_KEY` variable (not a secret)
 - Navigate to project `Administration > Analysis Method` and turn off the `Automatic Analysis` option
-- Please, refrain from adding your repository to the GitHub SonarCloud App. Doing so will duplicate reports and initiate them outside the primary pipeline workflow
-- Confirm that the GitHub action is part of your GitHub CI/CD workflow and enforces the "Sonar Way" quality gates. You can find more information about this in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/sonarqube.md)
+- Please, refrain from adding your repository to the GitHub SonarCloud App, as this app should not be used. Doing so will duplicate reports and initiate them outside the primary pipeline workflow
+- Confirm that the _"Perform static analysis"_ GitHub action is part of your GitHub CI/CD workflow and enforces the _"Sonar Way"_ quality gates. You can find more information about this in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/sonarqube.md)
 
 ## Testing
 
