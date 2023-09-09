@@ -32,10 +32,11 @@ function main() {
     test-docker-run \
     test-docker-clean \
   )
-  status=0
+  local status=0
   for test in "${tests[@]}"; do
     {
       echo -n "$test"
+      # shellcheck disable=SC2015
       $test && echo " PASS" || { echo " FAIL"; ((status++)); }
     }
   done
@@ -65,7 +66,7 @@ function test-docker-build() {
   # Act
   docker-build > /dev/null 2>&1
   # Assert
-  docker image inspect "${DOCKER_IMAGE}:$(_get-version)" > /dev/null 2>&1 && return 0 || return 1
+  docker image inspect "${DOCKER_IMAGE}:$(_get-effective-version)" > /dev/null 2>&1 && return 0 || return 1
 }
 
 function test-docker-version() {
@@ -75,6 +76,7 @@ function test-docker-version() {
   # Act
   version-create-effective-file
   # Assert
+  # shellcheck disable=SC2002
   (
       cat .version | grep -q "20230904-" &&
       cat .version | grep -q "2023.09.04-" &&
@@ -106,7 +108,7 @@ function test-docker-run() {
 function test-docker-clean() {
 
   # Arrange
-  version="$(_get-version)"
+  version="$(_get-effective-version)"
   # Act
   docker-clean
   # Assert

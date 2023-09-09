@@ -7,6 +7,9 @@
 docker-build: # Build Docker image - optional: dir=[path to the Dockerfile to use, default is '.']
 	make _docker cmd="build"
 
+docker-push: # Push Docker image - optional: dir=[path to the image directory where the Dockerfile is located, default is '.']
+	make _docker cmd="push"
+
 clean:: # Remove Docker resources - optional: dir=[path to the image directory where the Dockerfile is located, default is '.']
 	make _docker cmd="clean"
 
@@ -68,5 +71,6 @@ ${VERBOSE}.SILENT: \
 	docker-example-clean \
 	docker-example-lint \
 	docker-example-run \
+	docker-push \
 	docker-shellscript-lint \
 	docker-test-suite-run \

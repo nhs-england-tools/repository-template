@@ -1,4 +1,4 @@
-name: "CI/CD Pull Request"
+name: "CI/CD pull request"
 
 # The total recommended execution time for the "CI/CD Pull Request" workflow is around 20 minutes.
 
