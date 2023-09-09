@@ -8,50 +8,50 @@
 #   - secret scanning, which we expect to be a pre-commit hook
 #   - code review, which is outside the scope of automated testing for the moment
 
-test-unit: # Run your unit tests from scripts/test/unit
+test-unit: # Run your unit tests from scripts/test/unit @Testing
 	make _test name="unit"
 
-test-lint: # Lint your code from scripts/test/lint
+test-lint: # Lint your code from scripts/test/lint @Testing
 	make _test name="lint"
 
-test-coverage: # Evaluate code coverage from scripts/test/coverage
+test-coverage: # Evaluate code coverage from scripts/test/coverage @Testing
 	make _test name="coverage"
 
-test-accessibility: # Run your accessibility tests from scripts/test/accessibility
+test-accessibility: # Run your accessibility tests from scripts/test/accessibility @Testing
 	make _test name="accessibility"
 
-test-contract: # Run your contract tests from scripts/test/contract
+test-contract: # Run your contract tests from scripts/test/contract @Testing
 	make _test name="contract"
 
-test-integration: # Run your integration tests from scripts/test/integration
+test-integration: # Run your integration tests from scripts/test/integration @Testing
 	make _test name="integration"
 
-test-load: # Run all your load tests
+test-load: # Run all your load tests @Testing
 	make \
 		test-capacity \
 		test-soak \
 		test-response-time
 		# You may wish to add more here, depending on your app
 
-test-capacity: # Test what load level your app fails at from scripts/test/capacity
+test-capacity: # Test what load level your app fails at from scripts/test/capacity @Testing
 	make _test name="capacity"
 
-test-soak: # Test that resources don't get exhausted over time from scripts/test/soak
+test-soak: # Test that resources don't get exhausted over time from scripts/test/soak @Testing
 	make _test name="soak"
 
-test-response-time: # Test your API response times from scripts/test/response-time
+test-response-time: # Test your API response times from scripts/test/response-time @Testing
 	make _test name="response-time"
 
-test-security: # Run your security tests from scripts/test/security
+test-security: # Run your security tests from scripts/test/security @Testing
 	make _test name="security"
 
-test-ui: # Run your UI tests from scripts/test/ui
+test-ui: # Run your UI tests from scripts/test/ui @Testing
 	make _test name="ui"
 
-test-ui-performance: # Run UI render tests from scripts/test/ui-performance
+test-ui-performance: # Run UI render tests from scripts/test/ui-performance @Testing
 	make _test name="ui-performance"
 
-test: # Run all the test tasks
+test: # Run all the test tasks @Testing
 	make \
 		test-unit \
 		test-lint \

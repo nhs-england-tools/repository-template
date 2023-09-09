@@ -28,6 +28,6 @@ The [pre-commit](https://pre-commit.com/) framework is a powerful tool for manag
 You can run and test the process by executing the following commands from your terminal. These commands should be run from the top-level directory of the repository:
 
 ```shell
-make githooks-install
+make githooks-config
 make githooks-run
 ```

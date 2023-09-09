@@ -4,25 +4,25 @@
 # Custom implementation - implementation of a make target should not exceed 5 lines of effective code.
 # In most cases there should be no need to modify the existing make targets.
 
-terraform-init: # Initialise Terraform - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform init command, default is none/empty]
+terraform-init: # Initialise Terraform - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform init command, default is none/empty] @Development
 	make _terraform cmd="init"
 
-terraform-plan: # Plan Terraform changes - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform plan command, default is none/empty]
+terraform-plan: # Plan Terraform changes - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform plan command, default is none/empty] @Development
 	make _terraform cmd="plan"
 
-terraform-apply: # Apply Terraform changes - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform apply command, default is none/empty]
+terraform-apply: # Apply Terraform changes - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform apply command, default is none/empty] @Development
 	make _terraform cmd="apply"
 
-terraform-destroy: # Destroy Terraform resources - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform destroy command, default is none/empty]
+terraform-destroy: # Destroy Terraform resources - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform destroy command, default is none/empty] @Development
 	make _terraform cmd="destroy"
 
-terraform-fmt: # Format Terraform files - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform fmt command, default is '-recursive']
+terraform-fmt: # Format Terraform files - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform fmt command, default is '-recursive'] @Quality
 	make _terraform cmd="fmt"
 
-terraform-validate: # Validate Terraform configuration - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform validate command, default is none/empty]
+terraform-validate: # Validate Terraform configuration - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform validate command, default is none/empty] @Quality
 	make _terraform cmd="validate"
 
-clean:: # Remove Terraform files - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set]
+clean:: # Remove Terraform files (terraform) - optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set] @Operations
 	make _terraform cmd="clean"
 
 _terraform: # Terraform command wrapper - mandatory: cmd=[command to execute]; optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform command, default is none/empty]
@@ -35,7 +35,7 @@ _terraform: # Terraform command wrapper - mandatory: cmd=[command to execute]; 
 # ==============================================================================
 # Quality checks - please, DO NOT edit this section!
 
-terraform-shellscript-lint: # Lint all Terraform module shell scripts
+terraform-shellscript-lint: # Lint all Terraform module shell scripts @Quality
 	for file in $$(find scripts/terraform -type f -name "*.sh"); do
 		file=$${file} scripts/shellscript-linter.sh
 	done
@@ -43,15 +43,15 @@ terraform-shellscript-lint: # Lint all Terraform module shell scripts
 # ==============================================================================
 # Module tests and examples - please, DO NOT edit this section!
 
-terraform-example-provision-aws-infrastructure: # Provision example of AWS infrastructure
+terraform-example-provision-aws-infrastructure: # Provision example of AWS infrastructure @ExamplesAndTests
 	make terraform-init
 	make terraform-plan opts="-out=terraform.tfplan"
 	make terraform-apply opts="-auto-approve terraform.tfplan"
 
-terraform-example-destroy-aws-infrastructure: # Destroy example of AWS infrastructure
+terraform-example-destroy-aws-infrastructure: # Destroy example of AWS infrastructure @ExamplesAndTests
 	make terraform-destroy opts="-auto-approve"
 
-terraform-example-clean: # Remove Terraform example files
+terraform-example-clean: # Remove Terraform example files @ExamplesAndTests
 	dir=$(or ${dir}, ${TERRAFORM_STACK})
 	source scripts/terraform/terraform.lib.sh
 	terraform-clean
@@ -60,7 +60,7 @@ terraform-example-clean: # Remove Terraform example files
 # ==============================================================================
 # Configuration - please, DO NOT edit this section!
 
-terraform-install: # Install Terraform
+terraform-install: # Install Terraform @Installation
 	make _install-dependency name="terraform"
 
 # ==============================================================================
