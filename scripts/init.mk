@@ -75,9 +75,8 @@ config:: # Configure development environment (common) @Configuration
 		githooks-config
 
 help: # Print help @Others
-	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2]\033[0m \033[0m\033[32mmake \033[0m\033[34m<command>\033[0m\n\n"
+	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"
 	perl -e '$(HELP_SCRIPT)' $(MAKEFILE_LIST)
-	#awk 'BEGIN {FS = ":.*?# "} /^[ a-zA-Z0-9-]+:.*? # / {printf "\033[36m%-41s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 
 list-variables: # List all the variables available to make @Operations
 	$(foreach v, $(sort $(.VARIABLES)),
@@ -122,7 +121,7 @@ HELP_SCRIPT = \
 	for my $$category (sort { $$a eq 'Others' ? 1 : $$b eq 'Others' ? -1 : $$a cmp $$b } keys %help) { \
 		print "\033[1m\033[94m$$category\033[0m:\n\n"; \
 		for my $$item (sort { $$a->[0] cmp $$b->[0] } @{$$help{$$category}}) { \
-			printf "  \033[0m\033[34m%-33s\033[0m%s\n", $$item->[0], $$item->[1]; \
+			printf " \033[0m\033[34m%-29s\033[0m%s\n", $$item->[0], $$item->[1]; \
 		} \
 		print "\n"; \
 	} \
