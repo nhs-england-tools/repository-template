@@ -7,16 +7,22 @@
   - [Conventions](#conventions)
     - [Debugging](#debugging)
     - [Scripts](#scripts)
-  - [TODO](#todo)
 
 ## Using Make
 
-Sample make target definition:
+Sample make target signature definition:
 
 ```makefile
-some-target: # Short target description - mandatory: foo=[description]; optional: baz=[description, default is 'qux']
+some-target: # Target description - mandatory: foo=[description]; optional: baz=[description, default is 'qux'] @Category
     # Recipe implementation...
 ```
+
+- `some-target`: This is the name of the target you would specify when you want to run this particular target. Use the kebab-case naming convention and prefix with an underscore `_` to mark it as a "private" target. The first part of the name is used for grouping, e.g. `docker-*` or `terraform-*`.
+- `Target Description`: Provided directly after the target name as a single line, so be concise.
+- `mandatory` parameters: Parameters that must be provided when invoking the target. Each parameter has its own description. Please, follow the specified format as it is used by `make help`.
+- `optional` parameters: Parameters that are not required when invoking the target. They may have a default value. Each parameter has its own description.
+- `@Category` label: Used for grouping by the `make help` command.
+- `Recipe implementation`: This section defines the actual commands or steps the target will execute. **Do not exceed 5 lines of effective code**. For more complex operations, use a shell script. Refer to the `docker-build` implementation in the [docker.mk](../../scripts/docker/docker.mk) file. More complex operations are implemented in the [docker.sh](../../scripts/docker/docker.lib.sh) script for readability and simplicity.
 
 Run make target from a terminal:
 
@@ -30,6 +36,10 @@ By convention we use uppercase variables for global settings that you would ordi
 All make targets should be added to the `${VERBOSE}.SILENT:` section of the `make` file, which prevents `make` from printing commands before executing them. The `${VERBOSE}` prefix on the `.SILENT:` special target allows toggling it if needed. If you explicitly want output from a certain line, use `echo`.
 
 It is worth noting that by default, `make` creates a new system process to execute each line of a recipe. This is not the desired behaviour for us and the entire content of a make recipe (a target) should be run in a single shell invocation. This has been configured in this repository by setting the [`.ONESHELL:`](https://www.gnu.org/software/make/manual/html_node/One-Shell.html) special target in the `scripts/init.mk` file.
+
+To see all available make targets, run `make help`.
+
+![make help](./assets/make_help.png)
 
 ## Using Bash
 
@@ -141,10 +151,3 @@ You can combine it with the `VERBOSE` flag to see the details of the execution f
 ```shell
 VERBOSE=1 FORCE_USE_DOCKER=1 scripts/shellscript-linter.sh
 ```
-
-## TODO
-
-- Use of CLI tools installed and available on `$PATH`
-- Commands run in Docker containers when a CLI tool is not installed
-- Explain the concept of modules in this repository
-- Make is used as an orchestrator and tool to integrate development processes with the CI/CD pipeline

@@ -7,7 +7,7 @@
 docker-build: # Build Docker image - optional: dir=[path to the Dockerfile to use, default is '.'] @Development
 	make _docker cmd="build"
 
-docker-push: # Push Docker image - optional: dir=[path to the image directory where the Dockerfile is located, default is '.']
+docker-push: # Push Docker image - optional: dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
 	make _docker cmd="push"
 
 clean:: # Remove Docker resources (docker) - optional: dir=[path to the image directory where the Dockerfile is located, default is '.'] @Operations
