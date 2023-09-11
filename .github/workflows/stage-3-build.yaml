@@ -34,6 +34,7 @@ on:
 
 jobs:
   artefact-1:
+    name: "Artefact 1"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -50,6 +51,7 @@ jobs:
           echo "Uploading artefact 1 ..."
           # TODO: Use either action/cache or action/upload-artifact
   artefact-2:
+    name: "Artefact 2"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

@@ -146,23 +146,27 @@ function version-create-effective-file() {
 # checking this tag for existence for any subsequent use.
 # Arguments (provided as environment variables):
 #   name=[full name of the Docker image]
+#   match_version=[regexp to match the version, for example if the same image is used with multiple tags, default is '.*']
 # shellcheck disable=SC2001
 function docker-get-image-version-and-pull() {
 
-  # Get the image full version from the '.tool-versions' file
+  # E.g. for the given entry "# docker/ghcr.io/org/image 1.2.3@sha256:hash" in
+  # the '.tool-versions' file, the following variables will be set to:
+  #   name="ghcr.io/org/image"
+  #   version="1.2.3@sha256:hash"
+  #   tag="1.2.3"
+  #   digest="sha256:hash"
+
+  # Get the image full version from the '.tool-versions' file,
+  # match it by name and version regex, if given.
   local versions_file="$(git rev-parse --show-toplevel)/.tool-versions"
   local version="latest"
   if [ -f "$versions_file" ]; then
-    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//")
+    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-'.*'}")
     [ -n "$line" ] && version=$(echo "$line" | awk '{print $2}')
   fi
 
   # Split the image version into two, tag name and digest sha256.
-  # E.g. for the given entry "docker/image 1.2.3@sha256:hash" in the
-  # '.tool-versions' file, the following variables will be set:
-  #   version="1.2.3@sha256:hash"
-  #   tag="1.2.3"
-  #   digest="sha256:hash"
   local tag="$(echo "$version" | sed 's/@.*$//')"
   local digest="$(echo "$version" | sed 's/^.*@//')"
 

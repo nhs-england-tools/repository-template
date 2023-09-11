@@ -34,6 +34,7 @@ on:
 
 jobs:
   test-unit:
+    name: "Unit tests"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -46,6 +47,7 @@ jobs:
         run: |
           echo "Nothing to save"
   test-lint:
+    name: "Linting"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -58,6 +60,7 @@ jobs:
         run: |
           echo "Nothing to save"
   test-coverage:
+    name: "Test coverage"
     needs: [test-unit]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -71,13 +74,13 @@ jobs:
         run: |
           echo "Nothing to save"
   perform-static-analysis:
+    name: "Perform static analysis"
     needs: [test-unit]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     timeout-minutes: 5
-    name: "Perform static analysis"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4

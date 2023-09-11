@@ -8,12 +8,13 @@ runner-act: # Run GitHub Actions locally - mandatory: workflow=[workflow file na
 	source ./scripts/docker/docker.lib.sh
 	act $(shell [[ "${VERBOSE}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]] && echo --verbose) \
 		--container-architecture linux/amd64 \
-		--platform ubuntu-latest=ghcr.io/$$(name=nhs-england-tools/github-runner-image docker-get-image-version-and-pull) \
+		--platform ubuntu-latest=$$(name="ghcr.io/nhs-england-tools/github-runner-image" docker-get-image-version-and-pull) \
 		--container-options "--privileged" \
 		--bind \
 		--pull=false \
 		--reuse \
 		--rm \
+		--defaultbranch main \
 		--workflows .github/workflows/${workflow}.yaml \
 		--job ${job}
 
@@ -63,6 +64,7 @@ clean:: # Remove all generated and temporary files
 		*cloc-report*.json \
 		*sbom*report*.json \
 		*vulnerabilities*report*.json \
+		*report*json.zip \
 		docs/diagrams/.*.bkp \
 		docs/diagrams/.*.dtmp \
 		.version

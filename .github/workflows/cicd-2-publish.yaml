@@ -8,6 +8,7 @@ on:
 
 jobs:
   metadata:
+    name: "Set CI/CD metadata"
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     timeout-minutes: 1
@@ -45,6 +46,7 @@ jobs:
           export VERSION="${{ steps.variables.outputs.version }}"
           make list-variables
   publish:
+    name: "Publish packages"
     runs-on: ubuntu-latest
     needs: [metadata]
     if: github.event.pull_request.merged == true
@@ -78,13 +80,14 @@ jobs:
       #     asset_name: repository-template-${{ needs.metadata.outputs.version }}.tar.gz
       #     asset_content_type: "application/gzip"
   success:
+    name: "Success notification"
     runs-on: ubuntu-latest
     needs: [publish]
     steps:
       - name: "Check prerequisites for notification"
         id: check
         run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
-      - name: "Notify on build completion"
+      - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
         uses: nhs-england-tools/notify-msteams-action@v0.0.4
         with:

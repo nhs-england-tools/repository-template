@@ -34,9 +34,9 @@ on:
 
 jobs:
   scan-secrets:
+    name: "Scan secrets"
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    name: "Scan secrets"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -45,9 +45,9 @@ jobs:
       - name: "Scan secrets"
         uses: ./.github/actions/scan-secrets
   check-file-format:
+    name: "Check file format"
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    name: "Check file format"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -56,9 +56,9 @@ jobs:
       - name: "Check file format"
         uses: ./.github/actions/check-file-format
   check-markdown-format:
+    name: "Check markdown format"
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    name: "Check markdown format"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -67,21 +67,21 @@ jobs:
       - name: "Check markdown format"
         uses: ./.github/actions/check-markdown-format
   lint-terraform:
+    name: "Lint Terraform"
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    name: "Lint Terraform"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
       - name: "Lint Terraform"
         uses: ./.github/actions/lint-terraform
   cloc-repository:
+    name: "Count lines of code"
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     timeout-minutes: 2
-    name: "Count lines of code"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -95,12 +95,12 @@ jobs:
           idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
           idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
   scan-dependencies:
+    name: "Scan dependencies"
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     timeout-minutes: 2
-    name: "Scan dependencies"
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
