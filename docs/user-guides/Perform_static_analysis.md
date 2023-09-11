@@ -21,7 +21,30 @@ Static code analysis is an essential part of modern software development. It pro
 
 ## Configuration checklist
 
-- Contact the GitHub Admins via email to have your [SonarCloud](https://sonarcloud.io) project created within the organisation space
+- Contact the GitHub Admins via email to have your [SonarCloud](https://sonarcloud.io) access set up. They will
+  - Create a Sonar project within the organisation space:
+    - Navigate to `+ > Analyze new project > create a project manually`
+    - Choose the appropriate organisation
+    - Set "Display name"
+    - Set "Project key" (it should be populated automatically)
+    - Set project visibility to "Public"
+    - After clicking the 'Next' button, set "The new code for this project will be based on" to "Previous version"
+    - Click "Create project"
+  - Add two new groups under `Administration > Groups`:
+    - `[Programme Name] Admins`
+    - `[Programme Name]`
+  - Assign members to the above groups accordingly
+  - Set group permissions under `Administration > Permissions`:
+    - For the `[Programme Name] Admins` group, assign:
+      - "Quality Gates"
+      - "Quality Profiles"
+  - Manage project permissions, navigate to `Administration > Projects Management` and select the project you created
+    - Click on `Edit Permissions`
+    - Search for `[Programme Name] Admins` group and assign the following:
+      - "Administer Issues"
+      - "Administer Security Hotspots"
+      - "Administer"
+      - Ensure that other groups do not have unnecessary permissions to administer this project
 - Create a bot account for your service. For more details, please see this [note](../../docs/adr/ADR-003_Acceptable_use_of_GitHub_PAT_and_Apps_for_authN_and_authZ.md#recommendation-for-github-admins). This account should be given access to your project and must own the `SONAR_TOKEN` for security reasons. Use this account to complete the rest of the activities in the Sonar service
 - Navigate to project `Administration > Analysis Method > Manually` and select `Other (for JS, TS, Go, Python, PHP, ...)`
 - In the [sonar-scanner.properties](../../scripts/config/sonar-scanner.properties) file in your repository, set the following properties according to the information provided above
