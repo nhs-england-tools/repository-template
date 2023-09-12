@@ -2,14 +2,15 @@
 
 - [Developer Guide: CI/CD pipeline](#developer-guide-cicd-pipeline)
   - [The pipeline high-level workflow model](#the-pipeline-high-level-workflow-model)
-  - [Stage triggers](#stage-triggers)
   - [Workflow stages](#workflow-stages)
     - [End-to-end workflow stages](#end-to-end-workflow-stages)
+    - [Stage triggers](#stage-triggers)
     - [Branch review workflow](#branch-review-workflow)
     - [PR review workflow](#pr-review-workflow)
     - [Publish workflow](#publish-workflow)
     - [Deploy workflow](#deploy-workflow)
     - [Rollback workflow](#rollback-workflow)
+  - [Environments and artefact promotion](#environments-and-artefact-promotion)
   - [Resources](#resources)
 
 ## The pipeline high-level workflow model
@@ -20,26 +21,6 @@ flowchart LR
     Publish --> Deploy
     Deploy --> Rollback
 ```
-
-## Stage triggers
-
-| Workflow | Stage                   |    `main` branch trigger    |  Task branch trigger   |
-|---------:|:------------------------|:---------------------------:|:----------------------:|
-|   Review | Commit (local githooks) |              -              |       on commit        |
-|   Review | Commit (remote)         |           on push           |        on push         |
-|   Review | Test                    |           on push           |        on push         |
-|   Review | Build                   |           on push           | on push, if PR is open |
-|   Review | Acceptance              |           on push           | on push, if PR is open |
-|  Publish | Publish                 |           on tag            |           -            |
-|   Deploy | Deploy                  |           on tag            |           -            |
-| Rollback | Rollback                | on demand or on healthcheck |           -            |
-
-- Publish:
-  - When merged, create snapshot release
-  - When tagged, crate Release Candidate
-- Deploy
-  - Only deploy RCs
-  - Deploy to specified environment
 
 ## Workflow stages
 
@@ -55,6 +36,26 @@ flowchart LR
     Publish --> Deploy
     Deploy --> Rollback
 ```
+
+### Stage triggers
+
+| Workflow | Stage                   |    `main` branch trigger    |  Task branch trigger   |
+|---------:|:------------------------|:---------------------------:|:----------------------:|
+|   Review | Commit (local githooks) |              -              |       on commit        |
+|   Review | Commit (remote)         |          on merge           |        on push         |
+|   Review | Test                    |          on merge           |        on push         |
+|   Review | Build                   |          on merge           | on push, if PR is open |
+|   Review | Acceptance              |          on merge           | on push, if PR is open |
+|  Publish | Publish                 |           on tag            |           -            |
+|   Deploy | Deploy                  |           on tag            |           -            |
+| Rollback | Rollback                | on demand or on healthcheck |           -            |
+
+- Publish:
+  - When merged, create snapshot release
+  - When tagged, crate Release Candidate
+- Deploy
+  - Only deploy RCs
+  - Deploy to specified environment
 
 ### Branch review workflow
 
@@ -232,6 +233,37 @@ flowchart LR
     pr_review["PR review"] --> publish
     publish["Publish"] --> deploy
     deploy["Deploy"] --> rollback
+```
+
+## Environments and artefact promotion
+
+```mermaid
+flowchart LR
+    subgraph branch_review["Branch review"]
+        direction LR
+        bA("`**local**`")
+    end
+    subgraph pr_review["PR Review"]
+        direction LR
+        prA["`**ephemeral**
+        dev environments`"]
+        prB["`automated acceptance
+        **test** environments`"]
+        prA --> prB
+    end
+    subgraph deploy1["Deploy (high-instance)"]
+        direction LR
+        d1A["`**non-prod**
+        environments`"]
+    end
+    subgraph deploy2["Deploy (Live)"]
+        direction LR
+        d2A["`**prod**
+        environment`"]
+    end
+    branch_review --> pr_review
+    pr_review --> deploy1
+    deploy1 --> deploy2
 ```
 
 ## Resources
