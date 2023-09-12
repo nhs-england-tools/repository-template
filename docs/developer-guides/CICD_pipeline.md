@@ -241,25 +241,21 @@ flowchart LR
 flowchart LR
     subgraph branch_review["Branch review"]
         direction LR
-        bA("`**local**`")
+        bA("local")
     end
     subgraph pr_review["PR Review"]
         direction LR
-        prA["`**ephemeral**
-        dev environments`"]
-        prB["`automated acceptance
-        **test** environments`"]
+        prA["ephemeral<br>dev environments"]
+        prB["automated acceptance<br>test environments"]
         prA --> prB
     end
     subgraph deploy1["Deploy (high-instance)"]
         direction LR
-        d1A["`**non-prod**
-        environments`"]
+        d1A["non-prod<br>environments"]
     end
     subgraph deploy2["Deploy (Live)"]
         direction LR
-        d2A["`**prod**
-        environment`"]
+        d2A["prod environment"]
     end
     branch_review --> pr_review
     pr_review --> deploy1
