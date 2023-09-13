@@ -1,5 +1,6 @@
 nodejs 18.17.1 # Always check AWS and Azure runtime support
 python 3.11.4 # Always check AWS and Azure runtime support
+poetry 1.6.1
 terraform 1.5.6
 pre-commit 3.3.3
 
