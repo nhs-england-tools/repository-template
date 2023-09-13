@@ -1,5 +1,11 @@
 # SEE: https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml
 
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md010.md
+MD010: # no-hard-tabs
+  ignore_code_languages:
+    - make
+    - console
+
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md013.md
 MD013: false
 
