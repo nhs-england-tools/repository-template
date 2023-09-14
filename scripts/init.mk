@@ -101,12 +101,14 @@ else
 	.SHELLFLAGS := -ce
 endif
 
-# This script parses all the make target descriptions and renders help output.
+# This script parses all the make target descriptions and renders help output - it was difficult to write, so it must be hard to read...
 HELP_SCRIPT = \
+	use Text::Wrap; \
 	%help; \
+	my $$max_cmd_len = 0; \
+	my $$terminal_width = `tput cols` || 120; chomp($$terminal_width); \
 	while(<>){ \
 		next if /^_/; \
-		s/(\w+)=/\033[3m\033[93m$$1\033[0m=/g; \
 		if (/^([\w-_]+)\s*:.*\#(.*?)(@(\w+))?\s*$$/) { \
 			my $$cmd = $$1; \
 			my $$desc = $$2; \
@@ -116,15 +118,28 @@ HELP_SCRIPT = \
 			$$category_name = lc($$category_name); \
 			$$category_name =~ s/^(.)/\U$$1/; \
 			push @{$$help{$$category_name}}, [$$cmd, $$desc]; \
+			$$max_cmd_len = (length($$cmd) > 37) ? 40 : $$max_cmd_len; \
 		} \
 	} \
+	my $$desc_width = $$terminal_width - $$max_cmd_len - 4; \
+	$$Text::Wrap::columns = $$desc_width; \
 	for my $$category (sort { $$a eq 'Others' ? 1 : $$b eq 'Others' ? -1 : $$a cmp $$b } keys %help) { \
-		print "\033[1m\033[94m$$category\033[0m:\n\n"; \
+		print "\033[1m$$category\033[0m:\n\n"; \
 		for my $$item (sort { $$a->[0] cmp $$b->[0] } @{$$help{$$category}}) { \
-			printf " \033[0m\033[34m%-29s\033[0m%s\n", $$item->[0], $$item->[1]; \
+			my $$desc = $$item->[1]; \
+			my @desc_lines = split("\n", wrap("", "", $$desc)); \
+			my $$d1 = shift @desc_lines; \
+			$$d1 =~ s/(\w+)=/\033[3m\033[93m$$1\033[0m=/g; \
+			my $$formatted_cmd = $$item->[0]; \
+			$$formatted_cmd = substr($$formatted_cmd, 0, 37) . "..." if length($$formatted_cmd) > 37; \
+			print sprintf("  \033[0m\033[34m%-$${max_cmd_len}s\033[0m%s %s\n", $$formatted_cmd, $$d1); \
+			for my $$line (@desc_lines) { \
+				$$line =~ s/(\w+)=/\033[3m\033[93m$$1\033[0m=/g; \
+				print sprintf(" %-$${max_cmd_len}s  %s\n", " ", $$line); \
+			} \
+			print "\n"; \
 		} \
-		print "\n"; \
-	} \
+	}
 
 ${VERBOSE}.SILENT: \
 	_install-dependency \
