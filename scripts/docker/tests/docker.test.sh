@@ -27,7 +27,8 @@ function main() {
   test-docker-suite-setup
   tests=( \
     test-docker-build \
-    test-docker-version \
+    test-docker-image-from-signature \
+    test-docker-version-file \
     test-docker-test \
     test-docker-run \
     test-docker-clean \
@@ -70,7 +71,17 @@ function test-docker-build() {
   docker image inspect "${DOCKER_IMAGE}:$(_get-effective-version)" > /dev/null 2>&1 && return 0 || return 1
 }
 
-function test-docker-version() {
+function test-docker-image-from-signature() {
+
+  # Arrange
+  cp Dockerfile Dockerfile.effective
+  # Act
+  _replace-image-latest-by-specific-version
+  # Assert
+  grep -q "FROM python:.*-alpine.*@sha256:.*" Dockerfile.effective && return 0 || return 1
+}
+
+function test-docker-version-file() {
 
   # Arrange
   export BUILD_DATETIME="2023-09-04T15:46:34+0000"

@@ -24,8 +24,12 @@ function docker-build() {
 
   local dir=${dir:-$PWD}
 
-  _create-effective-dockerfile
   version-create-effective-file
+  _create-effective-dockerfile
+  # The current directory must be changed for the image build script to access
+  # assets that need to be copied
+  current_dir=$(pwd)
+  cd "$dir"
   docker build \
     --progress=plain \
     --platform linux/amd64 \
@@ -42,6 +46,7 @@ function docker-build() {
     --rm \
     --file "${dir}/Dockerfile.effective" \
     .
+  cd "$current_dir"
   # Tag the image with all the stated versions, see the documentation for more details
   for version in $(_get-all-effective-versions) latest; do
     docker tag "${DOCKER_IMAGE}:$(_get-effective-version)" "${DOCKER_IMAGE}:${version}"
@@ -217,14 +222,14 @@ function _replace-image-latest-by-specific-version() {
   local build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}
 
   if [ -f "$versions_file" ]; then
-    # First, list the entries specific for Docker to take precedence, then the rest
-    content=$(grep " docker/" "$versions_file"; grep -v " docker/" "$versions_file")
+    # First, list the entries specific for Docker to take precedence, then the rest but exclude comments
+    content=$(grep " docker/" "$versions_file"; grep -v " docker/" "$versions_file" | grep -v "^#")
     echo "$content" | while IFS= read -r line; do
       [ -z "$line" ] && continue
       line=$(echo "$line" | sed "s/^#\s*//; s/\s*#.*$//" | sed "s;docker/;;")
       name=$(echo "$line" | awk '{print $1}')
       version=$(echo "$line" | awk '{print $2}')
-      sed -i "s;\(FROM .*\) ${name}:latest;\1 ${name}:${version};g" "$dockerfile"
+      sed -i "s;\(FROM .*\)${name}:latest;\1${name}:${version};g" "$dockerfile"
     done
   fi
 
