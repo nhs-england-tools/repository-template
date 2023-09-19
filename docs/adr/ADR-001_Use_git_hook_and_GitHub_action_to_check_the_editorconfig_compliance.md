@@ -126,7 +126,7 @@ As a result of the above decision
 - the name of the file will be `check-file-format.sh`
 - there will be a `pre-commit` runner installed by the [pre-commit](https://pre-commit.com/) framework using a make target
 - the GitHub Action will call the git hook `check-file-format.sh` script directly
-- and a couple of `Makefile` targets like `config`, `githooks-install` will be implemented to bootstrap the project
+- and a couple of `Makefile` targets like `config`, `githooks-config` will be implemented to bootstrap the project
 
 The intention of this decision is to guide any other git hook and GitHub Action implementations.
 
