@@ -2,11 +2,11 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `12/09/2022` |
+>| Date         | `15/09/2022` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
->| Owners       | `?` |
+>| Owners       | `Dan Stefaniuk, Nick Sparks` |
 
 ---
 
@@ -23,6 +23,14 @@
   - [Tags](#tags)
 
 ## Context
+
+Continuous integration and continuous delivery pipeline is to organise all steps required to go from idea to a releasable software using automation of the development process. The key ideas upon it is founded are as follows:
+
+- The reliable, repeatable production of high quality software.
+- The application of scientific principles, experimentation, feedback and learning.
+- The pipeline (or set of workflows) as a mechanism to organise and automate the development process.
+
+For this to work it is essential to apply principles and practices noted in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework)
 
 Requirements:
 
