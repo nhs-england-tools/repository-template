@@ -31,6 +31,7 @@ function main() {
     test-docker-test \
     test-docker-run \
     test-docker-clean \
+    test-docker-get-image-version-and-pull \
   )
   local status=0
   for test in "${tests[@]}"; do
@@ -113,6 +114,20 @@ function test-docker-clean() {
   docker-clean
   # Assert
   docker image inspect "${DOCKER_IMAGE}:${version}" > /dev/null 2>&1 && return 1 || return 0
+}
+
+function test-docker-get-image-version-and-pull() {
+
+  # Arrange
+  name="ghcr.io/nhs-england-tools/github-runner-image"
+  match_version=".*-rt.*"
+  # Act
+  docker-get-image-version-and-pull > /dev/null 2>&1
+  # Assert
+  docker images \
+    --filter=reference="$name" \
+    --format "{{.Tag}}" \
+  | grep -vq "<none>"
 }
 
 # ==============================================================================

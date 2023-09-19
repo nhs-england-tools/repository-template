@@ -11,6 +11,7 @@ on:
 
 jobs:
   metadata:
+    name: "Set CI/CD metadata"
     runs-on: ubuntu-latest
     timeout-minutes: 1
     outputs:
@@ -66,6 +67,7 @@ jobs:
           export DOES_PULL_REQUEST_EXIST="${{ steps.pr_exists.outputs.does_pull_request_exist }}"
           make list-variables
   commit-stage: # Recommended maximum execution time is 2 minutes
+    name: "Commit stage"
     needs: [metadata]
     uses: ./.github/workflows/stage-1-commit.yaml
     with:
@@ -78,6 +80,7 @@ jobs:
       version: "${{ needs.metadata.outputs.version }}"
     secrets: inherit
   test-stage: # Recommended maximum execution time is 5 minutes
+    name: "Test stage"
     needs: [metadata, commit-stage]
     uses: ./.github/workflows/stage-2-test.yaml
     with:
@@ -90,6 +93,7 @@ jobs:
       version: "${{ needs.metadata.outputs.version }}"
     secrets: inherit
   build-stage: # Recommended maximum execution time is 3 minutes
+    name: "Build stage"
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-3-build.yaml
     if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
@@ -103,6 +107,7 @@ jobs:
       version: "${{ needs.metadata.outputs.version }}"
     secrets: inherit
   acceptance-stage: # Recommended maximum execution time is 10 minutes
+    name: "Acceptance stage"
     needs: [metadata, build-stage]
     uses: ./.github/workflows/stage-4-acceptance.yaml
     if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))

@@ -31,6 +31,7 @@ runs:
       shell: bash
       run: zip sbom-repository-report.json.zip sbom-repository-report.json
     - name: "Upload SBOM report as an artefact"
+      if: ${{ !env.ACT }}
       uses: actions/upload-artifact@v3
       with:
         name: sbom-repository-report.json.zip
@@ -45,6 +46,7 @@ runs:
       shell: bash
       run: zip vulnerabilities-repository-report.json.zip vulnerabilities-repository-report.json
     - name: "Upload vulnerabilities report as an artefact"
+      if: ${{ !env.ACT }}
       uses: actions/upload-artifact@v3
       with:
         name: vulnerabilities-repository-report.json.zip

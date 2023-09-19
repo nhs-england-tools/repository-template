@@ -136,12 +136,12 @@ Both, the git hook and the GitHub Action should be executed automatically as par
 
 ## Notes
 
-There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub actions even more portable. The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.
+There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub Actions even more portable. ~~The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.~~ Update: Please, see the [Test GitHub Actions locally](../user-guides/Test_GitHub_Actions_locally.md) user guide.
 
 ## Actions
 
-- [ ] Ensure the naming convention of the other git hooks follows the pattern set by the `./scripts/githooks/check-file-format.sh` script
-- [ ] Relocate shell scripts that are called by the GitHub workflow, currently placed in the `./scripts` directory, to `./.github/workflows/scripts`
+- [x] Ensure the naming convention of the other git hooks follows the pattern set by the `scripts/githooks/check-file-format.sh` script
+- [ ] ~~Relocate shell scripts that are called by the GitHub workflow, currently placed in the `scripts` directory, to `.github/workflows/scripts`.~~ Update: Scripts provided along with this repository template are made to be agnostic from any provider's workflow implementation; this is by design. Therefore, the `scripts` directory is the right place for the shell scripts.
 
 ## Tags
 

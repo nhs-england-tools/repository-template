@@ -31,6 +31,7 @@ runs:
       shell: bash
       run: zip cloc-report.json.zip cloc-report.json
     - name: "Upload CLOC report as an artefact"
+      if: ${{ !env.ACT }}
       uses: actions/upload-artifact@v3
       with:
         name: cloc-report.json.zip
