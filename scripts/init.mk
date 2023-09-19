@@ -6,7 +6,7 @@ include scripts/tests/test.mk
 
 # ==============================================================================
 
-runner-act: # Run GitHub Actions locally - mandatory: workflow=[workflow file name], job=[job name]
+runner-act: # Run GitHub Actions locally - mandatory: workflow=[workflow file name], job=[job name] @Development
 	source ./scripts/docker/docker.lib.sh
 	act $(shell [[ "${VERBOSE}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]] && echo --verbose) \
 		--container-architecture linux/amd64 \
@@ -80,7 +80,7 @@ help: # Print help @Others
 	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"
 	perl -e '$(HELP_SCRIPT)' $(MAKEFILE_LIST)
 
-list-variables: # List all the variables available to make @Operations
+list-variables: # List all the variables available to make @Others
 	$(foreach v, $(sort $(.VARIABLES)),
 		$(if $(filter-out default automatic, $(origin $v)),
 			$(if $(and $(patsubst %_PASSWORD,,$v), $(patsubst %_PASS,,$v), $(patsubst %_KEY,,$v), $(patsubst %_SECRET,,$v)),
