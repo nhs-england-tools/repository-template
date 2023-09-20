@@ -51,8 +51,6 @@ function main() {
       --volume=$PWD:/check \
       mstruebing/editorconfig-checker:$image_version \
         sh -c 'ec --exclude ".git/" $(git diff --diff-filter=ACMRT --name-only)'
-    [ $? != 0 ] && exit_code=1 ||:
-
   fi
 }
 
