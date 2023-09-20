@@ -27,8 +27,7 @@ set +e
 # ==============================================================================
 
 # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags, use the `linux/amd64` os/arch
-image_version=2.7.0@sha256:0f8f8dd4f393d29755bef2aef4391d37c34e358d676e9d66ce195359a9c72ef3
-exit_code=0
+image_version=2.7.1@sha256:dd3ca9ea50ef4518efe9be018d669ef9cf937f6bb5cfe2ef84ff2a620b5ddc24
 
 # ==============================================================================
 
@@ -72,4 +71,4 @@ is-arg-true "$VERBOSE" && set -x
 
 main $*
 
-exit $exit_code
+exit 0
