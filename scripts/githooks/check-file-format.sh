@@ -87,9 +87,6 @@ case $check in
         ;;
 esac
 
-echo $check
-echo $filter
-
 is-arg-true "$VERBOSE" && set -x
 is-arg-true "$dry_run" && dry_run_opt="--dry-run"
 
