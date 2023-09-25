@@ -11,7 +11,6 @@ set +e
 #
 # Options:
 #   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is `origin/main`
-#   ALL_FILES=true                      # Check all files, default is `false`
 #   VERBOSE=true                        # Show all the executed commands, default is `false`
 #
 # Exit codes:
