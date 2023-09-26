@@ -47,6 +47,28 @@ function main() {
 
   cd $(git rev-parse --show-toplevel)
 
+  is-arg-true "$dry_run" && dry_run_opt="--dry-run"
+
+  check=${check:-working-tree-changes}
+  case $check in
+    "all")
+      filter="git ls-files"
+      ;;
+    "staged-changes")
+      filter="git diff --diff-filter=ACMRT --name-only --cached"
+      ;;
+    "working-tree-changes")
+      filter="git diff --diff-filter=ACMRT --name-only"
+      ;;
+    "branch")
+      filter="git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main}"
+      ;;
+    *)
+      echo "Unrecognised check mode: $check" >&2 && exit 1
+      ;;
+  esac
+
+
   # We use /dev/null here as a backstop in case there are no files in the state
   # we choose.  If the filter comes back empty, adding `/dev/null` onto it has
   # the effect of preventing `ec` from treating "no files" as "all the files".
@@ -67,28 +89,8 @@ function is-arg-true() {
 
 # ==============================================================================
 
-check=${check:-working-tree-changes}
-
-case $check in
-    "all")
-        filter="git ls-files"
-        ;;
-    "staged-changes")
-        filter="git diff --diff-filter=ACMRT --name-only --cached"
-        ;;
-    "working-tree-changes")
-        filter="git diff --diff-filter=ACMRT --name-only"
-        ;;
-    "branch")
-        filter="git diff --diff-filter=ACMRT --name-only ${BRANCH_NAME:-origin/main}"
-        ;;
-    *)
-        echo "Unrecognised check mode: $check" >&2 && exit 1
-        ;;
-esac
 
 is-arg-true "$VERBOSE" && set -x
-is-arg-true "$dry_run" && dry_run_opt="--dry-run"
 
 main $*
 
