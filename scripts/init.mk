@@ -50,8 +50,7 @@ githooks-run: # Run git hooks configured in this repository @Operations
 
 asdf-install: # Install asdf @Installation
 	asdf_version=$$(grep -E "#\s+asdf\s+v[0-9.]+\s+[a-fA-F0-9]{40}" .tool-versions | awk '{ print $$4 }')
-	if ! [ -d "${HOME}/.asdf" ] || ! [ -d "${HOME}/.asdf/.git" ]; then
-		rm -rf "${HOME}/.asdf"
+	if ! [ -d "${HOME}/.asdf" ]; then
 		git clone https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
 	fi
 	cd "${HOME}/.asdf"
