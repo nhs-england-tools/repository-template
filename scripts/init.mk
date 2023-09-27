@@ -49,11 +49,19 @@ githooks-run: # Run git hooks configured in this repository @Operations
 		--all-files
 
 asdf-install: # Install asdf @Installation
-	if [ -d "${HOME}/.asdf" ]; then
-		( cd "${HOME}/.asdf"; git pull )
-	else
-		git clone --depth=1 https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
+	asdf_version=$$(grep -E "#\s+asdf\s+v[0-9.]+\s+[a-fA-F0-9]{40}" .tool-versions | awk '{ print $$4 }')
+	if ! [ -d "${HOME}/.asdf" ] || ! [ -d "${HOME}/.asdf/.git" ]; then
+		rm -rf "${HOME}/.asdf"
+		git clone https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
 	fi
+	cd "${HOME}/.asdf"
+	git checkout master
+	git pull
+	git checkout $$asdf_version
+	printf "\n\033[0m\033[93mPlease, add the following lines to your shell profile, either '~/.zshrc' or '~/.bashrc' file:\033[0m\n\n"
+	printf "\033[3m\033[93m  source \"$$HOME/.asdf/asdf.sh\"\033[0m\n"
+	printf "\033[3m\033[93m  source \"$$HOME/.asdf/completions/asdf.bash\"\033[0m\n\n"
+	printf "\033[0m\033[93mThen re-run this command if required.\033[0m\n\n"
 	asdf plugin update --all
 
 _install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]

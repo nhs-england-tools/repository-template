@@ -21,12 +21,12 @@ Make use of this repository template to expedite your project setup and enhance 
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
     - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
+    - [Configuration](#configuration)
   - [Usage](#usage)
     - [Testing](#testing)
   - [Architecture](#architecture)
     - [Diagrams](#diagrams)
-    - [Configuration](#configuration)
+    - [Configuration](#configuration-1)
   - [Contributing](#contributing)
   - [Contacts](#contacts)
   - [Licence](#licence)
@@ -44,12 +44,13 @@ cd nhs-england-tools/repository-template
 
 ### Prerequisites
 
-The following software packages or their equivalents are expected to be installed
+The following software packages, or their equivalents, are expected to be installed:
 
-- [GNU make](https://www.gnu.org/software/make/) **v3.82 or later: OS X users, take note below**
 - [Docker](https://www.docker.com/)
+- [GNU make](https://www.gnu.org/software/make/) 3.82 or later (macOS users, please see the note below).
+- [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation. For macOS users, this has been scripted and automated by the `dotfiles` project; please see this [script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
 
-Note that the version of GNU Make available by default on OS X is earlier than this.  You will need to upgrade it, or certain `make` tasks will fail.  On OS X, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
+Note that the version of GNU Make available by default on macOS is earlier than this. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
 
 ```shell
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -59,18 +60,12 @@ brew install make
 You will then see instructions to fix your `$PATH` variable to make the newly installed version available.
 If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
 
-### Installation
+### Configuration
 
-Install and configure toolchain dependencies
+Installation and configuration of the toolchain dependencies
 
 ```shell
 make config
-```
-
-If this repository is
-
-```shell
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
 ```
 
 ## Usage
