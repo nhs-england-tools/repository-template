@@ -59,9 +59,10 @@ asdf-install: # Install asdf @Installation
 	git pull
 	git checkout $$asdf_version
 	printf "\n\033[0m\033[93mPlease, add the following lines to your shell profile, either '~/.zshrc' or '~/.bashrc' file:\033[0m\n\n"
-	printf "\033[3m\033[93m  source \"$$HOME/.asdf/asdf.sh\"\033[0m\n"
-	printf "\033[3m\033[93m  source \"$$HOME/.asdf/completions/asdf.bash\"\033[0m\n\n"
-	printf "\033[0m\033[93mThen re-run this command if required.\033[0m\n\n"
+	printf "\033[3m\033[93m  PATH=\"\$$PATH:\$$HOME/.asdf/shims:\$$HOME/.asdf/bin\"\033[0m\n"
+	printf "\033[3m\033[93m  source \"\$$HOME/.asdf/asdf.sh\"\033[0m\n"
+	printf "\033[3m\033[93m  source \"\$$HOME/.asdf/completions/asdf.bash\"\033[0m\n\n"
+	printf "\033[0m\033[93mThen re-open your terminal and run this command again if required, i.e. if the next step of the script fails.\033[0m\n\n"
 	asdf plugin update --all
 
 _install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
