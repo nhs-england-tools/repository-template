@@ -1,4 +1,4 @@
-# This file is for you! Edit it to implement your own Terraform make targets.
+# This file is for you! Please, updated to the versions agreed by your team.
 
 terraform 1.5.7
 pre-commit 3.4.0
