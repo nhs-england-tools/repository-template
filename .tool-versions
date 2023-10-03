@@ -1,23 +1,10 @@
-nodejs 18.18.0 # Always check AWS and Azure runtime support
-python 3.11.5 # Always check AWS and Azure runtime support
-poetry 1.6.1
-yarn 1.22.19
+# This file is for you! Edit it to implement your own Terraform make targets.
+
 terraform 1.5.7
 pre-commit 3.4.0
 
-# asdf v0.13.1 0586b37d03031ae8c3110ea2b51cacaad46c7cdc
-
 # ==============================================================================
 # The section below is reserved for Docker image versions.
-
-# alpine, SEE: https://hub.docker.com/_/alpine/tags
-# docker/alpine 3.18.3@sha256:c5c5fda71656f28e49ac9c5416b3643eaa6a108a8093151d6d1afc9463be8e33
-
-# nodejs, SEE: https://hub.docker.com/_/node/tags
-# docker/node 18.17.1-alpine3.18@sha256:982b5b6f07cd9241c9ebb163829067deac8eaefc57cfa8f31927f4b18943d971
-
-# python, SEE: https://hub.docker.com/_/python/tags
-# docker/python 3.11.4-alpine3.18@sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86
 
 # terraform, SEE: https://hub.docker.com/r/hashicorp/terraform/tags
 # docker/hashicorp/terraform 1.5.6@sha256:180a7efa983386a27b43657ed610e9deed9e6c3848d54f9ea9b6cb8a5c8c25f5

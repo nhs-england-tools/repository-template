@@ -29,14 +29,6 @@ shellscript-lint-all: # Lint all shell scripts in this project, do not fail on e
 		file=$${file} scripts/shellscript-linter.sh ||:
 	done
 
-nodejs-install: # Install Node.js @Installation
-	make _install-dependency name="nodejs"
-	make _install-dependency name="yarn" version=latest
-
-python-install: # Install Python @Installation
-	make _install-dependency name="python"
-	make _install-dependency name="poetry" version=latest
-
 githooks-config: # Trigger Git hooks on commit that are defined in this repository @Configuration
 	make _install-dependency name="pre-commit"
 	pre-commit install \
@@ -47,22 +39,6 @@ githooks-run: # Run git hooks configured in this repository @Operations
 	pre-commit run \
 		--config scripts/config/pre-commit.yaml \
 		--all-files
-
-asdf-install: # Install asdf @Installation
-	asdf_version=$$(grep -E "#\s+asdf\s+v[0-9.]+\s+[a-fA-F0-9]{40}" .tool-versions | awk '{ print $$4 }')
-	if ! [ -d "${HOME}/.asdf" ]; then
-		git clone https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
-	fi
-	cd "${HOME}/.asdf"
-	git checkout master
-	git pull
-	git checkout $$asdf_version
-	printf "\n\033[0m\033[93mPlease, add the following lines to your shell profile, either '~/.zshrc' or '~/.bashrc' file:\033[0m\n\n"
-	printf "\033[3m\033[93m  PATH=\"\$$PATH:\$$HOME/.asdf/shims:\$$HOME/.asdf/bin\"\033[0m\n"
-	printf "\033[3m\033[93m  source \"\$$HOME/.asdf/asdf.sh\"\033[0m\n"
-	printf "\033[3m\033[93m  source \"\$$HOME/.asdf/completions/asdf.bash\"\033[0m\n\n"
-	printf "\033[0m\033[93mThen re-open your terminal and run this command again if required, i.e. if the next step of the script fails.\033[0m\n\n"
-	asdf plugin update --all
 
 _install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
 	asdf plugin add ${name} ||:
@@ -81,7 +57,6 @@ clean:: # Remove all generated and temporary files (common) @Operations
 
 config:: # Configure development environment (common) @Configuration
 	make \
-		asdf-install \
 		githooks-config
 
 help: # Print help @Others
@@ -166,15 +141,12 @@ HELP_SCRIPT = \
 
 ${VERBOSE}.SILENT: \
 	_install-dependency \
-	asdf-install \
 	clean \
 	config \
 	githooks-config \
 	githooks-run \
 	help \
 	list-variables \
-	nodejs-install \
-	python-install \
 	runner-act \
 	shellscript-lint-all \
 	version-create-effective-file \
