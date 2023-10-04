@@ -10,7 +10,8 @@ repos:
   hooks:
   - id: check-file-format
     name: Check File Format
-    entry: check=staged-changes./scripts/githooks/check-file-format.sh
+    entry: ./scripts/githooks/check-file-format.sh
+    args: ["check=staged-changes"]
     language: script
     pass_filenames: false
 - repo: local

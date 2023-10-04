@@ -45,6 +45,7 @@ docker-example-build: # Build Docker example @ExamplesAndTests
 	cd scripts/docker/examples/python
 	DOCKER_IMAGE=repository-template/docker-example-python
 	DOCKER_TITLE="Repository Template Docker Python Example"
+	TOOL_VERSIONS="$(shell git rev-parse --show-toplevel)/scripts/docker/examples/python/.tool-versions.example"
 	docker-build
 
 docker-example-lint: # Lint Docker example @ExamplesAndTests

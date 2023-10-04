@@ -90,6 +90,7 @@ ${VERBOSE}.SILENT: \
 	terraform-example-provision-aws-infrastructure \
 	terraform-fmt \
 	terraform-init \
+	terraform-install \
 	terraform-plan \
 	terraform-shellscript-lint \
 	terraform-validate \

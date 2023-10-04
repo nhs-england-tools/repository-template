@@ -29,14 +29,6 @@ shellscript-lint-all: # Lint all shell scripts in this project, do not fail on e
 		file=$${file} scripts/shellscript-linter.sh ||:
 	done
 
-nodejs-install: # Install Node.js @Installation
-	make _install-dependency name="nodejs"
-	make _install-dependency name="yarn" version=latest
-
-python-install: # Install Python @Installation
-	make _install-dependency name="python"
-	make _install-dependency name="poetry" version=latest
-
 githooks-config: # Trigger Git hooks on commit that are defined in this repository @Configuration
 	make _install-dependency name="pre-commit"
 	pre-commit install \
@@ -47,14 +39,6 @@ githooks-run: # Run git hooks configured in this repository @Operations
 	pre-commit run \
 		--config scripts/config/pre-commit.yaml \
 		--all-files
-
-asdf-install: # Install asdf @Installation
-	if [ -d "${HOME}/.asdf" ]; then
-		( cd "${HOME}/.asdf"; git pull )
-	else
-		git clone --depth=1 https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
-	fi
-	asdf plugin update --all
 
 _install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
 	asdf plugin add ${name} ||:
@@ -73,7 +57,6 @@ clean:: # Remove all generated and temporary files (common) @Operations
 
 config:: # Configure development environment (common) @Configuration
 	make \
-		asdf-install \
 		githooks-config
 
 help: # Print help @Others
@@ -158,15 +141,12 @@ HELP_SCRIPT = \
 
 ${VERBOSE}.SILENT: \
 	_install-dependency \
-	asdf-install \
 	clean \
 	config \
 	githooks-config \
 	githooks-run \
 	help \
 	list-variables \
-	nodejs-install \
-	python-install \
 	runner-act \
 	shellscript-lint-all \
 	version-create-effective-file \

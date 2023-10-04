@@ -7,11 +7,10 @@ Start with an overview or a brief description of what the project is about and w
 
 Welcome to our repository template designed to streamline your project setup! This robust template provides a reliable starting point for your new projects, covering an essential tech stack and encouraging best practices in documenting.
 
-This repository template aims to foster a user-friendly development environment by ensuring that every included file is concise and adequately self-documented. By adhering to this standard, we can promote increased clarity and maintainability throughout your project's lifecycle. Bundled within this template are resources that pave the way for seamless repository creation. Our supported tech stack includes:
+This repository template aims to foster a user-friendly development environment by ensuring that every included file is concise and adequately self-documented. By adhering to this standard, we can promote increased clarity and maintainability throughout your project's lifecycle. Bundled within this template are resources that pave the way for seamless repository creation. Currently supported technologies are:
 
 - Terraform
-- Python
-- Node.js
+- Docker
 
 Make use of this repository template to expedite your project setup and enhance your productivity right from the get-go. Enjoy the advantage of having a well-structured, self-documented project that reduces overhead and increases focus on what truly matters - coding!
 
@@ -21,12 +20,12 @@ Make use of this repository template to expedite your project setup and enhance 
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
     - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
+    - [Configuration](#configuration)
   - [Usage](#usage)
     - [Testing](#testing)
-  - [Architecture](#architecture)
+  - [Design](#design)
     - [Diagrams](#diagrams)
-    - [Configuration](#configuration)
+    - [Modularity](#modularity)
   - [Contributing](#contributing)
   - [Contacts](#contacts)
   - [Licence](#licence)
@@ -44,33 +43,28 @@ cd nhs-england-tools/repository-template
 
 ### Prerequisites
 
-The following software packages or their equivalents are expected to be installed
+The following software packages, or their equivalents, are expected to be installed:
 
-- [GNU make](https://www.gnu.org/software/make/) **v3.82 or later: OS X users, take note below**
-- [Docker](https://www.docker.com/)
+- [docker](https://www.docker.com/) container runtime or a compatible tool, e.g. [podman](https://podman.io/),
+- [asdf](https://asdf-vm.com/) version manager,
+- [GNU make](https://www.gnu.org/software/make/) 3.82 or later,
+- [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation. For macOS users, this has been scripted and automated by the `dotfiles` project; please see this [script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
 
-Note that the version of GNU Make available by default on OS X is earlier than this.  You will need to upgrade it, or certain `make` tasks will fail.  On OS X, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
+> [!NOTE]<br>
+> The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
+>
+> ```shell
+> brew install make
+> ```
+>
+> You will then see instructions to fix your `$PATH` variable to make the newly installed version available. If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
 
-```shell
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install make
-```
+### Configuration
 
-You will then see instructions to fix your `$PATH` variable to make the newly installed version available.
-If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
-
-### Installation
-
-Install and configure toolchain dependencies
+Installation and configuration of the toolchain dependencies
 
 ```shell
 make config
-```
-
-If this repository is
-
-```shell
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/org/repo/branch/install.sh)"
 ```
 
 ## Usage
@@ -81,7 +75,7 @@ After a successful installation, provide an informative example of how this proj
 
 There are `make` tasks for you to configure to run your tests.  Run `make test` to see how they work.  You should be able to use the same entry points for local development as in your CI pipeline.
 
-## Architecture
+## Design
 
 ### Diagrams
 
@@ -89,7 +83,7 @@ The [C4 model](https://c4model.com/) is a simple and intuitive way to create sof
 
 ![Repository Template](./docs/diagrams/Repository_Template_GitHub_Generic.png)
 
-### Configuration
+### Modularity
 
 Most of the projects are built with customisability and extendability in mind. At a minimum, this can be achieved by implementing service level configuration options and settings. The intention of this section is to show how this can be used. If the system processes data, you could mention here for example how the input is prepared for testing - anonymised, synthetic or live data.
 

@@ -11,8 +11,9 @@ set -euo pipefail
 #   $ source ./docker.lib.sh
 #
 # Arguments (provided as environment variables):
-#   DOCKER_IMAGE=ghcr.io/org/repo   # Docker image name
-#   DOCKER_TITLE="My Docker image"  # Docker image title
+#   DOCKER_IMAGE=ghcr.io/org/repo             # Docker image name
+#   DOCKER_TITLE="My Docker image"            # Docker image title
+#   TOOL_VERSIONS=$project_dir/.tool-versions # Path to the tool versions file
 
 # ==============================================================================
 # Functions to be used with custom images.
@@ -164,7 +165,7 @@ function docker-get-image-version-and-pull() {
 
   # Get the image full version from the '.tool-versions' file,
   # match it by name and version regex, if given.
-  local versions_file="$(git rev-parse --show-toplevel)/.tool-versions"
+  local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
   local version="latest"
   if [ -f "$versions_file" ]; then
     line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-'.*'}")
@@ -217,13 +218,13 @@ function _create-effective-dockerfile() {
 function _replace-image-latest-by-specific-version() {
 
   local dir=${dir:-$PWD}
-  local versions_file=$(git rev-parse --show-toplevel)/.tool-versions
+  local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
   local dockerfile="${dir}/Dockerfile.effective"
   local build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}
 
   if [ -f "$versions_file" ]; then
     # First, list the entries specific for Docker to take precedence, then the rest but exclude comments
-    content=$(grep " docker/" "$versions_file"; grep -v " docker/" "$versions_file" | grep -v "^#")
+    content=$(grep " docker/" "$versions_file"; grep -v " docker/" "$versions_file" ||: | grep -v "^#")
     echo "$content" | while IFS= read -r line; do
       [ -z "$line" ] && continue
       line=$(echo "$line" | sed "s/^#\s*//; s/\s*#.*$//" | sed "s;docker/;;")

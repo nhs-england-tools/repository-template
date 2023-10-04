@@ -74,6 +74,7 @@ function test-docker-build() {
 function test-docker-image-from-signature() {
 
   # Arrange
+  TOOL_VERSIONS="$(git rev-parse --show-toplevel)/scripts/docker/tests/.tool-versions.test"
   cp Dockerfile Dockerfile.effective
   # Act
   _replace-image-latest-by-specific-version
