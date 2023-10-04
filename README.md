@@ -54,7 +54,6 @@ The following software packages, or their equivalents, are expected to be instal
 > The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
 >
 > ```shell
-> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 > brew install make
 > ```
 >
