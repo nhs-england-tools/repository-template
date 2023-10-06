@@ -18,7 +18,7 @@ set -euo pipefail
 
 function main() {
 
-  cd $(git rev-parse --show-toplevel)
+  cd "$(git rev-parse --show-toplevel)"
 
   local check_only=${check_only:-false}
   check_only=$check_only terraform-fmt
@@ -35,6 +35,8 @@ function terraform-fmt() {
   fi
   opts=$opts make terraform-fmt
 }
+
+# ==============================================================================
 
 function is-arg-true() {
 
