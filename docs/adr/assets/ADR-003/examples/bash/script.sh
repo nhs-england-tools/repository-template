@@ -17,7 +17,7 @@ function main() {
 function get-jwt-token() {
 
   header=$(echo -n '{"alg":"RS256","typ":"JWT"}' | base64 | tr -d '=' | tr -d '\n=' | tr -- '+/' '-_')
-  payload=$(echo -n '{"iat":'$(date +%s)',"exp":'$(($(date +%s)+600))',"iss":"'$GITHUB_APP_ID'"}' | base64 | tr -d '\n=' | tr -- '+/' '-_')
+  payload=$(echo -n '{"iat":'"$(date +%s)"',"exp":'$(($(date +%s)+600))',"iss":"'"$GITHUB_APP_ID"'"}' | base64 | tr -d '\n=' | tr -- '+/' '-_')
   signature=$(echo -n "$header.$payload" | openssl dgst -binary -sha256 -sign "$GITHUB_APP_PK_FILE" | openssl base64 | tr -d '\n=' | tr -- '+/' '-_')
 
   echo "$header.$payload.$signature"
@@ -30,7 +30,7 @@ function get-installation-id() {
     -H "Accept: application/vnd.github.v3+json" \
     https://api.github.com/app/installations)
 
-  echo "$(echo $installations_response | jq '.[] | select(.account.login == "'"$GITHUB_ORG"'") .id')"
+  echo "$installations_response" | jq '.[] | select(.account.login == "'"$GITHUB_ORG"'") .id'
 }
 
 function get-access-token() {
@@ -38,9 +38,9 @@ function get-access-token() {
   token_response=$(curl -sX POST \
     -H "Authorization: Bearer $jwt_token" \
     -H "Accept: application/vnd.github.v3+json" \
-    https://api.github.com/app/installations/$installation_id/access_tokens)
+    "https://api.github.com/app/installations/$installation_id/access_tokens")
 
-  echo "$(echo $token_response | jq .token -r)"
+  echo "$token_response" | jq .token -r
 }
 
 main
