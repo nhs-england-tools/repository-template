@@ -1,0 +1,17 @@
+Bitwarden
+Cyber
+Dependabot
+Gitleaks
+Grype
+OAuth
+Octokit
+Podman
+Python
+Syft
+Terraform
+Trufflehog
+bot
+idempotence
+onboarding
+toolchain
+[A-Z]+s

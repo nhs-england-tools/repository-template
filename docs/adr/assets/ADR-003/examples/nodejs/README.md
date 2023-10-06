@@ -26,4 +26,4 @@ $ yarn start
       ...
 ```
 
-See the [example (main.ts)](./main.ts) implementation. This script has been written to illustrate the concept in a clear and simple way. It is not a production ready code.
+See the [example (`main.ts`)](./main.ts) implementation. This script has been written to illustrate the concept in a clear and simple way. It is not a production ready code.

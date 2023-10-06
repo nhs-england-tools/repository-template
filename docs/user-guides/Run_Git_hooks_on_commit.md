@@ -14,13 +14,13 @@ The [pre-commit](https://pre-commit.com/) framework is a powerful tool for manag
 ## Key files
 
 - Scripts
-  - [check-file-format.sh](../../scripts/githooks/check-file-format.sh)
-  - [check-markdown-format.sh](../../scripts/githooks/check-markdown-format.sh)
-  - [check-terraform-format.sh](../../scripts/githooks/check-terraform-format.sh)
-  - [scan-secrets.sh](../../scripts/githooks/scan-secrets.sh)
+  - [`check-file-format.sh`](../../scripts/githooks/check-file-format.sh)
+  - [`check-markdown-format.sh`](../../scripts/githooks/check-markdown-format.sh)
+  - [`check-terraform-format.sh`](../../scripts/githooks/check-terraform-format.sh)
+  - [`scan-secrets.sh`](../../scripts/githooks/scan-secrets.sh)
 - Configuration
-  - [pre-commit.yaml](../../scripts/config/pre-commit.yaml)
-  - [init.mk](../../scripts/init.mk): make targets
+  - [`pre-commit.yaml`](../../scripts/config/pre-commit.yaml)
+  - [`init.mk`](../../scripts/init.mk): make targets
 
 ## Testing
 

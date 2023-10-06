@@ -40,8 +40,8 @@ Here are some key features built into this repository's Docker module:
 - Consolidates image versions in a unified `.tool-versions` file for easier dependency management
 - Optimises the build process specifically for the `amd64` architecture for consistency
 - Applies automatic image versioning according to a predefined pattern for artefact publishing and deployment
-- Incorporates metadata through Dockerfile labels for enhanced documentation and to conform to standards
-- Integrates a linting routine to ensure Dockerfile code quality
+- Incorporates metadata through `Dockerfile` labels for enhanced documentation and to conform to standards
+- Integrates a linting routine to ensure `Dockerfile` code quality
 - Includes an automated test suite to validate Docker scripts
 - Provides a ready-to-run example to demonstrate the module's functionality
 - Incorporates a best practice guide
@@ -49,20 +49,20 @@ Here are some key features built into this repository's Docker module:
 ## Key files
 
 - Scripts
-  - [docker.lib.sh](../../scripts/docker/docker.lib.sh): A library code loaded by custom make targets and CLI scripts
-  - [docker.mk](../../scripts/docker/docker.mk): Customised implementation of the Docker routines loaded by the `scripts/init.mk` file
-  - [dgoss.sh](../../scripts/docker/dgoss.sh): Docker image spec test framework
-  - [dockerfile-linter.sh](../../scripts/docker/dockerfile-linter.sh): Dockerfile linter
+  - [`docker.lib.sh`](../../scripts/docker/docker.lib.sh): A library code loaded by custom make targets and CLI scripts
+  - [`docker.mk`](../../scripts/docker/docker.mk): Customised implementation of the Docker routines loaded by the `scripts/init.mk` file
+  - [`dgoss.sh`](../../scripts/docker/dgoss.sh): Docker image spec test framework
+  - [`dockerfile-linter.sh`](../../scripts/docker/dockerfile-linter.sh): `Dockerfile` linter
 - Configuration
-  - [.tool-versions](../../.tool-versions): Stores Docker image versions
-  - [hadolint.yaml](../../scripts/config/hadolint.yaml): Dockerfile linter configuration file
-  - [Dockerfile.metadata](../../scripts/docker/Dockerfile.metadata): Labels added to image definition as specified by the spec
+  - [`.tool-versions`](../../.tool-versions): Stores Docker image versions
+  - [`hadolint.yaml`](../../scripts/config/hadolint.yaml): `Dockerfile` linter configuration file
+  - [`Dockerfile.metadata`](../../scripts/docker/Dockerfile.metadata): Labels added to image definition as specified by the spec
 - Test suite
-  - [docker.test.sh](../../scripts/docker/tests/docker.test.sh): Main file containing all the tests
-  - [Dockerfile](../../scripts/docker/tests/Dockerfile): Image definition for the test suite
-  - [VERSION](../../scripts/docker/tests/VERSION): Version patterns for the test suite
+  - [`docker.test.sh`](../../scripts/docker/tests/docker.test.sh): Main file containing all the tests
+  - [`Dockerfile`](../../scripts/docker/tests/Dockerfile): Image definition for the test suite
+  - [`VERSION`](../../scripts/docker/tests/VERSION): Version patterns for the test suite
 - Usage example
-  - Python-based example [hello_world](../../scripts/docker/examples/python) app showing a multi-staged build
+  - Python-based example [`hello_world`](../../scripts/docker/examples/python) app showing a multi-staged build
   - A set of [make targets](https://github.com/nhs-england-tools/repository-template/blob/main/scripts/docker/docker.mk#L18) to run the example
 
 ## Usage
@@ -113,7 +113,7 @@ Here is a step-by-step guide:
    FROM cypress/browsers:latest
    ```
 
-2. Add the following entry to the `.tool-versions` file. This will be used to replace the `latest` version placeholder in the Dockerfile.
+2. Add the following entry to the `.tool-versions` file. This will be used to replace the `latest` version placeholder in the `Dockerfile`.
 
    ```text
    # docker/cypress/browsers node-20.5.0-chrome-114.0.5735.133-1-ff-114.0.2-edge-114.0.1823.51-1@sha256:8b899d0292e700c80629d13a98ae309295e719f5b4f9aa50a98c6cdd2b6c5215
