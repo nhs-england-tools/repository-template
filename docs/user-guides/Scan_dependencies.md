@@ -11,16 +11,16 @@
 
 In modern software development, leveraging third-party dependencies is a common practice to reduce redundancy and improve efficiency. However, this introduces potential security risks and compliance issues into our codebase, making dependency scanning crucial. This process helps identify known vulnerabilities, or Common Vulnerabilities and Exposures (CVEs), in third-party libraries, allowing us to mitigate security threats proactively. Regular CVE scanning strengthens our codebase's security, ensuring adherence to top-tier security standards. In addition, generating a Software Bill of Materials (SBOM) - a comprehensive inventory of software components, libraries, and modules - is a valuable practice. SBOMs enhance transparency and traceability, giving an overview of all software elements, their versions, and associated licenses. This facilitates effective dependency management, compliance assurance, and timely response to version-specific vulnerabilities.
 
-[Syfy](https://github.com/anchore/syft) and [Grype](https://github.com/anchore/grype) are valuable tools that can bolster this process. Syft generates a detailed SBOM, ensuring full visibility and traceability of all incorporated software components. This facilitates precise tracking, management, and potential updating of dependencies. On the other hand, Grype, as a vulnerability scanner, meticulously examines dependencies for known CVEs, providing an extra layer of security and allowing us to rectify vulnerabilities promptly. By incorporating Syft and Grype into our CI/CD pipeline, we can ensure continuous scanning of dependencies and generate an up-to-date SBOM. This approach enables real-time detection and resolution of vulnerabilities, thereby fortifying our software development lifecycle against security risks and ensuring adherence to compliance requirements.
+[Syft](https://github.com/anchore/syft) and [Grype](https://github.com/anchore/grype) are valuable tools that can bolster this process. Syft generates a detailed SBOM, ensuring full visibility and traceability of all incorporated software components. This facilitates precise tracking, management, and potential updating of dependencies. On the other hand, Grype, as a vulnerability scanner, meticulously examines dependencies for known CVEs, providing an extra layer of security and allowing us to rectify vulnerabilities promptly. By incorporating Syft and Grype into our CI/CD pipeline, we can ensure continuous scanning of dependencies and generate an up-to-date SBOM. This approach enables real-time detection and resolution of vulnerabilities, thereby fortifying our software development lifecycle against security risks and ensuring adherence to compliance requirements.
 
 ## Key files
 
-- [generate-sbom.sh](../../scripts/reports/generate-sbom.sh): A shell script that generates SBOM (Software Bill of Materials)
-- [syft.yaml](../../scripts/config/syft.yaml): A configuration file for the SBOM generator
-- [scan-vulnerabilities.sh](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
-- [grype.yaml](../../scripts/config/grype.yaml): A configuration file for the CVE scanner
-- [scan-dependencies/action.yaml](../../.github/actions/scan-dependencies/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
-- [.gitignore](../../.gitignore): Excludes the `*sbom*report.json` and `*vulnerabilities*report.json` report files created during the process
+- [`generate-sbom.sh`](../../scripts/reports/generate-sbom.sh): A shell script that generates SBOM (Software Bill of Materials)
+- [`syft.yaml`](../../scripts/config/syft.yaml): A configuration file for the SBOM generator
+- [`scan-vulnerabilities.sh`](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
+- [`grype.yaml`](../../scripts/config/grype.yaml): A configuration file for the CVE scanner
+- [`scan-dependencies/action.yaml`](../../.github/actions/scan-dependencies/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
+- [`.gitignore`](../../.gitignore): Excludes the `*sbom*report.json` and `*vulnerabilities*report.json` report files created during the process
 
 ## Configuration checklist
 

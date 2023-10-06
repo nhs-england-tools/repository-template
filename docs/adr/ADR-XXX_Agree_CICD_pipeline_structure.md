@@ -55,7 +55,7 @@ Requirements:
 
 ### Assumptions
 
-Summarise the underlying assumptions in the environment in which you make the decision. This could be related to technology changes, forecast of the monetary and non-monetary costs, further delivery commitments, impactful external drivers etc., and any known unknowns that translate to risks.
+Summarise the underlying assumptions in the environment in which you make the decision. This could be related to technology changes, forecast of the monetary and non-monetary costs, further delivery commitments, impact from external drivers etc., and any known unknowns that translate to risks.
 
 ### Drivers
 

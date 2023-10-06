@@ -45,13 +45,13 @@ cd nhs-england-tools/repository-template
 
 The following software packages, or their equivalents, are expected to be installed:
 
-- [docker](https://www.docker.com/) container runtime or a compatible tool, e.g. [podman](https://podman.io/),
+- [Docker](https://www.docker.com/) container runtime or a compatible tool, e.g. [Podman](https://podman.io/),
 - [asdf](https://asdf-vm.com/) version manager,
 - [GNU make](https://www.gnu.org/software/make/) 3.82 or later,
 - [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation. For macOS users, this has been scripted and automated by the `dotfiles` project; please see this [script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
 
 > [!NOTE]<br>
-> The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [homebrew](https://brew.sh/) installed, then to install `make`, like so:
+> The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [Homebrew](https://brew.sh/) installed, then to install `make`, like so:
 >
 > ```shell
 > brew install make

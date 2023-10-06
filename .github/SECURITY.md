@@ -32,4 +32,4 @@ You can report vulnerabilities here: [https://www.ncsc.gov.uk/information/vulner
 
 ## General Security Enquiries
 
-If you have general enquiries regarding our cyber security, please reach out to us at [cybersecurity@nhs.net](cybersecurity@nhs.net)
+If you have general enquiries regarding our cybersecurity, please reach out to us at [cybersecurity@nhs.net](cybersecurity@nhs.net)
