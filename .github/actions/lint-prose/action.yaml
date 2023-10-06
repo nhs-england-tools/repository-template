@@ -6,4 +6,4 @@ runs:
     - name: "Check English usage"
       shell: bash
       run: |
-        ./scripts/githooks/check-english-usage.sh
+        check=branch ./scripts/githooks/check-english-usage.sh
