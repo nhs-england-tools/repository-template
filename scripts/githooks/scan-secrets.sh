@@ -10,8 +10,8 @@ set -euo pipefail
 #   $ ./scan-secrets.sh
 #
 # Options:
-#   check={whole-history,last-commit,staged-changes}  # Type of the check to run, default is `staged-changes`
-#   VERBOSE=true                                      # Show all the executed commands, default is `false`
+#   check={whole-history,last-commit,staged-changes}  # Type of the check to run, default is 'staged-changes'
+#   VERBOSE=true                                      # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true                             # If set to true the command is run in a Docker container, default is 'false'
 #
 # Exit codes:

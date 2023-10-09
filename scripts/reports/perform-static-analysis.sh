@@ -17,12 +17,8 @@ set -euo pipefail
 #   SONAR_TOKEN=token               # SonarCloud token
 #
 # Options:
-#   VERBOSE=true  # Show all the executed commands, default is `false`
-
-# ==============================================================================
-
-# SEE: https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags, use the `linux/amd64` os/arch
-image_version=5.0.1@sha256:494ecc3b5b1ee1625bd377b3905c4284e4f0cc155cff397805a244dee1c7d575
+#   VERBOSE=true          # Show all the executed commands, default is 'false'
+#   FORCE_USE_DOCKER=true # If set to true the command is run in a Docker container, default is 'false'
 
 # ==============================================================================
 
@@ -30,14 +26,35 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  create-report
+  if command -v sonar-scanner > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    cli-run-sonar-scanner
+  else
+    docker-run-sonar-scanner
+  fi
 }
 
-function create-report() {
+# Run Sonar Scanner natively.
+function cli-run-sonar-scanner() {
 
+  sonar-scanner \
+    -Dproject.settings="$PWD/scripts/config/sonar-scanner.properties" \
+    -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
+    -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
+    -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+    -Dsonar.token="$SONAR_TOKEN"
+}
+
+# Run Sonar Scanner in a Docker container.
+function docker-run-sonar-scanner() {
+
+  # shellcheck disable=SC1091
+  source ./scripts/docker/docker.lib.sh
+
+  # shellcheck disable=SC2155
+  local image=$(name=sonarsource/sonar-scanner-cli docker-get-image-version-and-pull)
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/usr/src \
-    sonarsource/sonar-scanner-cli:$image_version \
+    "$image" \
       -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
       -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
       -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
