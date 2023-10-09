@@ -6,6 +6,9 @@ pre-commit 3.4.0
 # ==============================================================================
 # The section below is reserved for Docker image versions.
 
+# gitleaks, SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks
+# docker/ghcr.io/gitleaks/gitleaks v8.18.0@sha256:fd2b5cab12b563d2cc538b14631764a1c25577780e3b7dba71657d58da45d9d9
+
 # terraform, SEE: https://hub.docker.com/r/hashicorp/terraform/tags
 # docker/hashicorp/terraform 1.5.6@sha256:180a7efa983386a27b43657ed610e9deed9e6c3848d54f9ea9b6cb8a5c8c25f5
 

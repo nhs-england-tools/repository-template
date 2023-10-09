@@ -168,7 +168,7 @@ function docker-get-image-version-and-pull() {
   local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
   local version="latest"
   if [ -f "$versions_file" ]; then
-    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-'.*'}")
+    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-".*"}")
     [ -n "$line" ] && version=$(echo "$line" | awk '{print $2}')
   fi
 
@@ -177,7 +177,7 @@ function docker-get-image-version-and-pull() {
   local digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already
-  if ! docker images | awk '{ print $1 ":" $2 }' | grep "^${name}:${tag}$"; then
+  if ! docker images | awk '{ print $1 ":" $2 }' | grep -q "^${name}:${tag}$"; then
     if [ "$digest" != "latest" ]; then
       # Pull image by the digest sha256 and tag it
       docker pull \
