@@ -48,12 +48,16 @@ function main() {
       ;;
   esac
 
+  # We use /dev/null here to stop `vale` from complaining that it's
+  # not been called correctly if the $filter happens to return an
+  # empty list.  As long as there's a filename, even if it's one that
+  # will be ignored, `vale` is happy.
   docker run --rm --platform linux/amd64 \
     --volume $PWD:/workdir \
     --workdir /workdir \
     jdkato/vale:$image_version \
       --config scripts/config/vale/vale.ini \
-      $($filter)
+      $($filter) /dev/null
 }
 
 function is-arg-true() {
