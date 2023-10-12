@@ -21,8 +21,8 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
+  [ -z "${file:-}" ] && echo "WARNING: 'file' variable not set, defaulting to itself"
   local file=${file:-scripts/shellscript-linter.sh}
-  [ "$file" == "scripts/shellscript-linter.sh" ] && echo "WARNING: 'file' variable not set, defaulting to itself"
   if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     file="$file" cli-run-shellcheck
   else

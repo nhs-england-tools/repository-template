@@ -46,7 +46,8 @@ function docker-run-hadolint() {
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
-  image=$(name=hadolint/hadolint docker-get-image-version-and-pull)
+  # shellcheck disable=SC2155
+  local image=$(name=hadolint/hadolint docker-get-image-version-and-pull)
   # shellcheck disable=SC2001
   docker run --rm --platform linux/amd64 \
     --volume "$PWD:/workdir" \
