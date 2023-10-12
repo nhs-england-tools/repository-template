@@ -25,7 +25,7 @@ There are two ways to sign commits in GitHub, using a GPG or an SSH signature. D
 ### Generate GPG key
 
 <!-- markdownlint-disable-next-line no-inline-html -->
-If you do not have it already generate a new pair of GPG keys. Please, change the passphrase (<span style="color:red">pleaseChooseYourKeyPassphrase</span>) below and save it in your password manager.
+If you do not have it already generate a new pair of GPG keys. Please change the passphrase (<span style="color:red">pleaseChooseYourKeyPassphrase</span>) below and save it in your password manager.
 
 ```shell
 USER_NAME="Your Name"

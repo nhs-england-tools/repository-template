@@ -136,7 +136,7 @@ Both, the git hook and the GitHub Action should be executed automatically as par
 
 ## Notes
 
-There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub Actions even more portable. ~~The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.~~ Update: Please, see the [Test GitHub Actions locally](../user-guides/Test_GitHub_Actions_locally.md) user guide.
+There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub Actions even more portable. ~~The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.~~ Update: Please see the [Test GitHub Actions locally](../user-guides/Test_GitHub_Actions_locally.md) user guide.
 
 ## Actions
 

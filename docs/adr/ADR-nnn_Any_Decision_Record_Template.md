@@ -26,7 +26,7 @@
 
 ## Context
 
-Describe the context and the problem statement. Is there a relationship to other decisions previously made? Are there any dependencies and/or constraints within which the decision will be made? Do these need to be reviewed or validated? Please, note that environmental limitations or restrictions such as accepted technology standards, commonly recognised and used patterns, engineering and architecture principles, organisation policies, governance and so on, may as an effect narrow down the choices. This should also be explicitly documented, as this is a point-in-time decision with the intention of being able to articulate it clearly and justify it later.
+Describe the context and the problem statement. Is there a relationship to other decisions previously made? Are there any dependencies and/or constraints within which the decision will be made? Do these need to be reviewed or validated? Please note that environmental limitations or restrictions such as accepted technology standards, commonly recognised and used patterns, engineering and architecture principles, organisation policies, governance and so on, may as an effect narrow down the choices. This should also be explicitly documented, as this is a point-in-time decision with the intention of being able to articulate it clearly and justify it later.
 
 ## Decision
 

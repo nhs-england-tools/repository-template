@@ -70,4 +70,4 @@ cat vulnerabilities-repository-reportc.json | jq
    - Easier investigation of CVEs found in the repository, eliminating dependence on a third party like GitHub
    - Enhanced portability and flexibility, allowing the scans to run in diverse environments
 
-   However, this approach should be periodically reviewed as there is an emerging practice to use projects like [act](https://github.com/nektos/act) ~~to make GitHub Actions portable~~. Update: Please, see the [Test GitHub Actions locally](../user-guides/Test_GitHub_Actions_locally.md) user guide.
+   However, this approach should be periodically reviewed as there is an emerging practice to use projects like [act](https://github.com/nektos/act) ~~to make GitHub Actions portable~~. Update: Please see the [Test GitHub Actions locally](../user-guides/Test_GitHub_Actions_locally.md) user guide.
