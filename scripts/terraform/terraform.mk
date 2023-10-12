@@ -48,7 +48,7 @@ _terraform: # Terraform command wrapper - mandatory: cmd=[command to execute]; 
 	terraform-${cmd} # 'dir' and 'opts' are accessible by the function as environment variables, if set
 
 # ==============================================================================
-# Quality checks - please, DO NOT edit this section!
+# Quality checks - please DO NOT edit this section!
 
 terraform-shellscript-lint: # Lint all Terraform module shell scripts @Quality
 	for file in $$(find scripts/terraform -type f -name "*.sh"); do
@@ -56,7 +56,7 @@ terraform-shellscript-lint: # Lint all Terraform module shell scripts @Quality
 	done
 
 # ==============================================================================
-# Module tests and examples - please, DO NOT edit this section!
+# Module tests and examples - please DO NOT edit this section!
 
 terraform-example-provision-aws-infrastructure: # Provision example of AWS infrastructure @ExamplesAndTests
 	make terraform-init
@@ -73,7 +73,7 @@ terraform-example-clean: # Remove Terraform example files @ExamplesAndTests
 	rm -f ${TERRAFORM_STACK}/.terraform.lock.hcl
 
 # ==============================================================================
-# Configuration - please, DO NOT edit this section!
+# Configuration - please DO NOT edit this section!
 
 terraform-install: # Install Terraform @Installation
 	make _install-dependency name="terraform"

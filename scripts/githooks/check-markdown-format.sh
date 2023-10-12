@@ -19,7 +19,7 @@ set -euo pipefail
 #   1 - Files are not formatted correctly
 #
 # Notes:
-#   1) Please, make sure to enable Markdown linting in your IDE. For the Visual
+#   1) Please make sure to enable Markdown linting in your IDE. For the Visual
 #   Studio Code editor it is `davidanson.vscode-markdownlint` that is already
 #   specified in the `./.vscode/extensions.json` file.
 #   2) To see the full list of the rules, please visit

@@ -32,7 +32,7 @@ set -euo pipefail
 # files that ec would check is output, with no check done.
 #
 # Notes:
-#   Please, make sure to enable EditorConfig linting in your IDE. For the
+#   Please make sure to enable EditorConfig linting in your IDE. For the
 #   Visual Studio Code editor it is `editorconfig.editorconfig` that is already
 #   specified in the `./.vscode/extensions.json` file.
 

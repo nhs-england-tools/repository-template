@@ -31,7 +31,7 @@ Static code analysis is an essential part of modern software development. It pro
   - Add `SONAR_ORGANISATION_KEY` variable (not a secret)
   - Add `SONAR_PROJECT_KEY` variable (not a secret)
 - Navigate to project `Administration > Analysis Method` and turn off the `Automatic Analysis` option
-- Please, refrain from adding your repository to the GitHub SonarCloud App, as this app should not be used. Doing so will duplicate reports and initiate them outside the primary pipeline workflow
+- Please refrain from adding your repository to the GitHub SonarCloud App, as this app should not be used. Doing so will duplicate reports and initiate them outside the primary pipeline workflow
 - Confirm that the _"Perform static analysis"_ GitHub action is part of your GitHub CI/CD workflow and enforces the _"Sonar Way"_ quality gates. You can find more information about this in the [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/blob/main/tools/sonarqube.md)
 
 ## Testing
