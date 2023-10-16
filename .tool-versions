@@ -7,9 +7,14 @@ pre-commit 3.4.0
 # The section below is reserved for Docker image versions.
 
 # TODO: Move this section - consider using a different file for the repository template dependencies.
+# docker/ghcr.io/anchore/grype v0.69.1@sha256:d41fcb371d0af59f311e72123dff46900ebd6d0482391b5a830853ee4f9d1a76 # SEE: https://github.com/anchore/grype/pkgs/container/grype
+# docker/ghcr.io/anchore/syft v0.92.0@sha256:63c60f0a21efb13e80aa1359ab243e49213b6cc2d7e0f8179da38e6913b997e0 # SEE: https://github.com/anchore/syft/pkgs/container/syft
 # docker/ghcr.io/gitleaks/gitleaks v8.18.0@sha256:fd2b5cab12b563d2cc538b14631764a1c25577780e3b7dba71657d58da45d9d9 # SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks
+# docker/ghcr.io/igorshubovych/markdownlint-cli v0.37.0@sha256:fb3e79946fce78e1cde84d6798c6c2a55f2de11fc16606a40d49411e281d950d # SEE: https://github.com/igorshubovych/markdownlint-cli/pkgs/container/markdownlint-cli
+# docker/ghcr.io/make-ops-tools/gocloc latest@sha256:6888e62e9ae693c4ebcfed9f1d86c70fd083868acb8815fe44b561b9a73b5032 # SEE: https://github.com/make-ops-tools/gocloc/pkgs/container/gocloc
 # docker/ghcr.io/nhs-england-tools/github-runner-image 20230909-321fd1e-rt@sha256:ce4fd6035dc450a50d3cbafb4986d60e77cb49a71ab60a053bb1b9518139a646 # SEE: https://github.com/nhs-england-tools/github-runner-image/pkgs/container/github-runner-image
 # docker/hadolint/hadolint 2.12.0-alpine@sha256:7dba9a9f1a0350f6d021fb2f6f88900998a4fb0aaf8e4330aa8c38544f04db42 # SEE: https://hub.docker.com/r/hadolint/hadolint/tags
 # docker/hashicorp/terraform 1.5.6@sha256:180a7efa983386a27b43657ed610e9deed9e6c3848d54f9ea9b6cb8a5c8c25f5 # SEE: https://hub.docker.com/r/hashicorp/terraform/tags
 # docker/koalaman/shellcheck latest@sha256:e40388688bae0fcffdddb7e4dea49b900c18933b452add0930654b2dea3e7d5c # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
+# docker/mstruebing/editorconfig-checker 2.7.1@sha256:dd3ca9ea50ef4518efe9be018d669ef9cf937f6bb5cfe2ef84ff2a620b5ddc24 # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags
 # docker/sonarsource/sonar-scanner-cli 5.0.1@sha256:494ecc3b5b1ee1625bd377b3905c4284e4f0cc155cff397805a244dee1c7d575 # SEE: https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags

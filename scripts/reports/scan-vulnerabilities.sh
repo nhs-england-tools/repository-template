@@ -5,18 +5,19 @@
 set -euo pipefail
 
 # Script to scan an SBOM file for CVEs (Common Vulnerabilities and Exposures).
+# This is a grype command wrapper. It will run grype natively if it is
+# installed, otherwise it will run it in a Docker container.
 #
 # Usage:
 #   $ ./scan-vulnerabilities.sh
 #
 # Options:
-#   VERBOSE=true                        # Show all the executed commands, default is `false`
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
-
-# ==============================================================================
-
-# SEE: https://github.com/anchore/grype/pkgs/container/grype, use the `linux/amd64` os/arch
-image_version=v0.69.1@sha256:d41fcb371d0af59f311e72123dff46900ebd6d0482391b5a830853ee4f9d1a76
+#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                        # Show all the executed commands, default is `false`
+#
+# Depends on:
+#   $ ./generate-sbom.sh
 
 # ==============================================================================
 
@@ -28,18 +29,45 @@ function main() {
   enrich-report
 }
 
+# Create the report.
 function create-report() {
 
-  docker run --rm --platform linux/amd64 \
-    --volume "$PWD":/scan \
-    --volume /tmp/grype/db:/.cache/grype/db \
-    ghcr.io/anchore/grype:$image_version \
-      sbom:/scan/sbom-repository-report.json \
-      --config /scan/scripts/config/grype.yaml \
-      --output json \
-      --file /scan/vulnerabilities-repository-report.tmp.json
+  if command -v grype > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    cli-run-grype
+  else
+    docker-run-grype
+  fi
 }
 
+# Run grype natively.
+function cli-run-grype() {
+
+  grype \
+    sbom:"$PWD/sbom-repository-report.json" \
+    --config "$PWD/scripts/config/grype.yaml" \
+    --output json \
+    --file "$PWD/vulnerabilities-repository-report.tmp.json"
+}
+
+# Run grype in a Docker container.
+function docker-run-grype() {
+
+  # shellcheck disable=SC1091
+  source ./scripts/docker/docker.lib.sh
+
+  # shellcheck disable=SC2155
+  local image=$(name=ghcr.io/anchore/grype docker-get-image-version-and-pull)
+  docker run --rm --platform linux/amd64 \
+    --volume "$PWD":/workdir \
+    --volume /tmp/grype/db:/.cache/grype/db \
+    "$image" \
+      sbom:/workdir/sbom-repository-report.json \
+      --config /workdir/scripts/config/grype.yaml \
+      --output json \
+      --file /workdir/vulnerabilities-repository-report.tmp.json
+}
+
+# Include additional information in the report.
 function enrich-report() {
 
   build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}

@@ -5,19 +5,17 @@
 set -euo pipefail
 
 # Script to generate SBOM (Software Bill of Materials) for the repository
-# content and any artefact created by the CI/CD pipeline.
+# content and any artefact created by the CI/CD pipeline. This is a syft command
+# wrapper. It will run syft natively if it is installed, otherwise it will run
+# it in a Docker container.
 #
 # Usage:
 #   $ ./generate-sbom.sh
 #
 # Options:
-#   VERBOSE=true                        # Show all the executed commands, default is `false`
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
-
-# ==============================================================================
-
-# SEE: https://github.com/anchore/syft/pkgs/container/syft, use the `linux/amd64` os/arch
-image_version=v0.92.0@sha256:63c60f0a21efb13e80aa1359ab243e49213b6cc2d7e0f8179da38e6913b997e0
+#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                        # Show all the executed commands, default is `false`
 
 # ==============================================================================
 
@@ -29,16 +27,41 @@ function main() {
   enrich-report
 }
 
+# Create the report.
 function create-report() {
 
-  docker run --rm --platform linux/amd64 \
-    --volume "$PWD":/scan \
-    ghcr.io/anchore/syft:$image_version \
-      packages dir:/scan \
-      --config /scan/scripts/config/syft.yaml \
-      --output spdx-json=/scan/sbom-repository-report.tmp.json
+  if command -v syft > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    cli-run-syft
+  else
+    docker-run-syft
+  fi
 }
 
+# Run syft natively.
+function cli-run-syft() {
+
+  syft packages dir:"$PWD" \
+    --config "$PWD/scripts/config/syft.yaml" \
+    --output spdx-json="$PWD/sbom-repository-report.tmp.json"
+}
+
+# Run syft in a Docker container.
+function docker-run-syft() {
+
+  # shellcheck disable=SC1091
+  source ./scripts/docker/docker.lib.sh
+
+  # shellcheck disable=SC2155
+  local image=$(name=ghcr.io/anchore/syft docker-get-image-version-and-pull)
+  docker run --rm --platform linux/amd64 \
+    --volume "$PWD":/workdir \
+    "$image" \
+      packages dir:/workdir \
+      --config /workdir/scripts/config/syft.yaml \
+      --output spdx-json=/workdir/sbom-repository-report.tmp.json
+}
+
+# Include additional information in the report.
 function enrich-report() {
 
   build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}

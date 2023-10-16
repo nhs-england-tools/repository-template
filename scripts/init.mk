@@ -88,7 +88,7 @@ else
 	.SHELLFLAGS := -ce
 endif
 
-# This script parses all the make target descriptions and renders the help output.
+# This script parses all the make target descriptions and renders the help output.
 HELP_SCRIPT = \
 	\
 	use Text::Wrap; \

@@ -12,8 +12,8 @@ set -euo pipefail
 #
 # Arguments (provided as environment variables):
 #   file=Dockerfile         # Path to the Dockerfile to lint, relative to the project's top-level directory, default is './Dockerfile.effective'
-#   VERBOSE=true            # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 

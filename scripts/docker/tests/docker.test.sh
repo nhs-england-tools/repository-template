@@ -73,12 +73,12 @@ function test-docker-build() {
 
 function test-docker-image-from-signature() {
 
-  # Arrange
+  # Arrange
   TOOL_VERSIONS="$(git rev-parse --show-toplevel)/scripts/docker/tests/.tool-versions.test"
   cp Dockerfile Dockerfile.effective
-  # Act
+  # Act
   _replace-image-latest-by-specific-version
-  # Assert
+  # Assert
   grep -q "FROM python:.*-alpine.*@sha256:.*" Dockerfile.effective && return 0 || return 1
 }
 

@@ -4,7 +4,7 @@
 # Custom implementation - implementation of a make target should not exceed 5 lines of effective code.
 # In most cases there should be no need to modify the existing make targets.
 
-terraform-init: # Initialise Terraform - optional: terraform_dir|dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], terraform_opts|opts=[options to pass to the Terraform init command, default is none/empty] @Development
+terraform-init: # Initialise Terraform - optional: terraform_dir|dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], terraform_opts|opts=[options to pass to the Terraform init command, default is none/empty] @Development
 	make _terraform cmd="init" \
 		dir=$(or ${terraform_dir}, ${dir}) \
 		opts=$(or ${terraform_opts}, ${opts})
@@ -40,7 +40,7 @@ clean:: # Remove Terraform files (terraform) - optional: terraform_dir|dir=[path
 		dir=$(or ${terraform_dir}, ${dir}) \
 		opts=$(or ${terraform_opts}, ${opts})
 
-_terraform: # Terraform command wrapper - mandatory: cmd=[command to execute]; optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform command, default is none/empty]
+_terraform: # Terraform command wrapper - mandatory: cmd=[command to execute]; optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform command, default is none/empty]
 	# 'TERRAFORM_STACK' is passed to the functions as environment variable
 	TERRAFORM_STACK=$(or ${TERRAFORM_STACK}, $(or ${terraform_stack}, $(or ${STACK}, $(or ${stack}, scripts/terraform/examples/terraform-state-aws-s3))))
 	dir=$(or ${dir}, ${TERRAFORM_STACK})

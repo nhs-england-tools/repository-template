@@ -4,19 +4,17 @@
 
 set -euo pipefail
 
-# Count lines of code of this repository.
+# Count lines of code of this repository. This is a gocloc command wrapper. It
+# will run gocloc natively if it is installed, otherwise it will run it in a
+# Docker container.
 #
 # Usage:
 #   $ ./cloc-repository.sh
 #
 # Options:
-#   VERBOSE=true                        # Show all the executed commands, default is `false`
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
-
-# ==============================================================================
-
-# SEE: https://github.com/make-ops-tools/gocloc/pkgs/container/gocloc, use the `linux/amd64` os/arch
-image_version=latest@sha256:6888e62e9ae693c4ebcfed9f1d86c70fd083868acb8815fe44b561b9a73b5032
+#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                        # Show all the executed commands, default is `false`
 
 # ==============================================================================
 
@@ -28,20 +26,44 @@ function main() {
   enrich-report
 }
 
+# Create the report.
 function create-report() {
 
+  if command -v gocloc > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    cli-run-gocloc
+  else
+    docker-run-gocloc
+  fi
+  # shellcheck disable=SC2002
+  cat cloc-report.tmp.json \
+    | jq -r '["Language","files","blank","comment","code"],["--------"],(.languages[]|[.name,.files,.blank,.comment,.code]),["-----"],(.total|["TOTAL",.files,.blank,.comment,.code])|@tsv' \
+    | sed 's/Plain Text/Plaintext/g' \
+    | column -t
+}
+
+# Run gocloc natively.
+function cli-run-gocloc() {
+
+  gocloc --output-type=json . > cloc-report.tmp.json
+}
+
+# Run gocloc in a Docker container.
+function docker-run-gocloc() {
+
+  # shellcheck disable=SC1091
+  source ./scripts/docker/docker.lib.sh
+
+  # shellcheck disable=SC2155
+  local image=$(name=ghcr.io/make-ops-tools/gocloc docker-get-image-version-and-pull)
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
-    ghcr.io/make-ops-tools/gocloc:$image_version \
+    "$image" \
       --output-type=json \
       . \
   > cloc-report.tmp.json
-  if which jq > /dev/null && which column > /dev/null; then
-    # shellcheck disable=SC2002
-    cat cloc-report.tmp.json | jq -r '["Language","files","blank","comment","code"],["--------"],(.languages[]|[.name,.files,.blank,.comment,.code]),["-----"],(.total|["TOTAL",.files,.blank,.comment,.code])|@tsv' | column -t
-  fi
 }
 
+# Include additional information in the report.
 function enrich-report() {
 
   build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}

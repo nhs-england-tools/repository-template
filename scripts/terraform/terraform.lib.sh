@@ -15,7 +15,7 @@ set -euo pipefail
 # Initialise Terraform.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
-#   opts=[options to pass to the Terraform init command, default is none/empty]
+#   opts=[options to pass to the Terraform init command, default is none/empty]
 function terraform-init() {
 
   _terraform init # 'dir' and 'opts' are passed to the function as environment variables, if set
@@ -24,7 +24,7 @@ function terraform-init() {
 # Plan Terraform changes.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
-#   opts=[options to pass to the Terraform plan command, default is none/empty]
+#   opts=[options to pass to the Terraform plan command, default is none/empty]
 function terraform-plan() {
 
   _terraform plan # 'dir' and 'opts' are passed to the function as environment variables, if set
@@ -33,7 +33,7 @@ function terraform-plan() {
 # Apply Terraform changes.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
-#   opts=[options to pass to the Terraform apply command, default is none/empty]
+#   opts=[options to pass to the Terraform apply command, default is none/empty]
 function terraform-apply() {
 
   _terraform apply # 'dir' and 'opts' are passed to the function as environment variables, if set
@@ -42,7 +42,7 @@ function terraform-apply() {
 # Destroy Terraform resources.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
-#   opts=[options to pass to the Terraform destroy command, default is none/empty]
+#   opts=[options to pass to the Terraform destroy command, default is none/empty]
 function terraform-destroy() {
 
     _terraform apply -destroy # 'dir' and 'opts' are passed to the function as environment variables, if set
@@ -51,7 +51,7 @@ function terraform-destroy() {
 # Format Terraform code.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
-#   opts=[options to pass to the Terraform fmt command, default is '-recursive']
+#   opts=[options to pass to the Terraform fmt command, default is '-recursive']
 function terraform-fmt() {
 
   _terraform fmt -recursive # 'dir' and 'opts' are passed to the function as environment variables, if set
@@ -60,7 +60,7 @@ function terraform-fmt() {
 # Validate Terraform code.
 # Arguments (provided as environment variables):
 #   dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is '.']
-#   opts=[options to pass to the Terraform validate command, default is none/empty]
+#   opts=[options to pass to the Terraform validate command, default is none/empty]
 function terraform-validate() {
 
   _terraform validate # 'dir' and 'opts' are passed to the function as environment variables, if set

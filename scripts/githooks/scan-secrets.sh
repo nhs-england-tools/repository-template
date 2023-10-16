@@ -4,15 +4,17 @@
 
 set -euo pipefail
 
-# Pre-commit git hook to scan for secrets hard-coded in the codebase.
+# Pre-commit git hook to scan for secrets hard-coded in the codebase. This is a
+# gitleaks command wrapper. It will run gitleaks natively if it is installed,
+# otherwise it will run it in a Docker container.
 #
 # Usage:
 #   $ ./scan-secrets.sh
 #
 # Options:
 #   check={whole-history,last-commit,staged-changes}  # Type of the check to run, default is 'staged-changes'
-#   VERBOSE=true                                      # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true                             # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                                      # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - No leaks present

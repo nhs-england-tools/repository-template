@@ -12,8 +12,8 @@ set -euo pipefail
 #
 # Arguments (provided as environment variables):
 #   file=shellscript        # Path to the shell script to lint, relative to the project's top-level directory, default is itself
-#   VERBOSE=true            # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 
