@@ -8,7 +8,7 @@ set -euo pipefail
 # otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ ./dockerfile-linter.sh
+#   $ [options] ./dockerfile-linter.sh
 #
 # Arguments (provided as environment variables):
 #   file=Dockerfile         # Path to the Dockerfile to lint, relative to the project's top-level directory, default is './Dockerfile.effective'
@@ -23,16 +23,16 @@ function main() {
 
   local file=${file:-./Dockerfile.effective}
   if command -v hadolint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    file="$file" cli-run-hadolint
+    file="$file" run-hadolint-natively
   else
-    file="$file" docker-run-hadolint
+    file="$file" run-hadolint-in-docker
   fi
 }
 
 # Run hadolint natively.
 # Arguments (provided as environment variables):
 #   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
-function cli-run-hadolint() {
+function run-hadolint-natively() {
 
   # shellcheck disable=SC2001
   hadolint "$(echo "$file" | sed "s#$PWD#.#")"
@@ -41,7 +41,7 @@ function cli-run-hadolint() {
 # Run hadolint in a Docker container.
 # Arguments (provided as environment variables):
 #   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
-function docker-run-hadolint() {
+function run-hadolint-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh

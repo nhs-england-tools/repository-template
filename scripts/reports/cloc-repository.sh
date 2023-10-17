@@ -9,7 +9,7 @@ set -euo pipefail
 # Docker container.
 #
 # Usage:
-#   $ ./cloc-repository.sh
+#   $ [options] ./cloc-repository.sh
 #
 # Options:
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
@@ -26,13 +26,12 @@ function main() {
   enrich-report
 }
 
-# Create the report.
 function create-report() {
 
   if command -v gocloc > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    cli-run-gocloc
+    run-gocloc-natively
   else
-    docker-run-gocloc
+    run-gocloc-in-docker
   fi
   # shellcheck disable=SC2002
   cat cloc-report.tmp.json \
@@ -41,14 +40,12 @@ function create-report() {
     | column -t
 }
 
-# Run gocloc natively.
-function cli-run-gocloc() {
+function run-gocloc-natively() {
 
   gocloc --output-type=json . > cloc-report.tmp.json
 }
 
-# Run gocloc in a Docker container.
-function docker-run-gocloc() {
+function run-gocloc-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
@@ -63,7 +60,6 @@ function docker-run-gocloc() {
   > cloc-report.tmp.json
 }
 
-# Include additional information in the report.
 function enrich-report() {
 
   build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}

@@ -53,9 +53,9 @@ function main() {
 
   if [ -n "$files" ]; then
     if command -v markdownlint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-      files="$files" cli-run-markdownlint
+      files="$files" run-markdownlint-natively
     else
-      files="$files" docker-run-markdownlint
+      files="$files" run-markdownlint-in-docker
     fi
   fi
 }
@@ -63,7 +63,7 @@ function main() {
 # Run markdownlint natively.
 # Arguments (provided as environment variables):
 #   files=[files to check]
-function cli-run-markdownlint() {
+function run-markdownlint-natively() {
 
   # shellcheck disable=SC2086
   markdownlint \
@@ -74,7 +74,7 @@ function cli-run-markdownlint() {
 # Run markdownlint in a Docker container.
 # Arguments (provided as environment variables):
 #   files=[files to check]
-function docker-run-markdownlint() {
+function run-markdownlint-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh

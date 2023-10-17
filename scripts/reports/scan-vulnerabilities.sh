@@ -9,7 +9,7 @@ set -euo pipefail
 # installed, otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ ./scan-vulnerabilities.sh
+#   $ [options] ./scan-vulnerabilities.sh
 #
 # Options:
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
@@ -29,18 +29,16 @@ function main() {
   enrich-report
 }
 
-# Create the report.
 function create-report() {
 
   if command -v grype > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    cli-run-grype
+    run-grype-natively
   else
-    docker-run-grype
+    run-grype-in-docker
   fi
 }
 
-# Run grype natively.
-function cli-run-grype() {
+function run-grype-natively() {
 
   grype \
     sbom:"$PWD/sbom-repository-report.json" \
@@ -49,8 +47,7 @@ function cli-run-grype() {
     --file "$PWD/vulnerabilities-repository-report.tmp.json"
 }
 
-# Run grype in a Docker container.
-function docker-run-grype() {
+function run-grype-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
@@ -67,7 +64,6 @@ function docker-run-grype() {
       --file /workdir/vulnerabilities-repository-report.tmp.json
 }
 
-# Include additional information in the report.
 function enrich-report() {
 
   build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}

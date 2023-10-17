@@ -67,9 +67,9 @@ function main() {
   esac
 
   if command -v editorconfig > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    filter="$filter" dry_run_opt="${dry_run_opt:-}" cli-run-editorconfig
+    filter="$filter" dry_run_opt="${dry_run_opt:-}" run-editorconfig-natively
   else
-    filter="$filter" dry_run_opt="${dry_run_opt:-}" docker-run-editorconfig
+    filter="$filter" dry_run_opt="${dry_run_opt:-}" run-editorconfig-in-docker
   fi
 }
 
@@ -77,7 +77,7 @@ function main() {
 # Arguments (provided as environment variables):
 #   dry_run_opt=[dry run option]
 #   filter=[filter for files to check]
-function cli-run-editorconfig() {
+function run-editorconfig-natively() {
 
   # shellcheck disable=SC2046,SC2086
   editorconfig \
@@ -88,7 +88,7 @@ function cli-run-editorconfig() {
 # Arguments (provided as environment variables):
 #   dry_run_opt=[dry run option]
 #   filter=[filter for files to check]
-function docker-run-editorconfig() {
+function run-editorconfig-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh

@@ -29,10 +29,10 @@ function main() {
 
   if command -v gitleaks > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     dir="$PWD"
-    cmd="$(get-cmd-to-run)" cli-run-gitleaks
+    cmd="$(get-cmd-to-run)" run-gitleaks-natively
   else
     dir="/workdir"
-    cmd="$(get-cmd-to-run)" docker-run-gitleaks
+    cmd="$(get-cmd-to-run)" run-gitleaks-in-docker
   fi
 }
 
@@ -66,7 +66,7 @@ function get-cmd-to-run() {
 # Run Gitleaks natively.
 # Arguments (provided as environment variables):
 #   cmd=[command to run]
-function cli-run-gitleaks() {
+function run-gitleaks-natively() {
 
   # shellcheck disable=SC2086
   gitleaks $cmd
@@ -76,7 +76,7 @@ function cli-run-gitleaks() {
 # Arguments (provided as environment variables):
 #   cmd=[command to run]
 #   dir=[directory to mount as a volume]
-function docker-run-gitleaks() {
+function run-gitleaks-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
