@@ -15,7 +15,7 @@ In modern software development, leveraging third-party dependencies is a common 
 
 ## Key files
 
-- [generate-sbom.sh](../../scripts/reports/generate-sbom.sh): A shell script that generates SBOM (Software Bill of Materials)
+- [create-sbom-report.sh](../../scripts/reports/create-sbom-report.sh): A shell script that generates SBOM (Software Bill of Materials)
 - [syft.yaml](../../scripts/config/syft.yaml): A configuration file for the SBOM generator
 - [scan-vulnerabilities.sh](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
 - [grype.yaml](../../scripts/config/grype.yaml): A configuration file for the CVE scanner
@@ -41,7 +41,7 @@ You can run and test the process locally on a developer's workstation using the 
 SBOM generator
 
 ```shell
-./scripts/reports/generate-sbom.sh
+./scripts/reports/create-sbom-report.sh
 cat sbom-repository-report.json | jq
 ```
 

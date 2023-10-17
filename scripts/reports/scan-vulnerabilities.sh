@@ -17,7 +17,7 @@ set -euo pipefail
 #   VERBOSE=true                        # Show all the executed commands, default is `false`
 #
 # Depends on:
-#   $ ./generate-sbom.sh
+#   $ ./create-sbom-report.sh
 
 # ==============================================================================
 

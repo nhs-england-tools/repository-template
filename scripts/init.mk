@@ -47,9 +47,7 @@ _install-dependency: # Install asdf dependency - mandatory: name=[listed in the 
 clean:: # Remove all generated and temporary files (common) @Operations
 	rm -rf \
 		.scannerwork \
-		*cloc-report*.json \
-		*sbom*report*.json \
-		*vulnerabilities*report*.json \
+		*report*.json \
 		*report*json.zip \
 		docs/diagrams/.*.bkp \
 		docs/diagrams/.*.dtmp \

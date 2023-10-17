@@ -4,13 +4,12 @@
 
 set -euo pipefail
 
-# Script to generate SBOM (Software Bill of Materials) for the repository
-# content and any artefact created by the CI/CD pipeline. This is a syft command
-# wrapper. It will run syft natively if it is installed, otherwise it will run
-# it in a Docker container.
+# Count lines of code of this repository. This is a gocloc command wrapper. It
+# will run gocloc natively if it is installed, otherwise it will run it in a
+# Docker container.
 #
 # Usage:
-#   $ [options] ./generate-sbom.sh
+#   $ [options] ./create-lines-of-code-report.sh
 #
 # Options:
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
@@ -29,33 +28,36 @@ function main() {
 
 function create-report() {
 
-  if command -v syft > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    run-syft-natively
+  if command -v gocloc > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    run-gocloc-natively
   else
-    run-syft-in-docker
+    run-gocloc-in-docker
   fi
+  # shellcheck disable=SC2002
+  cat lines-of-code-report.tmp.json \
+    | jq -r '["Language","files","blank","comment","code"],["--------"],(.languages[]|[.name,.files,.blank,.comment,.code]),["-----"],(.total|["TOTAL",.files,.blank,.comment,.code])|@tsv' \
+    | sed 's/Plain Text/Plaintext/g' \
+    | column -t
 }
 
-function run-syft-natively() {
+function run-gocloc-natively() {
 
-  syft packages dir:"$PWD" \
-    --config "$PWD/scripts/config/syft.yaml" \
-    --output spdx-json="$PWD/sbom-repository-report.tmp.json"
+  gocloc --output-type=json . > lines-of-code-report.tmp.json
 }
 
-function run-syft-in-docker() {
+function run-gocloc-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
   # shellcheck disable=SC2155
-  local image=$(name=ghcr.io/anchore/syft docker-get-image-version-and-pull)
+  local image=$(name=ghcr.io/make-ops-tools/gocloc docker-get-image-version-and-pull)
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     "$image" \
-      packages dir:/workdir \
-      --config /workdir/scripts/config/syft.yaml \
-      --output spdx-json=/workdir/sbom-repository-report.tmp.json
+      --output-type=json \
+      . \
+  > lines-of-code-report.tmp.json
 }
 
 function enrich-report() {
@@ -72,9 +74,9 @@ function enrich-report() {
   # shellcheck disable=SC2086
   jq \
     '.creationInfo |= . + {"created":"'${build_datetime}'","repository":{"url":"'${git_url}'","branch":"'${git_branch}'","tags":['${git_tags}'],"commitHash":"'${git_commit_hash}'"},"pipeline":{"id":'${pipeline_run_id}',"number":'${pipeline_run_number}',"attempt":'${pipeline_run_attempt}'}}' \
-    sbom-repository-report.tmp.json \
-      > sbom-repository-report.json
-  rm -f sbom-repository-report.tmp.json
+    lines-of-code-report.tmp.json \
+      > lines-of-code-report.json
+  rm -f lines-of-code-report.tmp.json
 }
 
 # ==============================================================================
