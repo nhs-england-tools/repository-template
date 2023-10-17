@@ -11,12 +11,14 @@ set -euo pipefail
 # installed, otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ check={all,staged-changes,working-tree-changes,branch} [dry_run=true] ./check-file-format.sh
+#   $ [options] ./check-file-format.sh
 #
 # Options:
-#   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is `origin/main`
-#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                        # Show all the executed commands, default is `false`
+#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
+#   dry_run=true                                            # Do not check, run dry run only, default is 'false'
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
+#   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                                            # Show all the executed commands, default is `false`
 #
 # Exit codes:
 #   0 - All files are formatted correctly
@@ -30,9 +32,6 @@ set -euo pipefail
 #   check=staged-changes: check only files staged for commit.
 #   check=working-tree-changes: check modified, unstaged files. This is the default.
 #   check=branch: check for all changes since branching from $BRANCH_NAME
-#
-# If the `dry_run` parameter is set to a truthy value, the list of
-# files that ec would check is output, with no check done.
 #
 # Notes:
 #   Please make sure to enable EditorConfig linting in your IDE. For the

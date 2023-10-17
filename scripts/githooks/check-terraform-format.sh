@@ -7,7 +7,7 @@ set -euo pipefail
 # Pre-commit git hook to check format Terraform code.
 #
 # Usage:
-#   $ ./check-terraform-format.sh
+#   $ [options] ./check-terraform-format.sh
 #
 # Options:
 #   check_only=true         # Do not format, run check only, default is 'false'

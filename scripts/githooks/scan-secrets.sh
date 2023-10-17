@@ -9,7 +9,7 @@ set -euo pipefail
 # otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ ./scan-secrets.sh
+#   $ [options] ./scan-secrets.sh
 #
 # Options:
 #   check={whole-history,last-commit,staged-changes}  # Type of the check to run, default is 'staged-changes'
