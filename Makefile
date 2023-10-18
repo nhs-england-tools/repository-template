@@ -3,11 +3,12 @@
 
 include ./scripts/init.mk
 
+# ==============================================================================
+
 # Example CI/CD targets are: dependencies, build, publish, deploy, clean, etc.
 
 dependencies: # Install dependencies needed to build and test the project
 	# TODO: Implement installation of your project dependencies
-
 
 build:  # Build the project artefact @Pipeline
 	make _project name="build"
@@ -33,6 +34,8 @@ clean:: # Clean-up project resources (main) @Operations
 config:: # Configure development environment (main) @Configuration
 	# TODO: Use only 'make' targets that are specific to this project, e.g. you may not need to install Node.js
 	make _install-dependencies
+
+# ==============================================================================
 
 _project:
 	set -e
