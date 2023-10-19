@@ -4,19 +4,17 @@
 
 set -euo pipefail
 
-# Count lines of code of this repository.
+# Count lines of code of this repository. This is a gocloc command wrapper. It
+# will run gocloc natively if it is installed, otherwise it will run it in a
+# Docker container.
 #
 # Usage:
-#   $ ./cloc-repository.sh
+#   $ [options] ./create-lines-of-code-report.sh
 #
 # Options:
-#   VERBOSE=true                        # Show all the executed commands, default is `false`
 #   BUILD_DATETIME=%Y-%m-%dT%H:%M:%S%z  # Build datetime, default is `date -u +'%Y-%m-%dT%H:%M:%S%z'`
-
-# ==============================================================================
-
-# SEE: https://github.com/make-ops-tools/gocloc/pkgs/container/gocloc, use the `linux/amd64` os/arch
-image_version=latest@sha256:6888e62e9ae693c4ebcfed9f1d86c70fd083868acb8815fe44b561b9a73b5032
+#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                        # Show all the executed commands, default is `false`
 
 # ==============================================================================
 
@@ -30,16 +28,36 @@ function main() {
 
 function create-report() {
 
+  if command -v gocloc > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    run-gocloc-natively
+  else
+    run-gocloc-in-docker
+  fi
+  # shellcheck disable=SC2002
+  cat lines-of-code-report.tmp.json \
+    | jq -r '["Language","files","blank","comment","code"],["--------"],(.languages[]|[.name,.files,.blank,.comment,.code]),["-----"],(.total|["TOTAL",.files,.blank,.comment,.code])|@tsv' \
+    | sed 's/Plain Text/Plaintext/g' \
+    | column -t
+}
+
+function run-gocloc-natively() {
+
+  gocloc --output-type=json . > lines-of-code-report.tmp.json
+}
+
+function run-gocloc-in-docker() {
+
+  # shellcheck disable=SC1091
+  source ./scripts/docker/docker.lib.sh
+
+  # shellcheck disable=SC2155
+  local image=$(name=ghcr.io/make-ops-tools/gocloc docker-get-image-version-and-pull)
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
-    ghcr.io/make-ops-tools/gocloc:$image_version \
+    "$image" \
       --output-type=json \
       . \
-  > cloc-report.tmp.json
-  if which jq > /dev/null && which column > /dev/null; then
-    # shellcheck disable=SC2002
-    cat cloc-report.tmp.json | jq -r '["Language","files","blank","comment","code"],["--------"],(.languages[]|[.name,.files,.blank,.comment,.code]),["-----"],(.total|["TOTAL",.files,.blank,.comment,.code])|@tsv' | column -t
-  fi
+  > lines-of-code-report.tmp.json
 }
 
 function enrich-report() {
@@ -56,9 +74,9 @@ function enrich-report() {
   # shellcheck disable=SC2086
   jq \
     '.creationInfo |= . + {"created":"'${build_datetime}'","repository":{"url":"'${git_url}'","branch":"'${git_branch}'","tags":['${git_tags}'],"commitHash":"'${git_commit_hash}'"},"pipeline":{"id":'${pipeline_run_id}',"number":'${pipeline_run_number}',"attempt":'${pipeline_run_attempt}'}}' \
-    cloc-report.tmp.json \
-      > cloc-report.json
-  rm -f cloc-report.tmp.json
+    lines-of-code-report.tmp.json \
+      > lines-of-code-report.json
+  rm -f lines-of-code-report.tmp.json
 }
 
 # ==============================================================================

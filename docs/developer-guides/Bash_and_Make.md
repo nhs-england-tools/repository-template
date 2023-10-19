@@ -140,7 +140,7 @@ VERBOSE=1 scripts/shellscript-linter.sh
 
 ### Scripts
 
-Most scripts provided with this repository template can utilise tools installed on your `PATH` if they are available or run them from within a Docker container. To force a script to use Docker, the `FORCE_USE_DOCKER` variable is provided. Here is an example of how to use it:
+Most scripts provided with this repository template can utilise tools installed on your `PATH` if they are available or run them from within a Docker container. To force a script to use Docker, the `FORCE_USE_DOCKER` variable is provided. This feature increases configurability of the development environment, allowing you to use custom tooling by default if present on the command-line path. Here is an example of how to use it:
 
 ```shell
 FORCE_USE_DOCKER=1 scripts/shellscript-linter.sh

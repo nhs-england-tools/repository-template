@@ -8,7 +8,7 @@ set -euo pipefail
 # report to SonarCloud.
 #
 # Usage:
-#   $ ./perform-static-analysis.sh
+#   $ [options] ./perform-static-analysis.sh
 #
 # Expects:
 #   BRANCH_NAME=branch-name         # Branch to report on
@@ -17,8 +17,8 @@ set -euo pipefail
 #   SONAR_TOKEN=token               # SonarCloud token
 #
 # Options:
-#   VERBOSE=true          # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true          # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 
@@ -27,14 +27,13 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
 
   if command -v sonar-scanner > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    cli-run-sonar-scanner
+    run-sonar-scanner-natively
   else
-    docker-run-sonar-scanner
+    run-sonar-scanner-in-docker
   fi
 }
 
-# Run Sonar Scanner natively.
-function cli-run-sonar-scanner() {
+function run-sonar-scanner-natively() {
 
   sonar-scanner \
     -Dproject.settings="$PWD/scripts/config/sonar-scanner.properties" \
@@ -44,8 +43,7 @@ function cli-run-sonar-scanner() {
     -Dsonar.token="$SONAR_TOKEN"
 }
 
-# Run Sonar Scanner in a Docker container.
-function docker-run-sonar-scanner() {
+function run-sonar-scanner-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh

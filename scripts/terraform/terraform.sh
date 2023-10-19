@@ -8,12 +8,12 @@ set -euo pipefail
 # installed, otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ ./terraform.sh
+#   $ [options] ./terraform.sh
 #
 # Options:
 #   cmd=command             # Terraform command to execute
-#   VERBOSE=true            # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 
@@ -23,16 +23,16 @@ function main() {
 
   if command -v terraform > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     # shellcheck disable=SC2154
-    cmd=$cmd cli-run-terraform
+    cmd=$cmd run-terraform-natively
   else
-    cmd=$cmd docker-run-terraform
+    cmd=$cmd run-terraform-in-docker
   fi
 }
 
 # Run Terraform natively.
 # Arguments (provided as environment variables):
 #   cmd=[Terraform command to execute]
-function cli-run-terraform() {
+function run-terraform-natively() {
 
   # shellcheck disable=SC2086
   terraform $cmd
@@ -41,7 +41,7 @@ function cli-run-terraform() {
 # Run Terraform in a Docker container.
 # Arguments (provided as environment variables):
 #   cmd=[Terraform command to execute]
-function docker-run-terraform() {
+function run-terraform-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh

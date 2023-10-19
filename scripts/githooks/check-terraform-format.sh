@@ -7,12 +7,12 @@ set -euo pipefail
 # Pre-commit git hook to check format Terraform code.
 #
 # Usage:
-#   $ ./check-terraform-format.sh
+#   $ [options] ./check-terraform-format.sh
 #
 # Options:
 #   check_only=true         # Do not format, run check only, default is 'false'
-#   VERBOSE=true            # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 

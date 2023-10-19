@@ -26,16 +26,16 @@ runs:
       shell: bash
       run: |
         export BUILD_DATETIME=${{ inputs.build_datetime }}
-        ./scripts/reports/cloc-repository.sh
+        ./scripts/reports/create-lines-of-code-report.sh
     - name: "Compress CLOC report"
       shell: bash
-      run: zip cloc-report.json.zip cloc-report.json
+      run: zip lines-of-code-report.json.zip lines-of-code-report.json
     - name: "Upload CLOC report as an artefact"
       if: ${{ !env.ACT }}
       uses: actions/upload-artifact@v3
       with:
-        name: cloc-report.json.zip
-        path: ./cloc-report.json.zip
+        name: lines-of-code-report.json.zip
+        path: ./lines-of-code-report.json.zip
         retention-days: 21
     - name: "Check prerequisites for sending the report"
       shell: bash
@@ -53,5 +53,5 @@ runs:
       if: steps.check.outputs.secrets_exist == 'true'
       run: |
         aws s3 cp \
-          ./cloc-report.json.zip \
-          ${{ inputs.idp_aws_report_upload_bucket_endpoint }}/${{ inputs.build_timestamp }}-cloc-report.json.zip
+          ./lines-of-code-report.json.zip \
+          ${{ inputs.idp_aws_report_upload_bucket_endpoint }}/${{ inputs.build_timestamp }}-lines-of-code-report.json.zip

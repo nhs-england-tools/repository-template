@@ -28,7 +28,7 @@ The following command-line tools are expected to be installed:
 Here is an example on how to run a GitHub workflow job:
 
 ```shell
-$ make runner-act workflow="stage-1-commit" job="cloc-repository"
+$ make runner-act workflow="stage-1-commit" job="create-lines-of-code-report"
 
 [Commit stage/Count lines of code] 🚀  Start image=ghcr.io/nhs-england-tools/github-runner-image:20230101-abcdef0-rt
 [Commit stage/Count lines of code]   🐳  docker pull image=ghcr.io/nhs-england-tools/github-runner-image:20230101-abcdef0-rt platform=linux/amd64 username= forcePull=false
@@ -42,7 +42,7 @@ $ make runner-act workflow="stage-1-commit" job="cloc-repository"
 [Commit stage/Count lines of code]   ✅  Success - Main Create CLOC report
 [Commit stage/Count lines of code] ⭐ Run Main Compress CLOC report
 [Commit stage/Count lines of code]   🐳  docker exec cmd=[bash --noprofile --norc -e -o pipefail /var/run/act/workflow/1-composite-1.sh] user= workdir=
-| updating: cloc-report.json (deflated 68%)
+| updating: lines-of-code-report.json (deflated 68%)
 [Commit stage/Count lines of code]   ✅  Success - Main Compress CLOC report
 [Commit stage/Count lines of code]   ☁  git clone 'https://github.com/actions/upload-artifact' # ref=v3
 [Commit stage/Count lines of code] ⭐ Run Main Check prerequisites for sending the report

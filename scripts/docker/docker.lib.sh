@@ -27,8 +27,8 @@ function docker-build() {
 
   version-create-effective-file
   _create-effective-dockerfile
-  # The current directory must be changed for the image build script to access
-  # assets that need to be copied
+  # The current directory must be changed for the image build script to access
+  # assets that need to be copied
   current_dir=$(pwd)
   cd "$dir"
   docker build \
@@ -164,7 +164,7 @@ function docker-get-image-version-and-pull() {
   #   digest="sha256:hash"
 
   # Get the image full version from the '.tool-versions' file,
-  # match it by name and version regex, if given.
+  # match it by name and version regex, if given.
   local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
   local version="latest"
   if [ -f "$versions_file" ]; then

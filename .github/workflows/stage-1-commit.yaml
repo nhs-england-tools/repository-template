@@ -75,7 +75,7 @@ jobs:
         uses: actions/checkout@v4
       - name: "Lint Terraform"
         uses: ./.github/actions/lint-terraform
-  cloc-repository:
+  count-lines-of-code:
     name: "Count lines of code"
     runs-on: ubuntu-latest
     permissions:
@@ -86,7 +86,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v4
       - name: "Count lines of code"
-        uses: ./.github/actions/cloc-repository
+        uses: ./.github/actions/create-lines-of-code-report
         with:
           build_datetime: "${{ inputs.build_datetime }}"
           build_timestamp: "${{ inputs.build_timestamp }}"

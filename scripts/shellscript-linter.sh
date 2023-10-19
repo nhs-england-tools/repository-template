@@ -8,12 +8,12 @@ set -euo pipefail
 # installed, otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ ./shellscript-linter.sh
+#   $ [options] ./shellscript-linter.sh
 #
 # Arguments (provided as environment variables):
 #   file=shellscript        # Path to the shell script to lint, relative to the project's top-level directory, default is itself
-#   VERBOSE=true            # Show all the executed commands, default is 'false'
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 
@@ -24,16 +24,16 @@ function main() {
   [ -z "${file:-}" ] && echo "WARNING: 'file' variable not set, defaulting to itself"
   local file=${file:-scripts/shellscript-linter.sh}
   if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    file="$file" cli-run-shellcheck
+    file="$file" run-shellcheck-natively
   else
-    file="$file" docker-run-shellcheck
+    file="$file" run-shellcheck-in-docker
   fi
 }
 
 # Run ShellCheck natively.
 # Arguments (provided as environment variables):
 #   file=[path to the shell script to lint, relative to the project's top-level directory]
-function cli-run-shellcheck() {
+function run-shellcheck-natively() {
 
   # shellcheck disable=SC2001
   shellcheck "$(echo "$file" | sed "s#$PWD#.#")"
@@ -42,7 +42,7 @@ function cli-run-shellcheck() {
 # Run ShellCheck in a Docker container.
 # Arguments (provided as environment variables):
 #   file=[path to the shell script to lint, relative to the project's top-level directory]
-function docker-run-shellcheck() {
+function run-shellcheck-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
