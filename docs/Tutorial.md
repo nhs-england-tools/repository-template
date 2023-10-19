@@ -1,10 +1,5 @@
 # The Simplest Thing That Can Possibly Work
 
-This repository template contains a lot of material, and provides a
-lot of functionality out of the box. You might feel intimidated and
-confused by the sheer number of files in it, and not know where to
-look to get what you need done.
-
 This tutorial is to walk you through the steps of getting a basic
 Hello-World-style app into production, to show you where to find the
 functionality you need and to demystify some of the content so that
@@ -19,14 +14,13 @@ I will assume familiarity with git itself.
 ## First things first
 
 You will need certain tools to be installed in order to use the tools
-in the repository template.  They are:
+in the repository template.  They are listed in the
+[`README`](../README.md#prerequisites) at the root of the project, so
+make sure you have them installed first, before trying to continue.
 
-- The gnu coreutils.
-- Gnu make.
-
-These are some of the tools that the engineering community assumes you
-will have for compatibility with a wide range of projects and
-products, so install them if you haven't already.
+These prerequisites are some of the tools that the engineering
+community assumes you will have for compatibility with a wide range of
+projects and products.
 
 Some other tools will be installed by the framework if you don't
 already have them installed.  I'll call those out as and when they
@@ -94,36 +88,20 @@ returns a JSON blob that looks like this:
 
 The framework contains a mechanism for ensuring that your local
 development python interpreter is at a known version; that mechanism
-relies on [`asdf`](https://github.com/asdf-vm/asdf).  The next step will
-install it if you don't already have it, and will update it if you
-do, but there's something we need to edit first.
+relies on [`asdf`](https://github.com/asdf-vm/asdf).  The next step
+will use `asdf` to install dependencies for you, but there's something
+we need to edit first.
 
-Open `Makefile` in your editor.  This is the entrypoint for the tasks
-that the framework supplies for you, and this entrypoint is something
-you can edit for yourself.
+The framework assumes that all tool dependencies and versions are
+specified in the `.tool-versions` file, so open it and add these lines
+at the top:
 
-Locate the `config` task.  You will see that it looks like this:
-
-```make
-config:: # Configure development environment
-	# TODO: Use only `make` targets that are specific to this project, e.g. you may not need to install Node.js
-	make \
-		nodejs-install \
-		python-install \
-		terraform-install
+```text
+python 3.11.4
+poetry 1.6.1
 ```
 
-For this project we don't need NodeJS, and while we will need
-terraform, we don't need it yet.  Modify the `config` task so that it
-looks like this:
-
-```make
-config:: # Configure development environment
-	make python-install
-```
-
-That means it will only install python for us, which - for now - is
-the only thing we want.  Run the task:
+Run the task:
 
 ```shell
 make config
@@ -131,10 +109,10 @@ make config
 
 The first time you run this it will download and build `python` for
 you, so you may want to make a cup of tea.  The version it picks is in
-the `.tool-version` file at the top level of the template.
+the `.tool-versions` file at the top level of the template.
 
-In addition to installing `asdf`, `make config` sets up some `git`
-commit hooks that will come in handy later.
+`make config` also sets up some `git` commit hooks that will come in
+handy later.
 
 Now, the template has given us a `poetry` installation for dependency
 management.  There is a configuration option that I recommend you set
@@ -153,7 +131,7 @@ deleting the working directory and starting again will reset all
 (well, nearly all) the relevant state.
 
 However, you don't want to be committing the virtual environment to
-`git`, so edit the file `.gitignore` and add :
+`git`, so edit the file `.gitignore` and add:
 
 ```text
 .venv/
@@ -183,8 +161,8 @@ Now we add `pytest`:
 poetry add --group=dev pytest
 ```
 
-With that prologue out of the way, we can write our test.  Which will
-fail, but seeing it fail in the right way will tell us that the python
+With that prologue out of the way, we can write our test.  It will
+fail, but seeing it fail in the right way will tell us that the Python
 environment is how we need it.  First, make a directory to put our
 code into:
 
@@ -203,7 +181,7 @@ def test_lambda_handler():
   assert response["message"] == "Hello World"
 ```
 
-Run pytest with the command `poetry run pytest` and you will see the
+Run `pytest` with the command `poetry run pytest` and you will see the
 following (among some other test failure info):
 
 ```console
@@ -367,7 +345,7 @@ format: # Apply code formatting
 
 ```
 
-Note, if you're not used to makefile syntax, that the space before
+Note, if you're not used to `make` syntax, that the space before
 `make` on the second line needs to be a single `tab` character.  It
 will break otherwise.  Copy and paste if in doubt.
 
