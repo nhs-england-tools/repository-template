@@ -61,10 +61,6 @@ make it private if you prefer.
 Under `Repository name`, give the repository a name of
 `nhset-hello-world`.
 
-[TODO: This means the SonarCloud integration won't work, but we can't
-get around that without being able to make repositories in a different
-org.]
-
 If a description will help you remember the purpose of this project in
 the future, put something meaningful to you in the `Description`
 field.
