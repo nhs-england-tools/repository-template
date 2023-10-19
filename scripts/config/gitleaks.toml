@@ -16,4 +16,4 @@ regexes = [
 ]
 
 [allowlist]
-files = ['.terraform.lock.hcl', 'poetry.lock', 'yarn.lock']
+paths = ['''.terraform.lock.hcl''', '''poetry.lock''', '''yarn.lock''']
