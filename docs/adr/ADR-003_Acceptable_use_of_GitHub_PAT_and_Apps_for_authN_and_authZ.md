@@ -2,7 +2,7 @@
 
 >|              | |
 >| ------------ | --- |
->| Date         | `11/09/2023` |
+>| Date         | `04/09/2023` |
 >| Status       | `RFC` |
 >| Deciders     | `Engineering` |
 >| Significance | `Construction techniques` |
@@ -136,7 +136,7 @@ This guide describes the essence of the fundamental aspects of GitHub authentica
 To be executed by a GitHub organisation administrator:
 
 - Identify the GitHub repository name for which the team has requested a GitHub App integration
-- Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net) by completing the `New shared mailbox request` form on the Internal Portal (ServiceNow). For programmes with multiple repositories, consider an alternative naming such as [england.[programme-name]-github-service-user@nhs.net](england.[programme-name]-github-service-user@nhs.net)
+- Create a shared email address [england.[repository-name]-app@nhs.net](england.[repository-name]-app@nhs.net) by filling in the `New shared mailbox request` form using the Internal Portal (ServiceNow)
   - Delegate access to this mailbox for the GitHub organisation owners, administrators and the engineering team
 - Create a GitHub bot account named `[repository-name]-app` using the email address mentioned above. The bot account should not be added to the organisation; therefore, **no GitHub seat will be taken**. It serves as an identity, but authentication and authorisation are handled via the GitHub App. This avoids granting the bot admin permissions to the repository, enabling commits to be signed by that bot account. Access is controlled solely through the GitHub App.
   - Use the `nhs.net` email address as the default and only email
