@@ -14,9 +14,6 @@ test-unit: # Run your unit tests from scripts/test/unit @Testing
 test-lint: # Lint your code from scripts/test/lint @Testing
 	make _test name="lint"
 
-test-style: # Run your markdown files through a prose style checker @Testing
-	make _test name="style"
-
 test-coverage: # Evaluate code coverage from scripts/test/coverage @Testing
 	make _test name="coverage"
 
@@ -58,7 +55,6 @@ test: # Run all the test tasks @Testing
 	make \
 		test-unit \
 		test-lint \
-		test-style \
 		test-coverage \
 		test-contract \
 		test-security \
@@ -90,7 +86,6 @@ ${VERBOSE}.SILENT: \
 	test-load \
 	test-response-time \
 	test-security \
-	test-style \
 	test-ui \
 	test-ui-performance \
 	test-unit \
