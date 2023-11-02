@@ -24,8 +24,7 @@ clean:: # Clean-up project resources (main) @Operations
 
 config:: # Configure development environment (main) @Configuration
 	# TODO: Use only 'make' targets that are specific to this project, e.g. you may not need to install Node.js
-	make \
-		terraform-install
+	make _install-dependencies
 
 # ==============================================================================
 
