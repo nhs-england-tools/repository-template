@@ -15,12 +15,12 @@ In modern software development, leveraging third-party dependencies is a common 
 
 ## Key files
 
-- [create-sbom-report.sh](../../scripts/reports/create-sbom-report.sh): A shell script that generates SBOM (Software Bill of Materials)
-- [syft.yaml](../../scripts/config/syft.yaml): A configuration file for the SBOM generator
-- [scan-vulnerabilities.sh](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
-- [grype.yaml](../../scripts/config/grype.yaml): A configuration file for the CVE scanner
-- [scan-dependencies/action.yaml](../../.github/actions/scan-dependencies/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
-- [.gitignore](../../.gitignore): Excludes the `*sbom*report.json` and `*vulnerabilities*report.json` report files created during the process
+- [`create-sbom-report.sh`](../../scripts/reports/create-sbom-report.sh): A shell script that generates SBOM (Software Bill of Materials)
+- [`syft.yaml`](../../scripts/config/syft.yaml): A configuration file for the SBOM generator
+- [`scan-vulnerabilities.sh`](../../scripts/reports/scan-vulnerabilities.sh): A shell script that performs CVE analysis
+- [`grype.yaml`](../../scripts/config/grype.yaml): A configuration file for the CVE scanner
+- [`scan-dependencies/action.yaml`](../../.github/actions/scan-dependencies/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
+- [`.gitignore`](../../.gitignore): Excludes the `*sbom*report.json` and `*vulnerabilities*report.json` report files created during the process
 
 ## Configuration checklist
 
