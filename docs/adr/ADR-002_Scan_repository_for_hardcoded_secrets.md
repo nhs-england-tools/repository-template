@@ -1,4 +1,4 @@
-# ADR-002: Scan repository for hardcoded secrets
+# ADR-002: Scan repository for hard-coded secrets
 
 >|              |                                                               |
 >| ------------ | ------------------------------------------------------------- |
@@ -10,7 +10,7 @@
 
 ---
 
-- [ADR-002: Scan repository for hardcoded secrets](#adr-002-scan-repository-for-hardcoded-secrets)
+- [ADR-002: Scan repository for hard-coded secrets](#adr-002-scan-repository-for-hard-coded-secrets)
   - [Context](#context)
   - [Decision](#decision)
     - [Assumptions](#assumptions)
@@ -42,7 +42,7 @@ Within NHS England, we are observing an adoption of the `gitleaks` tool, which i
 
 There are three options presented in this decision record.
 
-1. [git-secrets](https://github.com/awslabs/git-secrets)
+1. [Git-secrets](https://github.com/awslabs/git-secrets)
 
    - Repository metadata
      - Contributions
@@ -66,9 +66,9 @@ There are three options presented in this decision record.
    - Cons
      - Rules and exclusion patterns are not easy to manage as no comments or metadata are allowed in the definition
      - No pre-backed Docker image
-     - Activity of the repo has dropped (last commit a while ago)
+     - Activity of the repository has dropped (last commit a while ago)
 
-2. [trufflehog](https://github.com/trufflesecurity/trufflehog)
+2. [Trufflehog](https://github.com/trufflesecurity/trufflehog)
 
    - Repository metadata
      - Contributions
@@ -93,7 +93,7 @@ There are three options presented in this decision record.
    - Cons
      - [AGPL-3.0](https://choosealicense.com/licenses/agpl-3.0/) licence comes with conditions
 
-3. [gitleaks](https://github.com/gitleaks/gitleaks)
+3. [Gitleaks](https://github.com/gitleaks/gitleaks)
 
    - Repository metadata
 

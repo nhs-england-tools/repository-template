@@ -20,9 +20,9 @@ Terraform is an open-source infrastructure as code (IaC) tool. It allows you to 
 Some advantages of using Terraform are as outlined below:
 
 - **Declarative configuration**: Terraform enables the precise definition of the desired state of infrastructure, streamlining its creation through a readable and understandable codebase.
-- **Version control**: The infrastructure code may be subject to version control, thereby providing an auditable record of environmental changes.
+- **Version control**: The infrastructure code may be subject to version control, thereby providing an audit trail of environmental changes.
 - **Modularisation and reusability**: Terraform facilitates the packaging of infrastructure into modular components, enhancing both reusability and ease of sharing across organisational teams.
-- **State management**: Terraform's state management capabilities ensure an accurate representation of real-world resources, enabling features such as resource dependencies and idempotency.
+- **State management**: Terraform's state management capabilities ensure an accurate representation of real-world resources, enabling features such as resource dependencies and idempotence.
 - **Collaboration and workflow**: The platform supports collaboration through features like remote backends and state locking, thereby fostering collective work on infrastructure projects.
 - **Community and ecosystem**: A robust community actively contributes to the Terraform ecosystem, providing a wealth of modules and examples that expedite infrastructure development.
 
@@ -46,16 +46,16 @@ Here are some key features built into this repository's Terraform module:
 ## Key files
 
 - Scripts
-  - [terraform.lib.sh](../../scripts/terraform/terraform.lib.sh) A library code loaded by custom make targets and CLI scripts
-  - [terraform.mk](../../scripts/terraform/terraform.mk): Customised implementation of the Terraform routines loaded by the `scripts/init.mk` file
-  - [terraform.sh](../../scripts/terraform/terraform.sh): Terraform command wrapper
+  - [`terraform.lib.sh`](../../scripts/terraform/terraform.lib.sh) A library code loaded by custom make targets and CLI scripts
+  - [`terraform.mk`](../../scripts/terraform/terraform.mk): Customised implementation of the Terraform routines loaded by the `scripts/init.mk` file
+  - [`terraform.sh`](../../scripts/terraform/terraform.sh): Terraform command wrapper
 - Configuration
-  - [.tool-versions](../../.tool-versions): Stores Terraform version to be used
+  - [`.tool-versions`](../../.tool-versions): Stores Terraform version to be used
 - Code quality gates
-  - [lint-terraform/action.yaml](../../.github/actions/lint-terraform/action.yaml): GitHub action
-  - [check-terraform-format.sh](../../scripts/githooks/check-terraform-format.sh): Git hook
+  - [`lint-terraform/action.yaml`](../../.github/actions/lint-terraform/action.yaml): GitHub action
+  - [`check-terraform-format.sh`](../../scripts/githooks/check-terraform-format.sh): Git hook
 - Usage example
-  - Declarative infrastructure definition example [terraform-state-aws-s3](../../scripts/terraform/examples/terraform-state-aws-s3) to store Terraform state
+  - Declarative infrastructure definition example [`terraform-state-aws-s3`](../../scripts/terraform/examples/terraform-state-aws-s3) to store Terraform state
   - A set of [make targets](https://github.com/nhs-england-tools/repository-template/blob/main/scripts/terraform/terraform.mk#L44) to run the example
 
 ## Usage

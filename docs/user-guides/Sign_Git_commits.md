@@ -123,7 +123,7 @@ After completing these steps, your new signing key will be listed in the "**SSH 
 
 ### Troubleshooting
 
-If you receive the error message "error: gpg failed to sign the data", make sure you added `export GPG_TTY=$(tty)` to your `~/.zshrc` or `~/.bashrc`, and restarted your terminal.
+If you receive the error message `error: gpg failed to sign the data`, make sure you added `export GPG_TTY=$(tty)` to your `~/.zshrc` or `~/.bashrc`, and restarted your terminal.
 
 ```shell
 sed -i '/^export GPG_TTY/d' ~/.exports

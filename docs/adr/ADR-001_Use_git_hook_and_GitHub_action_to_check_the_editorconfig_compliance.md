@@ -106,7 +106,7 @@ This option is an extension built upon option 2a.
 - Pros
   - Usage of a GitHub native functionality
 - Cons
-  - Reliance on the GitHub DSL (coding in yaml) may lead to less portable solution
+  - Reliance on the GitHub DSL (coding in YAML) may lead to less portable solution
   - Implementation of the functionality has to be duplicated for the git hook
 
 ### Outcome

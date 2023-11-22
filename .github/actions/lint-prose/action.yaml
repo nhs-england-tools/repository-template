@@ -1,0 +1,9 @@
+name: "Check English usage"
+description: "Check English usage"
+runs:
+  using: "composite"
+  steps:
+    - name: "Check English usage"
+      shell: bash
+      run: |
+        check=branch ./scripts/githooks/check-english-usage.sh
