@@ -2,7 +2,7 @@ repos:
 - repo: local
   hooks:
   - id: scan-secrets
-    name: Scan Secrets
+    name: Scan secrets
     entry: ./scripts/githooks/scan-secrets.sh
     args: ["check=staged-changes"]
     language: script
@@ -10,7 +10,7 @@ repos:
 - repo: local
   hooks:
   - id: check-file-format
-    name: Check File Format
+    name: Check file format
     entry: ./scripts/githooks/check-file-format.sh
     args: ["check=staged-changes"]
     language: script
@@ -18,15 +18,23 @@ repos:
 - repo: local
   hooks:
   - id: check-markdown-format
-    name: Check Markdown Format
+    name: Check Markdown format
     entry: ./scripts/githooks/check-markdown-format.sh
     args: ["check=staged-changes"]
     language: script
     pass_filenames: false
 - repo: local
   hooks:
-  - id: check-terraform-format
-    name: Check Terraform Format
+  - id: check-english-usage
+    name: Check English usage
+    entry: ./scripts/githooks/check-english-usage.sh
+    args: ["check=staged-changes"]
+    language: script
+    pass_filenames: false
+- repo: local
+  hooks:
+  - id: lint-terraform
+    name: Lint Terraform
     entry: ./scripts/githooks/check-terraform-format.sh
     language: script
     pass_filenames: false
