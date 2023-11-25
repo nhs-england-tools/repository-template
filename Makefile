@@ -1,25 +1,25 @@
 # This file is for you! Edit it to implement your own hooks (make targets) into
 # the project as automated steps to be executed on locally and in the CD pipeline.
 
-include ./scripts/init.mk
+include scripts/init.mk
 
 # ==============================================================================
 
 # Example CI/CD targets are: dependencies, build, publish, deploy, clean, etc.
 
-dependencies: # Install dependencies needed to build and test the project
+dependencies: # Install dependencies needed to build and test the project @Pipeline
 	# TODO: Implement installation of your project dependencies
 
-build:  # Build the project artefact @Pipeline
+build: # Build the project artefact @Pipeline
 	make _project name="build"
 
-up: # Run your code
+up: # Run your code @Pipeline
 	make _project name="up"
 
-down: # Stop your code
+down: # Stop your code @Pipeline
 	make _project name="down"
 
-sh: up # Get a shell inside your running project, running it first if necessary
+sh: up # Get a shell inside your running project, running it first if necessary @Development
 	make _project name="sh"
 
 publish: # Publish the project artefact @Pipeline
@@ -55,5 +55,4 @@ ${VERBOSE}.SILENT: \
 	deploy \
 	down \
 	sh \
-	tmp/build_timestamp \
 	up \
