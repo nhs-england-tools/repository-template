@@ -14,6 +14,7 @@ This repository template aims to foster a user-friendly development environment 
 
 Make use of this repository template to expedite your project setup and enhance your productivity right from the get-go. Enjoy the advantage of having a well-structured, self-documented project that reduces overhead and increases focus on what truly matters - coding!
 
+
 ## Table of Contents
 
 - [Repository Template](#repository-template)
