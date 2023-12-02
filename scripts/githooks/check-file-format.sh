@@ -76,7 +76,7 @@ function main() {
 # Run editorconfig natively.
 # Arguments (provided as environment variables):
 #   dry_run_opt=[dry run option]
-#   filter=[filter for files to check]
+#   filter=[git command to filter the files to check]
 function run-editorconfig-natively() {
 
   # shellcheck disable=SC2046,SC2086
@@ -87,7 +87,7 @@ function run-editorconfig-natively() {
 # Run editorconfig in a Docker container.
 # Arguments (provided as environment variables):
 #   dry_run_opt=[dry run option]
-#   filter=[filter for files to check]
+#   filter=[git command to filter the files to check]
 function run-editorconfig-in-docker() {
 
   # shellcheck disable=SC1091
