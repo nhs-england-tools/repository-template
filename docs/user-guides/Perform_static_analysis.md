@@ -38,7 +38,7 @@ export SONAR_TOKEN=[replace-with-your-sonar-token]
 ## Configuration checklist
 
 > [!WARNING]<br>
-> This section is to be used by the the GitHub Admins.
+> This section is to be used by the GitHub Admins.
 
 The list demonstrates the manual way of configuring a project, however our aim is to automate all the activities below.
 
