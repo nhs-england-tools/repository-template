@@ -13,5 +13,6 @@ Trufflehog
 bot
 idempotence
 onboarding
+sed
 toolchain
 [A-Z]+s
