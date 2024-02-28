@@ -1,7 +1,12 @@
 # This file is for you! Please, updated to the versions agreed by your team.
 
-terraform 1.7.0
+golang 1.21.4
+nodejs 21.2.0 # Always check cloud providers runtime support
+poetry 1.7.1
 pre-commit 3.6.0
+python 3.12.0 # Always check cloud providers runtime support
+terraform 1.7.0
+yarn 1.22.21
 
 # ==============================================================================
 # The section below is reserved for Docker image versions.

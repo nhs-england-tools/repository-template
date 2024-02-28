@@ -41,14 +41,21 @@ githooks-run: # Run git hooks configured in this repository @Operations
 		--all-files
 
 _install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
-	echo ${name}
 	asdf plugin add ${name} ||:
-	asdf install ${name} $(or ${version},)
+	asdf install ${name} $(or ${version},) ||:
 
 _install-dependencies: # Install all the dependencies listed in .tool-versions
 	for plugin in $$(grep ^[a-z] .tool-versions | sed 's/[[:space:]].*//'); do
 		make _install-dependency name="$${plugin}"
 	done
+
+asdf-install: # Install asdf @Installation
+	if [ -d "${HOME}/.asdf" ]; then
+		( cd "${HOME}/.asdf"; git pull )
+	else
+		git clone https://github.com/asdf-vm/asdf.git "${HOME}/.asdf" ||:
+	fi
+	asdf plugin update --all
 
 clean:: # Remove all generated and temporary files (common) @Operations
 	rm -rf \
@@ -61,7 +68,9 @@ clean:: # Remove all generated and temporary files (common) @Operations
 
 config:: # Configure development environment (common) @Configuration
 	make \
-		githooks-config
+		asdf-install \
+		_install-dependencies \
+		githooks-config \
 
 help: # Print help @Others
 	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"
@@ -146,6 +155,7 @@ HELP_SCRIPT = \
 ${VERBOSE}.SILENT: \
 	_install-dependencies \
 	_install-dependency \
+	asdf-install \
 	clean \
 	config \
 	githooks-config \
