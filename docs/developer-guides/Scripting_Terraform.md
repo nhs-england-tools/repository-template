@@ -62,7 +62,6 @@ Here are some key features built into this repository's Terraform module:
 
 ### Quick start
 
-
 The Repository Template assumes that you will be constructing the bulk of your infrastructure in `infrastructure/modules` as generic deployment configuration, which you will then compose into environment-specific modules, each stored in their own directory under `infrastructure/environments`.  Let's create a simple deployable thing, and configure an S3 bucket.  We'll make the name of the bucket a variable, so that each environment can have its own.
 
 Open the file `infrastructure/modules/private_s3_bucket/main.tf`, and put this in it:
@@ -88,13 +87,12 @@ Note that the variable has been given no value.  This is intentional, and allows
 Now, we're going to define two deployment environments: `dev`, and `test`.  Run this:
 
 ```bash
- $ mkdir -p infrastructure/environments/{dev,test}
+mkdir -p infrastructure/environments/{dev,test}
 ```
 
 It is important that the directory names match your environment names.
 
 Now, let's create the environment definition files.  Open `infrastructure/environments/dev/main.tf` and copy in:
-
 
 ```terraform
 module "dev_environment" {
@@ -123,8 +121,8 @@ We have changed the bucket name here.  In this example, I am making no assumptio
 Now we have our modules and our environments configured, we need to initialise each of them.  Run these two commands:
 
 ```bash
- $ TF_ENV=dev make terraform-init
- $ TF_ENV=test make terraform-init
+TF_ENV=dev make terraform-init
+TF_ENV=test make terraform-init
 ```
 
 Each invocation will download the terraform dependencies we need.  The `TF_ENV` name we give to each invocation is the name of the environment, and must match the directory name we chose under `infrastructure/environments` so that `make` gives the right parameters to `terraform`.
@@ -135,8 +133,8 @@ I am going to assume that you have an `~/.aws/credentials` file set up with a se
 
 Run the following:
 
-```
- $ TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-plan
+```shell
+TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-plan
 ```
 
 If all is working correctly (and you may need to do a round of `aws sso login` first), you should see this output:
@@ -180,7 +178,7 @@ Note: You didn't use the -out option to save this plan, so Terraform can't guara
 No errors found, so we can now create the bucket:
 
 ```shell
- $  $ TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-apply
+ $ TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-apply
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
   + create
@@ -226,7 +224,7 @@ Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 You will notice here that I needed to confirm the action to terraform manually.  If you don't want to do that, you can pass the `-auto-approve` option to terraform like this:
 
 ```shell
- $ TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-apply opts="-auto-approve"
+TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-apply opts="-auto-approve"
 ```
 
 If you check the contents of your AWS account, you should see your new bucket:
@@ -255,7 +253,7 @@ Terraform will perform the following actions:
 To create your `test` environment, you run the same commands with `test` where previously you had `dev`:
 
 ```shell
- $ TF_ENV=test AWS_PROFILE=my-test-environment make terraform-apply opts="-auto-approve"
+TF_ENV=test AWS_PROFILE=my-test-environment make terraform-apply opts="-auto-approve"
 ```
 
 To use the same terraform config in a github action, see the docs [here](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services).
