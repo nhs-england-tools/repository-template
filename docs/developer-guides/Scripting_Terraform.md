@@ -103,7 +103,7 @@ module "dev_environment" {
 
 Some things to note:
 
-- The `source` path is relative to the directory that the `main.tf` file is in.  When terraform runs, it will `chdir` to that directory first, before doing anything else.
+- The `source` path is relative to the directory that the `main.tf` file is in.  When `terraform` runs, it will `chdir` to that directory first, before doing anything else.
 - The `module` name, `"dev_environment"` here, can be anything.  Module names are only scoped to the file they're in, so you don't need to follow any particular convention here.
 - The `bucket_name` is going to end up as the bucket name in AWS.  It wants to be meaningful to you, and you need to pick your own.  The framework doesn't constrain your choice, but remember that AWS needs them to be globally unique and if you steal `"nhse-ee-my-fancy-bucket"` then I can't test these docs and then I will be sad.
 
@@ -116,7 +116,7 @@ module "test_environment" {
 }
 ```
 
-We have changed the bucket name here.  In this example, I am making no assumptions as to how your AWS accounts are set up.  If you intend for your dev and test infrastructure to be in the same AWS account (perhaps by necessity, for organisational reasons) and you need to separate them by a naming convention, the framework can support that.
+We have changed the bucket name here.  In this example, I am making no assumptions as to how your AWS accounts are set up.  If you intend for your development and test infrastructure to be in the same AWS account (perhaps by necessity, for organisational reasons) and you need to separate them by a naming convention, the framework can support that.
 
 Now we have our modules and our environments configured, we need to initialise each of them.  Run these two commands:
 
@@ -125,11 +125,11 @@ TF_ENV=dev make terraform-init
 TF_ENV=test make terraform-init
 ```
 
-Each invocation will download the terraform dependencies we need.  The `TF_ENV` name we give to each invocation is the name of the environment, and must match the directory name we chose under `infrastructure/environments` so that `make` gives the right parameters to `terraform`.
+Each invocation will download the `terraform` dependencies we need.  The `TF_ENV` name we give to each invocation is the name of the environment, and must match the directory name we chose under `infrastructure/environments` so that `make` gives the right parameters to `terraform`.
 
 We are now ready to try deploying to AWS, from our local environment.
 
-I am going to assume that you have an `~/.aws/credentials` file set up with a separate profile for each environment that you want to use, called `my-test-environment` and `my-dev-environment`.  They might have the same credential values in them, in which case terraform will create the resources in the same account; or you might have them set up to deploy to different accounts.  Either would work.
+I am going to assume that you have an `~/.aws/credentials` file set up with a separate profile for each environment that you want to use, called `my-test-environment` and `my-dev-environment`.  They might have the same credential values in them, in which case `terraform` will create the resources in the same account; or you might have them set up to deploy to different accounts.  Either would work.
 
 Run the following:
 
@@ -221,7 +221,7 @@ Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 
 ```
 
-You will notice here that I needed to confirm the action to terraform manually.  If you don't want to do that, you can pass the `-auto-approve` option to terraform like this:
+You will notice here that I needed to confirm the action to `terraform` manually.  If you don't want to do that, you can pass the `-auto-approve` option to `terraform` like this:
 
 ```shell
 TF_ENV=dev AWS_PROFILE=my-dev-environment make terraform-apply opts="-auto-approve"
@@ -256,7 +256,7 @@ To create your `test` environment, you run the same commands with `test` where p
 TF_ENV=test AWS_PROFILE=my-test-environment make terraform-apply opts="-auto-approve"
 ```
 
-To use the same terraform config in a github action, see the docs [here](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services).
+To use the same `terraform` files in a GitHub action, see the docs [here](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services).
 
 ### Your stack implementation
 
