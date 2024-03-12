@@ -71,9 +71,6 @@ ${VERBOSE}.SILENT: \
 	clean \
 	terraform-apply \
 	terraform-destroy \
-	terraform-example-clean \
-	terraform-example-destroy-aws-infrastructure \
-	terraform-example-provision-aws-infrastructure \
 	terraform-fmt \
 	terraform-init \
 	terraform-install \
