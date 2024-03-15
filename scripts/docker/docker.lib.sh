@@ -73,11 +73,13 @@ function docker-bake-dockerfile() {
   _create-effective-dockerfile
 }
 
-
+# Run hadolint over the generated Dockerfile.
+# Arguments (provided as environment variables):
+#  dir=[path to the image directory where the Dockerfile.effective is located, default is '.']
 function docker-lint() {
+  local dir=${dir:-$PWD}
   file=${dir}/Dockerfile.effective ./scripts/docker/dockerfile-linter.sh
 }
-
 
 # Check test Docker image.
 # Arguments (provided as environment variables):
