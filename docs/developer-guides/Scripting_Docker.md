@@ -274,7 +274,7 @@ For cross-platform image support, the `--platform linux/amd64` flag is used to b
 
 ### Dockerignore file
 
-If you need to exclude files from a `COPY` command, put a `.dockerignore` file next to the relevant `Dockerfile`.  They do not live in the root directory.
+If you need to exclude files from a `COPY` command, put a [`Dockerfile.dockerignore`](https://docs.docker.com/build/building/context/#filename-and-location) file next to the relevant `Dockerfile`.  They do not live in the root directory.  Any paths within `Dockerfile.dockerignore` must be relative to the repository root.
 
 ## FAQ
 

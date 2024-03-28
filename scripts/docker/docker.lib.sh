@@ -28,12 +28,6 @@ function docker-build() {
   version-create-effective-file
   _create-effective-dockerfile
 
-  # The .dockerignore file is optional
-  ignore=""
-  if [ -f "${dir}/.dockerignore" ]; then
-    ignore="--ignorefile ${dir}/.dockerignore"
-  fi
-
   tag=$(_get-effective-tag)
 
   docker build \
@@ -51,7 +45,6 @@ function docker-build() {
     --tag "${tag}" \
     --rm \
     --file "${dir}/Dockerfile.effective" \
-    ${ignore} \
     .
 
   # Tag the image with all the stated versions, see the documentation for more details
@@ -141,7 +134,8 @@ function docker-clean() {
   done
   rm -f \
     .version \
-    Dockerfile.effective
+    Dockerfile.effective \
+    Dockerfile.effective.dockerignore
 }
 
 # Create effective version from the VERSION file.
@@ -234,6 +228,13 @@ function _create-effective-dockerfile() {
 
   local dir=${dir:-$PWD}
 
+  # If it exists, we need to copy the .dockerignore file to match the prefix of the
+  # Dockerfile.effective file, otherwise docker won't use it.
+  # See https://docs.docker.com/build/building/context/#filename-and-location
+  # If using podman, this requires v5.0.0 or later.
+  if [ -f "${dir}/Dockerfile.dockerignore" ]; then
+    cp "${dir}/Dockerfile.dockerignore" "${dir}/Dockerfile.effective.dockerignore"
+  fi
   cp "${dir}/Dockerfile" "${dir}/Dockerfile.effective"
   _replace-image-latest-by-specific-version
   _append-metadata
