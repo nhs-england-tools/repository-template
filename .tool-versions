@@ -1,7 +1,7 @@
 # This file is for you! Please, updated to the versions agreed by your team.
 
 terraform 1.7.0
-pre-commit 3.6.0
+pre-commit 3.7.0
 
 # ==============================================================================
 # The section below is reserved for Docker image versions.
