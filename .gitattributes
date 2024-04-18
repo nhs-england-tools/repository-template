@@ -5,3 +5,5 @@ scripts/terraform/** linguist-vendored
 scripts/tests/test.mk linguist-vendored
 scripts/init.mk linguist-vendored
 scripts/shellscript-linter.sh linguist-vendored
+
+*.sh    text eol=lf
