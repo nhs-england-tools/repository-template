@@ -6,4 +6,5 @@ scripts/tests/test.mk linguist-vendored
 scripts/init.mk linguist-vendored
 scripts/shellscript-linter.sh linguist-vendored
 
-*.*    text eol=lf
+*.sh    text eol=lf
+*.yaml    text eol=lf
