@@ -63,9 +63,6 @@ jobs:
         id: semantic # Need an `id` for output variables
         with:
           semantic_version: 17
-          extra_plugins: |
-            @semantic-release/changelog
-            @semantic-release/exec
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   success:
