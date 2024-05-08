@@ -65,33 +65,9 @@ jobs:
           semantic_version: 17
           extra_plugins: |
             @semantic-release/changelog
-            @semantic-release/release-notes-generator
             @semantic-release/exec
-            @semantic-release/git
-            @semantic-release/github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # - name: "Create release"
-      #   id: create_release
-      #   uses: softprops/action-gh-release@v2
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     tag_name: ${{ needs.metadata.outputs.version }}
-      #     release_name: Release ${{ needs.metadata.outputs.version }}
-      #     body: |
-      #       Release of ${{ needs.metadata.outputs.version }}
-      #     draft: false
-      #     prerelease: false
-      # - name: "Upload release asset"
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: "${{ steps.create_release.outputs.upload_url }}"
-      #     asset_path: ./*
-      #     asset_name: repository-template-${{ needs.metadata.outputs.version }}.tar.gz
-      #     asset_content_type: "application/gzip"
   success:
     name: "Success notification"
     runs-on: ubuntu-latest
