@@ -1,8 +1,12 @@
 name: "CI/CD publish"
 
 on:
+  # push:
+  #   branches:
+  #     - main
   pull_request:
-    types: [closed]
+    types:
+      - closed
     branches:
       - main
 
@@ -58,13 +62,14 @@ jobs:
         run: |
           echo "Getting the artefacts created by the build stage ..."
           # TODO: Use either action/cache or action/upload-artifact
-      # - name: "Semantic Release"
-      #   uses: cycjimmy/semantic-release-action@v2
-      #   id: semantic # Need an `id` for output variables
-      #   with:
-      #     semantic_version: 17
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Semantic Release"
+        uses: cycjimmy/semantic-release-action@v2
+        id: semantic # Need an `id` for output variables
+        with:
+          semantic_version: 17
+          dry_run: ${{github.event_name == 'pull_request'}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   success:
     name: "Success notification"
     runs-on: ubuntu-latest

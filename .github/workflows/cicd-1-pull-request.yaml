@@ -79,29 +79,9 @@ jobs:
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
     secrets: inherit
-  tag-stage:
-    name: "Tag stage"
-    runs-on: ubuntu-latest
-    needs: [metadata, commit-stage]
-    if: needs.metadata.outputs.does_pull_request_exist == 'true'
-    timeout-minutes: 3
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v4
-      - name: "Get the artefacts"
-        run: |
-          echo "Getting the artefacts created by the build stage ..."
-          # TODO: Use either action/cache or action/upload-artifact
-      - name: "Semantic Release"
-        uses: cycjimmy/semantic-release-action@v2
-        id: semantic # Need an `id` for output variables
-        with:
-          semantic_version: 17
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-stage: # Recommended maximum execution time is 5 minutes
     name: "Test stage"
-    needs: [metadata, commit-stage, tag-stage]
+    needs: [metadata, commit-stage]
     uses: ./.github/workflows/stage-2-test.yaml
     with:
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
