@@ -59,7 +59,6 @@ jobs:
         uses: cycjimmy/semantic-release-action@v2
         id: semantic # Need an `id` for output variables
         with:
-          semantic_version: 17
           dry_run: ${{github.event_name == 'pull_request'}}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
