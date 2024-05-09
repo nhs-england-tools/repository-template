@@ -56,7 +56,7 @@ jobs:
           echo "Getting the artefacts created by the build stage ..."
           # TODO: Use either action/cache or action/upload-artifact
       - name: "Semantic Release"
-        uses: cycjimmy/semantic-release-action@v2
+        uses: cycjimmy/semantic-release-action@v4.1.0
         id: semantic # Need an `id` for output variables
         with:
           dry_run: ${{github.event_name == 'pull_request'}}
