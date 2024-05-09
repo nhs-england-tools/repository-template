@@ -60,6 +60,7 @@ jobs:
         id: semantic # Need an `id` for output variables
         with:
           dry_run: ${{github.event_name == 'pull_request'}}
+          branches: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   success:
