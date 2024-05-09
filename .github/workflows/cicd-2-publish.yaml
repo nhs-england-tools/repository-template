@@ -61,8 +61,19 @@ jobs:
         with:
           dry_run: ${{github.event_name == 'pull_request'}}
           branches: main
+          extra_plugins: |
+            "@semantic-release/commit-analyzer"
+            "@semantic-release/release-notes-generator"
+            "@semantic-release/github"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Output new release details
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo ${{ steps.semantic.outputs.new_release_version }}
+          echo ${{ steps.semantic.outputs.new_release_major_version }}
+          echo ${{ steps.semantic.outputs.new_release_minor_version }}
+          echo ${{ steps.semantic.outputs.new_release_patch_version }}
   success:
     name: "Success notification"
     runs-on: ubuntu-latest
