@@ -31,4 +31,4 @@ Configuration should be made in the `.releaserc` file.
 
 ## Testing
 
-It is recommended that any config changes are tested in a simple repository before committing to your main one
+It is recommended that any configuration changes are tested in a simple repository before committing to your main one
