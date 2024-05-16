@@ -31,10 +31,4 @@ Configuration should be made in the `.releaserc` file.
 
 ## Testing
 
-```shell
-$ make runner-act workflow="cicd-1-pull-request" job="semantic-release"
-
-# Output to go here
-```
-
-This will `dry-run` a semantic release and output the variables to the console
+It is recommended that any config changes are tested in a simple repository before committing to your main one
