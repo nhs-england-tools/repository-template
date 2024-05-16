@@ -1,4 +1,3 @@
-@ -0,0 +1,15 @@
 # User Guides
 
 - [Perform static analysis](./user-guides/Perform_static_analysis.md)

@@ -33,6 +33,8 @@ Configuration should be made in the `.releaserc` file.
 
 ```shell
 $ make runner-act workflow="cicd-1-pull-request" job="semantic-release"
+
+# Output to go here
 ```
 
 This will `dry-run` a semantic release and output the variables to the console
