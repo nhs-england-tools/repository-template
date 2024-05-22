@@ -5,7 +5,7 @@ Hello-World-style app into production, to show you where to find the
 functionality you need and to demystify some of the content so that
 you can get the most out of it.
 
-We'll be building a python AWS Lambda handler, so to complete the
+We'll be building a Python AWS Lambda handler, so to complete the
 later parts of the tutorial you'll need AWS credentials that let you
 deploy to it.
 
@@ -26,7 +26,7 @@ Some other tools will be installed by the framework if you don't
 already have them installed.  I'll call those out as and when they
 come up.
 
-I do not assume, dictate, or otherwite hint at the correct text
+I do not assume, dictate, or otherwise hint at the correct text
 editor for you to be using.  I just silently judge you for your
 choice.
 
@@ -34,7 +34,7 @@ choice.
 
 The first step to your brand new app is to clone the repository.  For
 the purposes of this tutorial, we're going to clone it into your
-personal account rather than into any of the NHS github
+personal account rather than into any of the NHS GitHub
 organisations. That's not what you'd be doing for anything we want to
 go into production, but it means you can keep it as a reference and we
 don't need to worry about naming collisions.
@@ -43,14 +43,14 @@ Go to <https://github.com/nhs-england-tools/repository-template> in your
 browser, and click the green button marked `Use this template`. From
 the dropdown that appears, select `Create a new repository`.
 
-You will be taken to github's `Create a new repository` page.  You
-might notice that this is the same page as github shows you when you
+You will be taken to GitHub's `Create a new repository` page.  You
+might notice that this is the same page as GitHub shows you when you
 create an ordinary repository in the web user interface, but pay
 attention to the `Repository template` field: you will see that it is
 pre-populated with the `nhs-england-tools/repository-template` value.
 That is as we want, so leave it as is.
 
-Leave the `Include all branches` checkbox unticked.
+Leave the `Include all branches` checkbox un-ticked.
 
 Under `Owner`, select yourself from the `Choose an owner` dropdown.
 Visibility options will appear under the Description field.  The
@@ -65,7 +65,7 @@ If a description will help you remember the purpose of this project in
 the future, put something meaningful to you in the `Description`
 field.
 
-Click the green `Create repository` button, and github will show you a
+Click the green `Create repository` button, and GitHub will show you a
 loading page while your new instance of the repository is created.
 
 Now that you have your repository, clone it to your local machine for
@@ -83,7 +83,7 @@ returns a JSON blob that looks like this:
 ```
 
 The framework contains a mechanism for ensuring that your local
-development python interpreter is at a known version; that mechanism
+development Python interpreter is at a known version; that mechanism
 relies on [`asdf`](https://github.com/asdf-vm/asdf).  The next step
 will use `asdf` to install dependencies for you, but there's something
 we need to edit first.
@@ -280,7 +280,7 @@ right name under `scripts/tests`, you can control how the framework
 executes that sort of test.
 
 Let's add another: let's get `make test-lint` working, and as an
-arbitrary choice we'll use python's `black` tool.  First add it to
+arbitrary choice we'll use Python's `black` tool.  First add it to
 `pyproject.toml` with `poetry`:
 
 ```console
