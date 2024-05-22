@@ -38,7 +38,7 @@ function main() {
   check=${check:-working-tree-changes}
   case $check in
     "all")
-      files="$(find ./ -type f -name "*.md")"
+      files="$(git ls-files "*.md")"
       ;;
     "staged-changes")
       files="$(git diff --diff-filter=ACMRT --name-only --cached "*.md")"
