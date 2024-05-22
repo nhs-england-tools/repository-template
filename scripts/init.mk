@@ -145,7 +145,7 @@ HELP_SCRIPT = \
 
 ${VERBOSE}.SILENT: \
 	_install-dependencies \
-Ì	_install-dependency \
+	_install-dependency \
 	clean \
 	config \
 	githooks-config \
