@@ -11,7 +11,7 @@
     - [Versioning](#versioning)
     - [Variables](#variables)
     - [Platform architecture](#platform-architecture)
-    - [Dockerignore file](#dockerignore-file)
+    - [`Dockerignore` file](#dockerignore-file)
   - [FAQ](#faq)
 
 ## Overview
@@ -272,7 +272,7 @@ Set the `docker_image` or `DOCKER_IMAGE` variable for your image. Alternatively,
 
 For cross-platform image support, the `--platform linux/amd64` flag is used to build Docker images, enabling containers to run without any changes on both `amd64` and `arm64` architectures (via emulation).
 
-### Dockerignore file
+### `Dockerignore` file
 
 If you need to exclude files from a `COPY` command, put a [`Dockerfile.dockerignore`](https://docs.docker.com/build/building/context/#filename-and-location) file next to the relevant `Dockerfile`.  They do not live in the root directory.  Any paths within `Dockerfile.dockerignore` must be relative to the repository root.
 
