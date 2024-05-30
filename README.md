@@ -91,6 +91,18 @@ The [C4 model](https://c4model.com/) is a simple and intuitive way to create sof
 
 ![Repository Template](./docs/diagrams/Repository_Template_GitHub_Generic.png)
 
+The source for diagrams should be in Git for change control and review purposes. Recommendations are [drawio](https://app.diagrams.net/) (example above in [docs](.docs/diagrams/) folder) and [Mermaids](https://github.com/mermaid-js/mermaid). Here is an example Mermaids sequeunce diagram:
+
+```mermaid
+sequenceDiagram
+    User->>+Service: GET /users?params=...
+    Service->>Service: auth request
+    Service->>Database: get all users
+    Database-->>Service: list of users
+    Service->>Service: filter users
+    Service-->>-User: list[User]
+```
+
 ### Modularity
 
 Most of the projects are built with customisability and extendability in mind. At a minimum, this can be achieved by implementing service level configuration options and settings. The intention of this section is to show how this can be used. If the system processes data, you could mention here for example how the input is prepared for testing - anonymised, synthetic or live data.
