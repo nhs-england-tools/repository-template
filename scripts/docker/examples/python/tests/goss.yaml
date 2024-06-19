@@ -1,8 +1,0 @@
-package:
-  python:
-    installed: true
-
-command:
-  pip list | grep -i flask:
-    exit-status: 0
-    timeout: 60000
