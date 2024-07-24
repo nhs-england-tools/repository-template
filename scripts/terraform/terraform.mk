@@ -47,7 +47,7 @@ clean:: # Remove Terraform files (terraform) - optional: terraform_dir|dir=[path
 
 _terraform: # Terraform command wrapper - mandatory: cmd=[command to execute]; optional: dir=[path to a directory where the command will be executed, relative to the project's top-level directory, default is one of the module variables or the example directory, if not set], opts=[options to pass to the Terraform command, default is none/empty]
 	dir=$(or ${dir}, ${TERRAFORM_STACK})
-	source scripts/terraform/terraform.lib.sh
+	. "scripts/terraform/terraform.lib.sh"
 	terraform-${cmd} # 'dir' and 'opts' are accessible by the function as environment variables, if set
 
 # ==============================================================================
