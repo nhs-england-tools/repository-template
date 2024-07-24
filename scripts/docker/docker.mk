@@ -22,7 +22,7 @@ _docker: # Docker command wrapper - mandatory: cmd=[command to execute]; optiona
 	# 'DOCKER_IMAGE' and 'DOCKER_TITLE' are passed to the functions as environment variables
 	DOCKER_IMAGE=$(or ${DOCKER_IMAGE}, $(or ${docker_image}, $(or ${IMAGE}, $(or ${image}, ghcr.io/org/repo))))
 	DOCKER_TITLE=$(or "${DOCKER_TITLE}", $(or "${docker_title}", $(or "${TITLE}", $(or "${title}", "Service Docker image"))))
-	source scripts/docker/docker.lib.sh
+	. "scripts/docker/docker.lib.sh"
 	dir=$(realpath ${dir})
 	docker-${cmd} # 'dir' is accessible by the function as environment variable
 
@@ -41,7 +41,7 @@ docker-test-suite-run: # Run Docker test suite @ExamplesAndTests
 	scripts/docker/tests/docker.test.sh
 
 docker-example-build: # Build Docker example @ExamplesAndTests
-	source scripts/docker/docker.lib.sh
+	. "scripts/docker/docker.lib.sh"
 	cd scripts/docker/examples/python
 	DOCKER_IMAGE=repository-template/docker-example-python
 	DOCKER_TITLE="Repository Template Docker Python Example"
@@ -53,7 +53,7 @@ docker-example-lint: # Lint Docker example @ExamplesAndTests
 	file=$${dockerfile} scripts/docker/dockerfile-linter.sh
 
 docker-example-run: # Run Docker example @ExamplesAndTests
-	source scripts/docker/docker.lib.sh
+	. "scripts/docker/docker.lib.sh"
 	cd scripts/docker/examples/python
 	DOCKER_IMAGE=repository-template/docker-example-python
 	args=" \
@@ -63,7 +63,7 @@ docker-example-run: # Run Docker example @ExamplesAndTests
 	docker-run
 
 docker-example-clean: # Remove Docker example resources @ExamplesAndTests
-	source scripts/docker/docker.lib.sh
+	. "scripts/docker/docker.lib.sh"
 	cd scripts/docker/examples/python
 	DOCKER_IMAGE=repository-template/docker-example-python
 	docker-clean
