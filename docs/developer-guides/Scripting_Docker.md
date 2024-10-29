@@ -11,9 +11,12 @@
     - [Versioning](#versioning)
     - [Variables](#variables)
     - [Platform architecture](#platform-architecture)
+    - [`Dockerignore` file](#dockerignore-file)
   - [FAQ](#faq)
 
 ## Overview
+
+This document provides instructions on how to build Docker images using our automated build process. You'll learn how to specify version tags, commit changes, and understand the build output.
 
 Docker is a tool for developing, shipping and running applications inside containers for Serverless and Kubernetes-based workloads. It has grown in popularity due to its ability to address several challenges faced by engineers, like:
 
@@ -43,7 +46,6 @@ Here are some key features built into this repository's Docker module:
 - Incorporates metadata through `Dockerfile` labels for enhanced documentation and to conform to standards
 - Integrates a linting routine to ensure `Dockerfile` code quality
 - Includes an automated test suite to validate Docker scripts
-- Provides a ready-to-run example to demonstrate the module's functionality
 - Incorporates a best practice guide
 
 ## Key files
@@ -61,50 +63,108 @@ Here are some key features built into this repository's Docker module:
   - [`docker.test.sh`](../../scripts/docker/tests/docker.test.sh): Main file containing all the tests
   - [`Dockerfile`](../../scripts/docker/tests/Dockerfile): Image definition for the test suite
   - [`VERSION`](../../scripts/docker/tests/VERSION): Version patterns for the test suite
-- Usage example
-  - Python-based example [`hello_world`](../../scripts/docker/examples/python) app showing a multi-staged build
-  - A set of [make targets](https://github.com/nhs-england-tools/repository-template/blob/main/scripts/docker/docker.mk#L18) to run the example
 
 ## Usage
 
 ### Quick start
 
-Run the test suite:
+The Repository Template assumes that you will want to build more than one docker image as part of your project.  As such, we do not use a `Dockerfile` at the root of the project.  Instead, each docker image that you create should go in its own folder under `infrastructure/images`.  So, if your application has a docker image called `my-shiny-app`, you should create the file `infrastructure/images/my-shiny-app/Dockerfile`.  Let's do that.
 
-```shell
-$ make docker-test-suite-run
+First, we need an application to package.  Let's do the simplest possible thing, and create a file called `main.py` in the root of the template with a familiar command in it:
 
-test-docker-build PASS
-test-docker-test PASS
-test-docker-run PASS
-test-docker-clean PASS
+```python
+print("hello world")
 ```
 
-Run the example:
+Run this command to make the directory:
 
 ```shell
-$ make docker-example-build
-
-#0 building with "desktop-linux" instance using docker driver
-...
-#12 DONE 0.0s
-
-$ make docker-example-run
-
- * Serving Flask app 'app'
- * Debug mode: off
-WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on all addresses (0.0.0.0)
- * Running on http://127.0.0.1:8000
- * Running on http://172.17.0.2:8000
-Press CTRL+C to quit
+mkdir -p infrastructure/images/my-shiny-app
 ```
+
+Now, edit `infrastructure/images/my-shiny-app/Dockerfile` and put this into it:
+
+```dockerfile
+FROM python
+
+COPY ./main.py .
+
+CMD ["python", "main.py"]
+```
+
+Note the paths in the `COPY` command.  The `Dockerfile` is stored in a subdirectory, but when `docker` runs it is executed in the root of the repository so that's where all paths are relative to.  This is because you can't `COPY` from parent directories. `COPY ../../main.py .` wouldn't work.
+
+The name of the folder is also significant. It should match the name of the docker image that you want to create.  With that name, you can run the following `make` task to run `hadolint` over your `Dockerfile` to check for common anti-patterns:
+
+```shell
+ $ DOCKER_IMAGE=my-shiny-app make docker-lint
+/workdir/./infrastructure/images/my-shiny-app/Dockerfile.effective:1 DL3006 warning: Always tag the version of an image explicitly
+make[1]: *** [scripts/docker/docker.mk:34: _docker] Error 1
+make: *** [scripts/docker/docker.mk:20: docker-lint] Error 2
+```
+
+All the provided docker `make` tasks take the `DOCKER_IMAGE` parameter.
+
+`hadolint` found a problem, so let's fix that.  It's complaining that we've not specified which version of the `python` docker container we want. Change the first line of the `Dockerfile` to:
+
+```dockerfile
+FROM python:3.12-slim-bookworm
+```
+
+Run `DOCKER_IMAGE=my-shiny-app make docker-lint` again, and you will see that it is silent.
+
+Now let's actually build the image.  Run the following:
+
+```shell
+DOCKER_IMAGE=my-shiny-app make docker-build
+```
+
+And now we can run it:
+
+```shell
+ $ DOCKER_IMAGE=my-shiny-app make docker-run
+hello world
+```
+
+If you list your images, you'll see that the image name matches the directory name under `infrastructure/images`:
+
+```shell
+ $ docker image ls
+REPOSITORY                   TAG                 IMAGE ID      CREATED        SIZE
+localhost/my-shiny-app       latest              6a0adeb5348c  2 hours ago    135 MB
+docker.io/library/python     3.12-slim-bookworm  d9f1825e4d49  5 weeks ago    135 MB
+localhost/hadolint/hadolint  2.12.0-alpine       19b38dcec411  16 months ago  8.3 MB
+```
+
+Your process might want to add specific tag formats so you can identify docker images by date-stamps, or git hashes.  The Repository Template supports that with a `VERSION` file.  Create a new file called `infrastructure/images/my-shiny-app/VERSION`, and put the following into it:
+
+```text
+${yyyy}${mm}${dd}-${hash}
+```
+
+Now, run the `docker-build` command again, and towards the end of the output you will see something that looks like this:
+
+```shell
+Successfully tagged localhost/my-shiny-app:20240314-07ee679
+```
+
+Obviously the specific values will be different for you.  See the Versioning section below for more on this.
+
+It is usually the case that there is a specific image that you will most often want to build, run, and deploy.  You should edit the root-level `Makefile` to document this and to provide shortcuts.  Edit `Makefile`, and change the `build` task to look like this:
+
+```make
+build: # Build the project artefact @Pipeline
+	DOCKER_IMAGE=my-shiny-app
+	make docker-build
+```
+
+Now when you run `make build`, it will do the right thing.  Keeping this convention consistent across projects means that new starters can be on-boarded quickly, without needing to learn a new set of conventions each time.
 
 ### Your image implementation
 
-Always follow [Docker best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) while developing images. Start with creating your container definition for the service and store it in the `infrastructure/images` directory.
+Always follow [Docker best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) while developing images.
 
-Here is a step-by-step guide:
+Here is a step-by-step guide for an image which packages a third-party tool.  It is mostly similar to the example above, but demonstrates the `.tool-versions` mechanism.
 
 1. Create `infrastructure/images/cypress/Dockerfile`
 
@@ -211,6 +271,10 @@ Set the `docker_image` or `DOCKER_IMAGE` variable for your image. Alternatively,
 ### Platform architecture
 
 For cross-platform image support, the `--platform linux/amd64` flag is used to build Docker images, enabling containers to run without any changes on both `amd64` and `arm64` architectures (via emulation).
+
+### `Dockerignore` file
+
+If you need to exclude files from a `COPY` command, put a [`Dockerfile.dockerignore`](https://docs.docker.com/build/building/context/#filename-and-location) file next to the relevant `Dockerfile`.  They do not live in the root directory.  Any paths within `Dockerfile.dockerignore` must be relative to the repository root.
 
 ## FAQ
 
