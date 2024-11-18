@@ -27,10 +27,9 @@ function docker-build() {
 
   version-create-effective-file
   _create-effective-dockerfile
-  # The current directory must be changed for the image build script to access
-  # assets that need to be copied
-  current_dir=$(pwd)
-  cd "$dir"
+
+  tag=$(_get-effective-tag)
+
   docker build \
     --progress=plain \
     --platform linux/amd64 \
@@ -43,16 +42,36 @@ function docker-build() {
     --build-arg GIT_COMMIT_HASH="$(git rev-parse --short HEAD)" \
     --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%S%z")" \
     --build-arg BUILD_VERSION="$(_get-effective-version)" \
-    --tag "${DOCKER_IMAGE}:$(_get-effective-version)" \
+    --tag "${tag}" \
     --rm \
     --file "${dir}/Dockerfile.effective" \
     .
-  cd "$current_dir"
+
   # Tag the image with all the stated versions, see the documentation for more details
   for version in $(_get-all-effective-versions) latest; do
-    docker tag "${DOCKER_IMAGE}:$(_get-effective-version)" "${DOCKER_IMAGE}:${version}"
+    if [ ! -z "$version" ]; then
+      docker tag "${tag}" "${DOCKER_IMAGE}:${version}"
+    fi
   done
-  docker rmi --force "$(docker images | grep "<none>" | awk '{print $3}')" 2> /dev/null ||:
+}
+
+# Create the Dockerfile.effective file to bake in version info
+# Arguments (provided as environment variables):
+#   dir=[path to the Dockerfile to use, default is '.']
+function docker-bake-dockerfile() {
+
+  local dir=${dir:-$PWD}
+
+  version-create-effective-file
+  _create-effective-dockerfile
+}
+
+# Run hadolint over the generated Dockerfile.
+# Arguments (provided as environment variables):
+#  dir=[path to the image directory where the Dockerfile.effective is located, default is '.']
+function docker-lint() {
+  local dir=${dir:-$PWD}
+  file=${dir}/Dockerfile.effective ./scripts/docker/dockerfile-linter.sh
 }
 
 # Check test Docker image.
@@ -81,12 +100,13 @@ function docker-check-test() {
 function docker-run() {
 
   local dir=${dir:-$PWD}
+  local tag=$(dir="$dir" _get-effective-tag)
 
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
     ${args:-} \
-    "${DOCKER_IMAGE}:$(dir="$dir" _get-effective-version)" \
-    ${cmd:-}
+    "${tag}" \
+    ${DOCKER_CMD:-}
 }
 
 # Push Docker image.
@@ -114,7 +134,8 @@ function docker-clean() {
   done
   rm -f \
     .version \
-    Dockerfile.effective
+    Dockerfile.effective \
+    Dockerfile.effective.dockerignore
 }
 
 # Create effective version from the VERSION file.
@@ -207,6 +228,13 @@ function _create-effective-dockerfile() {
 
   local dir=${dir:-$PWD}
 
+  # If it exists, we need to copy the .dockerignore file to match the prefix of the
+  # Dockerfile.effective file, otherwise docker won't use it.
+  # See https://docs.docker.com/build/building/context/#filename-and-location
+  # If using podman, this requires v5.0.0 or later.
+  if [ -f "${dir}/Dockerfile.dockerignore" ]; then
+    cp "${dir}/Dockerfile.dockerignore" "${dir}/Dockerfile.effective.dockerignore"
+  fi
   cp "${dir}/Dockerfile" "${dir}/Dockerfile.effective"
   _replace-image-latest-by-specific-version
   _append-metadata
@@ -274,6 +302,20 @@ function _get-effective-version() {
   local dir=${dir:-$PWD}
 
   head -n 1 "${dir}/.version" 2> /dev/null ||:
+}
+
+# Print the effective tag for the image with the version. If you don't have a VERSION file
+# then the tag will be just the image name.  Otherwise it will be the image name with the version.
+# Arguments (provided as environment variables):
+#   dir=[path to the image directory where the Dockerfile is located, default is '.']
+function _get-effective-tag() {
+
+  local tag=$DOCKER_IMAGE
+  version=$(_get-effective-version)
+  if [ ! -z "$version" ]; then
+    tag="${tag}:${version}"
+  fi
+  echo "$tag"
 }
 
 # Print all Docker image versions.
