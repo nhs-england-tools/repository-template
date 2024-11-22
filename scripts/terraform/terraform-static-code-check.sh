@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-# ShellCheck command wrapper. It will run Trivy natively if it is
+# Trivy command wrapper. It will run Trivy natively if it is
 # installed, otherwise it will run it in a Docker container.
 #
 # Usage:
@@ -45,7 +45,7 @@ function run-trivy-natively() {
 
 # Run Trivy in a Docker container.
 # Arguments (provided as environment variables):
-#   directory=[path to the shell script to lint, relative to the project's top-level directory]
+#   directory=[path to the Terraform to check, relative to the project's top-level directory]
 function run-trivy-in-docker() {
 
   # shellcheck disable=SC1091
