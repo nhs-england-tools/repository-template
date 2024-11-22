@@ -11,7 +11,7 @@ set -euo pipefail
 #   $ [options] ./terraform-static-code-check.sh
 #
 # Arguments (provided as environment variables):
-#   file=path               # Path to the Terraform code directory to check, relative to the project's top-level directory, default is itself
+#   directory=path          # Path to the Terraform code directory to check, relative to the project's top-level directory, default is itself
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
 #   VERBOSE=true            # Show all the executed commands, default is 'false'
 
@@ -21,31 +21,31 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  [ -z "${file:-}" ] && echo "WARNING: 'file' variable not set, defaulting to current directory"
-  local file=${file:-.}
+  [ -z "${directory:-}" ] && echo "WARNING: 'directory' variable not set, defaulting to current directory"
+  local directory=${directory:-.}
   if command -v trivy > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    file="$file" run-trivy-natively
+    directory="$directory" run-trivy-natively
   else
-    file="$file" run-trivy-in-docker
+    directory="$directory" run-trivy-in-docker
   fi
 }
 
 # Run Trivy natively.
 # Arguments (provided as environment variables):
-#   file=[path to the Terraform directory to check, relative to the project's top-level directory]
+#   directory=[path to the Terraform directory to check, relative to the project's top-level directory]
 function run-trivy-natively() {
 
-  if [ -e "$(echo ${file}/.trivy.yml | sed "s#$PWD#.#")" ]; then
-    echo "Using config file: $(echo ${file}/.trivy.yml | sed "s#$PWD#.#")"
-    trivy config  "$(echo "$file" | sed "s#$PWD#.#")" --config "$(echo ${file}/.trivy.yml | sed "s#$PWD#.#")"
+  if [ -e "$(echo ${directory}/.trivy.yml | sed "s#$PWD#.#")" ]; then
+    echo "Using config directory: $(echo ${directory}/.trivy.yml | sed "s#$PWD#.#")"
+    trivy config  "$(echo "$directory" | sed "s#$PWD#.#")" --config "$(echo ${directory}/.trivy.yml | sed "s#$PWD#.#")"
   else
-    trivy config "$(echo "$file" | sed "s#$PWD#.#")"
+    trivy config "$(echo "$directory" | sed "s#$PWD#.#")"
   fi
 }
 
 # Run Trivy in a Docker container.
 # Arguments (provided as environment variables):
-#   file=[path to the shell script to lint, relative to the project's top-level directory]
+#   directory=[path to the shell script to lint, relative to the project's top-level directory]
 function run-trivy-in-docker() {
 
   # shellcheck disable=SC1091
@@ -54,20 +54,20 @@ function run-trivy-in-docker() {
   # shellcheck disable=SC2155
   local image=$(name=aquasec/trivy docker-get-image-version-and-pull)
   # shellcheck disable=SC2001
-  if [ -e "$(echo ${file}/.trivy.yml | sed "s#$PWD#.#")" ]; then
-    echo "Using config file: $(echo ${file}/.trivy.yml | sed "s#$PWD#.#")"
+  if [ -e "$(echo ${directory}/.trivy.yml | sed "s#$PWD#.#")" ]; then
+    echo "Using config directory: $(echo ${directory}/.trivy.yml | sed "s#$PWD#.#")"
     docker run --rm --platform linux/amd64 \
       --volume "$PWD:/code" \
       --workdir /code \
       "$image" \
-      config "/code/$(echo "$file" | sed "s#$PWD#.#")" \
-      --config "$(echo "${file}/.trivy.yml" | sed "s#$PWD#.#")"
+      config "/code/$(echo "$directory" | sed "s#$PWD#.#")" \
+      --config "$(echo "${directory}/.trivy.yml" | sed "s#$PWD#.#")"
   else
     docker run --rm --platform linux/amd64 \
       --volume "$PWD:/code" \
       --workdir /code \
       "$image" \
-      config "/code/$(echo "$file" | sed "s#$PWD#.#")"
+      config "/code/$(echo "$directory" | sed "s#$PWD#.#")"
   fi
 }
 
