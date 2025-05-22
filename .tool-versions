@@ -8,7 +8,7 @@ vale 3.6.0
 # The section below is reserved for Docker image versions.
 
 # TODO: Move this section - consider using a different file for the repository template dependencies.
-# docker/ghcr.io/anchore/grype v0.69.1@sha256:d41fcb371d0af59f311e72123dff46900ebd6d0482391b5a830853ee4f9d1a76 # SEE: https://github.com/anchore/grype/pkgs/container/grype
+# docker/ghcr.io/anchore/grype v0.92.2@sha256:651e558f9ba84f2a790b3449c8a57cbbf4f34e004f7d3f14ae8f8cbeede4cd33 # SEE: https://github.com/anchore/grype/pkgs/container/grype
 # docker/ghcr.io/anchore/syft v0.92.0@sha256:63c60f0a21efb13e80aa1359ab243e49213b6cc2d7e0f8179da38e6913b997e0 # SEE: https://github.com/anchore/syft/pkgs/container/syft
 # docker/ghcr.io/gitleaks/gitleaks v8.18.0@sha256:fd2b5cab12b563d2cc538b14631764a1c25577780e3b7dba71657d58da45d9d9 # SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks
 # docker/ghcr.io/igorshubovych/markdownlint-cli v0.37.0@sha256:fb3e79946fce78e1cde84d6798c6c2a55f2de11fc16606a40d49411e281d950d # SEE: https://github.com/igorshubovych/markdownlint-cli/pkgs/container/markdownlint-cli
