@@ -1,0 +1,33 @@
+{
+  "name": "Ubuntu",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": true,
+      "azureDnsAutoDetection": true,
+      "installDockerBuildx": true,
+      "installDockerComposeSwitch": true,
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/azutake/devcontainer-features/go-packages-install:0": {
+      "PACKAGES": "github.com/asdf-vm/asdf/cmd/asdf@v0.18.0"
+    },
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers/features/common-utils": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "installOhMyZshConfig": true,
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers-extra/features/zsh-plugins:0": {
+      "plugins": "zsh-autosuggestions zsh-syntax-highlighting",
+      "omzPlugins": "https://github.com/zsh-users/zsh-autosuggestions.git https://github.com/zsh-users/zsh-syntax-highlighting.git"
+    }
+  },
+  "postCreateCommand": "pipx install pre-commit && make config && echo 'export GPG_TTY=$TTY' | cat - ~/.zshrc > temp && mv temp ~/.zshrc",
+  "mounts": [
+    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached"
+  ]
+}
