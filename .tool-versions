@@ -20,4 +20,4 @@ gitleaks 8.18.4
 # docker/jdkato/vale v3.6.0@sha256:0ef22c8d537f079633cfff69fc46f69a2196072f69cab1ab232e8a79a388e425 # SEE: https://hub.docker.com/r/jdkato/vale/tags
 # docker/koalaman/shellcheck latest@sha256:e40388688bae0fcffdddb7e4dea49b900c18933b452add0930654b2dea3e7d5c # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
 # docker/mstruebing/editorconfig-checker 2.7.1@sha256:dd3ca9ea50ef4518efe9be018d669ef9cf937f6bb5cfe2ef84ff2a620b5ddc24 # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags
-# docker/sonarsource/sonar-scanner-cli 5.0.1@sha256:494ecc3b5b1ee1625bd377b3905c4284e4f0cc155cff397805a244dee1c7d575 # SEE: https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags
+# docker/sonarsource/sonar-scanner-cli 10.0@sha256:0bc49076468d2955948867620b2d98d67f0d59c0fd4a5ef1f0afc55cf86f2079 # SEE: https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags
