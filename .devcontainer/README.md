@@ -10,4 +10,4 @@
 
 ## Future changes
 
-- The development container spec for extends will stop the need for duplication https://github.com/devcontainers/spec/issues/22
+- The development container [spec for extends will](https://github.com/devcontainers/spec/issues/22) stop the need for duplication.
