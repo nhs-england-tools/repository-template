@@ -1,4 +1,4 @@
-# Dev containers
+# Development containers
 
 ## Codespaces
 
@@ -6,8 +6,8 @@
 
 ## Local
 
-- Supports mounting useful directories, and ensuring host CA's are installed in the devcontainer
+- Supports mounting useful directories, and ensuring host certificate authority files are installed in the development container
 
 ## Future changes
 
-- The devcontainer spec for extends will stop the need for duplication https://github.com/devcontainers/spec/issues/22
+- The development container spec for extends will stop the need for duplication https://github.com/devcontainers/spec/issues/22
