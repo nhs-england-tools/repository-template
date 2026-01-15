@@ -12,9 +12,9 @@ set -euo pipefail
 #   $ [options] ./scan-secrets.sh
 #
 # Options:
-#   check={whole-history,last-commit,staged-changes}  # Type of the check to run, default is 'staged-changes'
-#   FORCE_USE_DOCKER=true                             # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                      # Show all the executed commands, default is 'false'
+#   check={whole-history,branch-changes,last-commit,staged-changes} # Type of the check to run, default is 'staged-changes'
+#   FORCE_USE_DOCKER=true                                           # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                                                    # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - No leaks present
@@ -45,6 +45,9 @@ function get-cmd-to-run() {
   case $check in
     "whole-history")
       cmd="detect --source $dir --verbose --redact"
+      ;;
+    "branch-changes")
+      cmd="detect --source $dir --verbose --redact --log-opts origin/main..HEAD"
       ;;
     "last-commit")
       cmd="detect --source $dir --verbose --redact --log-opts -1"
