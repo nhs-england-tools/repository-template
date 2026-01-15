@@ -103,6 +103,6 @@ function is-arg-true() {
 
 is-arg-true "${VERBOSE:-false}" && set -x
 
-main "$@"
+#main "$@"
 
 exit 0
