@@ -182,6 +182,7 @@ pre-commit run --config scripts/config/pre-commit.yaml --all-files
 
 ```bash
 check=staged-changes ./scripts/githooks/scan-secrets.sh   # Pre-commit (default)
+check=branch-changes ./scripts/githooks/scan-secrets.sh   # Commits on current branch not in main (CI)
 check=last-commit ./scripts/githooks/scan-secrets.sh      # Last commit only
 check=whole-history ./scripts/githooks/scan-secrets.sh    # Full repository history
 ```
