@@ -139,7 +139,7 @@ make githooks-run      # Run all hooks manually
 
 1. Copy `scripts/config/pre-commit.yaml`
 2. Copy the corresponding `scripts/githooks/*.sh` scripts for enabled hooks
-3. Add `pre-commit` to `.tool-versions` (e.g., `pre-commit 3.6.0`)
+3. Add `pre-commit` to `.tool-versions` (e.g., `pre-commit 4.5.1`)
 4. Run `asdf install` to install pre-commit
 5. Run `make githooks-config`
 
@@ -195,7 +195,7 @@ check=whole-history ./scripts/githooks/scan-secrets.sh    # Full repository hist
 **To adopt**:
 
 1. Copy `scripts/githooks/scan-secrets.sh`, `scripts/config/gitleaks.toml`, and `.gitleaksignore`
-2. Add `gitleaks` to `.tool-versions` (e.g., `gitleaks 8.18.4`) for native execution
+2. Add `gitleaks` to `.tool-versions` (e.g., `gitleaks 8.30.0`) for native execution
 3. Optionally add Docker image entry to `.tool-versions` for Docker fallback:
 
    ```text
@@ -1031,10 +1031,10 @@ jq -e '.image // .build' .devcontainer/devcontainer.json > /dev/null && echo "Ha
 **Standard tool entries**:
 
 ```text
+gitleaks 8.30.0
+pre-commit 4.5.1
 terraform 1.7.0
-pre-commit 3.6.0
 vale 3.6.0
-gitleaks 8.18.4
 ```
 
 **Extended format for Docker images**:
