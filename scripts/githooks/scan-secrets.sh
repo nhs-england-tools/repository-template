@@ -34,6 +34,8 @@ function main() {
     dir="/workdir"
     cmd="$(get-cmd-to-run)" run-gitleaks-in-docker
   fi
+
+  return 0
 }
 
 # Get Gitleaks command to execute and configuration.
@@ -64,6 +66,8 @@ function get-cmd-to-run() {
   cmd="$cmd --config $dir/scripts/config/gitleaks.toml"
 
   echo "$cmd"
+
+  return 0
 }
 
 # Run Gitleaks natively.
@@ -73,6 +77,8 @@ function run-gitleaks-natively() {
 
   # shellcheck disable=SC2086
   gitleaks $cmd
+
+  return 0
 }
 
 # Run Gitleaks in a Docker container.
@@ -92,6 +98,8 @@ function run-gitleaks-in-docker() {
     --workdir $dir \
     "$image" \
       $cmd
+
+  return 0
 }
 
 # ==============================================================================

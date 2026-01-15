@@ -31,6 +31,8 @@ function main() {
   else
     run-sonar-scanner-in-docker
   fi
+
+  return 0
 }
 
 function run-sonar-scanner-natively() {
@@ -41,6 +43,8 @@ function run-sonar-scanner-natively() {
     -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
     -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
     -Dsonar.token="$SONAR_TOKEN"
+
+  return 0
 }
 
 function run-sonar-scanner-in-docker() {
@@ -58,6 +62,8 @@ function run-sonar-scanner-in-docker() {
       -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
       -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
       -Dsonar.token="$SONAR_TOKEN"
+
+  return 0
 }
 
 # ==============================================================================
