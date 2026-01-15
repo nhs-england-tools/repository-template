@@ -25,6 +25,8 @@ to your target repository's `scripts/init.mk`.
 
 ⚠️ Distribution note: this SKILL file is mirrored verbatim across three homes - the NHS England shared GitHub Copilot prompt catalogue (similar to the [Awesome GitHub Copilot Customizations](https://github.com/github/awesome-copilot)), the upstream [Repository Template](https://github.com/nhs-england-tools/repository-template), and every repository created from that template. Keep the wording identical in all locations, instead of editing per environment, detect where you are and resolve paths accordingly.
 
+🤖 Assistant behaviour: when a user asks broad questions such as _"repository template – describe how to use this skill"_, respond by summarising the capability list below, you must list all the capabilities in a tabular form as the next step and invite user to issue a follow-up prompt that names a specific capability plus an action (add, remove or improve) they want performed in their repository. This keeps replies actionable and focused on the modular building blocks.
+
 AI assistants or automation should detect the active context before copying files. For a reliable conclusion, check the repository's git URL first (for example, `git remote get-url origin`). If it points to `nhs-england-tools/repository-template`, you are working inside the upstream template and can read directly from the project root.
 
 Use the following checks after confirming the git URL:
