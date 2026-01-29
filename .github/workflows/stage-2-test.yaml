@@ -38,34 +38,7 @@ jobs:
         uses: actions/checkout@v6
       - name: "Run unit test suite"
         run: |
-          make test-unit
+          make test
       - name: "Save the result of fast test suite"
-        run: |
-          echo "Nothing to save"
-  test-lint:
-    name: "Linting"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Run linting"
-        run: |
-          make test-lint
-      - name: "Save the linting result"
-        run: |
-          echo "Nothing to save"
-  test-coverage:
-    name: "Test coverage"
-    needs: [test-unit]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Run test coverage check"
-        run: |
-          make test-coverage
-      - name: "Save the coverage check result"
         run: |
           echo "Nothing to save"
