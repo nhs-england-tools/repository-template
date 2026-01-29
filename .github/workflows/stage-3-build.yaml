@@ -23,10 +23,6 @@ on:
         description: "Python version, set by the CI/CD pipeline workflow"
         required: true
         type: string
-      terraform_version:
-        description: "Terraform version, set by the CI/CD pipeline workflow"
-        required: true
-        type: string
       version:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true

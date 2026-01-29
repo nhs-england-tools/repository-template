@@ -20,10 +20,3 @@ repos:
     entry: bash -c 'check=staged-changes ./scripts/githooks/check-markdown-format.sh'
     language: system
     pass_filenames: false
-- repo: local
-  hooks:
-  - id: lint-terraform
-    name: Lint Terraform
-    entry: bash -c './scripts/githooks/check-terraform-format.sh'
-    language: system
-    pass_filenames: false

@@ -23,10 +23,6 @@ on:
         description: "Python version, set by the CI/CD pipeline workflow"
         required: true
         type: string
-      terraform_version:
-        description: "Terraform version, set by the CI/CD pipeline workflow"
-        required: true
-        type: string
       version:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
@@ -66,15 +62,6 @@ jobs:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check Markdown format"
         uses: ./.github/actions/check-markdown-format
-  lint-terraform:
-    name: "Lint Terraform"
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Lint Terraform"
-        uses: ./.github/actions/lint-terraform
   count-lines-of-code:
     name: "Count lines of code"
     runs-on: ubuntu-latest
