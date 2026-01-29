@@ -2,7 +2,6 @@
 
 terraform 1.7.0
 pre-commit 3.6.0
-vale 3.6.0
 gitleaks 8.18.4
 
 # ==============================================================================
@@ -17,7 +16,6 @@ gitleaks 8.18.4
 # docker/ghcr.io/nhs-england-tools/github-runner-image 20230909-321fd1e-rt@sha256:ce4fd6035dc450a50d3cbafb4986d60e77cb49a71ab60a053bb1b9518139a646 # SEE: https://github.com/nhs-england-tools/github-runner-image/pkgs/container/github-runner-image
 # docker/hadolint/hadolint 2.12.0-alpine@sha256:7dba9a9f1a0350f6d021fb2f6f88900998a4fb0aaf8e4330aa8c38544f04db42 # SEE: https://hub.docker.com/r/hadolint/hadolint/tags
 # docker/hashicorp/terraform 1.12.2@sha256:b3d13c9037d2bd858fe10060999aa7ca56d30daafe067d7715b29b3d4f5b162f # SEE: https://hub.docker.com/r/hashicorp/terraform/tags
-# docker/jdkato/vale v3.6.0@sha256:0ef22c8d537f079633cfff69fc46f69a2196072f69cab1ab232e8a79a388e425 # SEE: https://hub.docker.com/r/jdkato/vale/tags
 # docker/koalaman/shellcheck latest@sha256:e40388688bae0fcffdddb7e4dea49b900c18933b452add0930654b2dea3e7d5c # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
 # docker/mstruebing/editorconfig-checker 2.7.1@sha256:dd3ca9ea50ef4518efe9be018d669ef9cf937f6bb5cfe2ef84ff2a620b5ddc24 # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags
 # docker/sonarsource/sonar-scanner-cli 10.0@sha256:0bc49076468d2955948867620b2d98d67f0d59c0fd4a5ef1f0afc55cf86f2079 # SEE: https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags
