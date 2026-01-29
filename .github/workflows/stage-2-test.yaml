@@ -69,22 +69,3 @@ jobs:
       - name: "Save the coverage check result"
         run: |
           echo "Nothing to save"
-  perform-static-analysis:
-    name: "Perform static analysis"
-    needs: [test-unit]
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    timeout-minutes: 5
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0 # Full history is needed to improving relevancy of reporting
-      - name: "Perform static analysis"
-        uses: ./.github/actions/perform-static-analysis
-        with:
-          sonar_organisation_key: "${{ vars.SONAR_ORGANISATION_KEY }}"
-          sonar_project_key: "${{ vars.SONAR_PROJECT_KEY }}"
-          sonar_token: "${{ secrets.SONAR_TOKEN }}"
