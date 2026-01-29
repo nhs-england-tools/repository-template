@@ -62,22 +62,3 @@ jobs:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check Markdown format"
         uses: ./.github/actions/check-markdown-format
-  count-lines-of-code:
-    name: "Count lines of code"
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Count lines of code"
-        uses: ./.github/actions/create-lines-of-code-report
-        with:
-          build_datetime: "${{ inputs.build_datetime }}"
-          build_timestamp: "${{ inputs.build_timestamp }}"
-          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
-          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
-          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
-          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
