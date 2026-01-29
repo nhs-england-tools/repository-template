@@ -17,7 +17,7 @@ some-target: # Target description - mandatory: foo=[description]; optional: baz=
     # Recipe implementation...
 ```
 
-- `some-target`: This is the name of the target you would specify when you want to run this particular target. Use the kebab-case naming convention and prefix with an underscore `_` to mark it as a "private" target. The first part of the name is used for grouping, e.g. `docker-*` or `terraform-*`.
+- `some-target`: This is the name of the target you would specify when you want to run this particular target. Use the kebab-case naming convention and prefix with an underscore `_` to mark it as a "private" target. The first part of the name is used for grouping, e.g. `docker-*`.
 - `Target Description`: Provided directly after the target name as a single line, so be concise.
 - `mandatory` parameters: Parameters that must be provided when invoking the target. Each parameter has its own description. Please follow the specified format as it is used by `make help`.
 - `optional` parameters: Parameters that are not required when invoking the target. They may have a default value. Each parameter has its own description.
