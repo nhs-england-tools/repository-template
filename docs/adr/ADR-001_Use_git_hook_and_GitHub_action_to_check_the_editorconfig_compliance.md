@@ -134,10 +134,6 @@ The intention of this decision is to guide any other git hook and GitHub Action 
 
 Both, the git hook and the GitHub Action should be executed automatically as part of the developer workflow.
 
-## Notes
-
-There is an emerging practice to use projects like [act](https://github.com/nektos/act) to make GitHub Actions even more portable. ~~The recommendation is for this tool to be assessed at further stages of the [nhs-england-tools/repository-template](https://github.com/nhs-england-tools/repository-template) project implementation, in the context of this decision record.~~ Update: Please see the [Test GitHub Actions locally](../user-guides/Test_GitHub_Actions_locally.md) user guide.
-
 ## Actions
 
 - [x] Ensure the naming convention of the other git hooks follows the pattern set by the `scripts/githooks/check-file-format.sh` script
