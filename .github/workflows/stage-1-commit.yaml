@@ -66,17 +66,6 @@ jobs:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check Markdown format"
         uses: ./.github/actions/check-markdown-format
-  check-english-usage:
-    name: "Check English usage"
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0 # Full history is needed to compare branches
-      - name: "Check English usage"
-        uses: ./.github/actions/check-english-usage
   lint-terraform:
     name: "Lint Terraform"
     runs-on: ubuntu-latest

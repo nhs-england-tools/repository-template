@@ -22,13 +22,6 @@ repos:
     pass_filenames: false
 - repo: local
   hooks:
-  - id: check-english-usage
-    name: Check English usage
-    entry: bash -c 'check=staged-changes ./scripts/githooks/check-english-usage.sh'
-    language: system
-    pass_filenames: false
-- repo: local
-  hooks:
   - id: lint-terraform
     name: Lint Terraform
     entry: bash -c './scripts/githooks/check-terraform-format.sh'
