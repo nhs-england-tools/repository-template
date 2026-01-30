@@ -8,7 +8,7 @@ set -euo pipefail
 # installed, otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ [options] ./shellscript-linter.sh
+#   $ [options] ./check-shell-lint.sh
 #
 # Arguments (provided as environment variables):
 #   file=shellscript        # Path to the shell script to lint, relative to the project's top-level directory, default is itself
@@ -22,7 +22,7 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
 
   [ -z "${file:-}" ] && echo "WARNING: 'file' variable not set, defaulting to itself"
-  local file=${file:-scripts/shellscript-linter.sh}
+  local file=${file:-scripts/quality/check-shell-lint.sh}
   if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     file="$file" run-shellcheck-natively
   else

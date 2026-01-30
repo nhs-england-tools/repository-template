@@ -20,3 +20,10 @@ repos:
         entry: make check-markdown-format check=all
         language: system
         pass_filenames: false
+  - repo: local
+    hooks:
+      - id: check-markdown-links
+        name: Check Markdown links
+        entry: make check-markdown-links check=all
+        language: system
+        pass_filenames: false

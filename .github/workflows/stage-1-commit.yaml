@@ -65,3 +65,14 @@ jobs:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check Markdown format"
         uses: ./.github/actions/check-markdown-format
+  check-markdown-links:
+    name: "Check Markdown links"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # Full history is needed to compare branches
+      - name: "Check Markdown links"
+        uses: ./.github/actions/check-markdown-links

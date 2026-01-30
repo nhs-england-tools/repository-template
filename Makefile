@@ -12,9 +12,13 @@ lint-file-format: # Check file formats @Quality
 lint-markdown-format: # Check markdown formatting @Quality
 	$(MAKE) check-markdown-format check=branch
 
+lint-markdown-links: # Check markdown links @Quality
+	$(MAKE) check-markdown-links check=branch
+
 lint: # Run linter to check code style and errors @Quality
 	$(MAKE) lint-file-format
 	$(MAKE) lint-markdown-format
+	$(MAKE) lint-markdown-links
 
 test: # Run all tests @Testing
 	# No tests required for this repository
@@ -53,4 +57,5 @@ ${VERBOSE}.SILENT: \
 	lint \
 	lint-file-format \
 	lint-markdown-format \
+	lint-markdown-links \
 	test \

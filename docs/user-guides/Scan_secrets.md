@@ -15,7 +15,7 @@ Scanning a repository for hard-coded secrets is a crucial security practice. "Ha
 
 ## Key files
 
-- [`scan-secrets.sh`](../../scripts/githooks/scan-secrets.sh): A shell script that scans the codebase for hard-coded secrets
+- [`scan-secrets.sh`](../../scripts/quality/scan-secrets.sh): A shell script that scans the codebase for hard-coded secrets
 - [`gitleaks.toml`](../../scripts/config/gitleaks.toml): A configuration file for the secret scanner
 - [`.gitleaksignore`](../../scripts/config/.gitleaksignore): A list of fingerprints to ignore by the secret scanner
 - [`scan-secrets/action.yaml`](../../.github/actions/scan-secrets/action.yaml): GitHub action to run the scripts as part of the CI/CD pipeline
@@ -33,7 +33,7 @@ Scanning a repository for hard-coded secrets is a crucial security practice. "Ha
 You can execute and test the secret scanning across all commits locally on a developer's workstation using the following command
 
 ```shell
-ALL_FILES=true ./scripts/githooks/scan-secrets.sh
+ALL_FILES=true ./scripts/quality/scan-secrets.sh
 ```
 
 ## Removing sensitive data
