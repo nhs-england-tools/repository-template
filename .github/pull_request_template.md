@@ -1,4 +1,5 @@
 <!-- markdownlint-disable-next-line first-line-heading -->
+
 ## Description
 
 <!-- Describe your changes in detail. -->
@@ -20,11 +21,12 @@
 
 <!-- Go over all the following points, and put an `x` in all the boxes that apply. -->
 
-- [ ] I am familiar with the [contributing guidelines](../docs/CONTRIBUTING.md)
+- [ ] I am familiar with the [contributing guidelines](./contributing.md)
 - [ ] I have followed the code style of the project
 - [ ] I have added tests to cover my changes
 - [ ] I have updated the documentation accordingly
 - [ ] This PR is a result of pair or mob programming
+- [ ] This PR is a result of AI-assisted development sessions
 
 ---
 

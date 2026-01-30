@@ -1,4 +1,3 @@
 scripts/docker/** linguist-vendored
-scripts/githooks/** linguist-vendored
+scripts/quality/** linguist-vendored
 scripts/init.mk linguist-vendored
-scripts/shellscript-linter.sh linguist-vendored

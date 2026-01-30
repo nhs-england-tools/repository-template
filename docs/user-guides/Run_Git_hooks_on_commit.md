@@ -7,16 +7,16 @@
 
 ## Overview
 
-Git hooks are scripts that are located in the [`./scripts/githooks`](../../scripts/githooks) directory. They are executed automatically on each commit, provided that the `make config` command has been run locally to set up the project. These same scripts are also part of the CI/CD pipeline execution. This setup serves as a safety net and helps to ensure consistency.
+Git hooks are implemented as Make targets that pre-commit executes automatically on each commit (after you run `make config` to install the hooks). Each hook runs a `make` target, which in turn calls the appropriate script under `scripts/quality/`. The same Make targets are reused in CI/CD, keeping local checks and pipeline checks consistent.
 
 The [pre-commit](https://pre-commit.com/) framework is a powerful tool for managing Git hooks, providing automated hook installation and management capabilities.
 
 ## Key files
 
 - Scripts
-  - [`check-file-format.sh`](../../scripts/githooks/check-file-format.sh)
-  - [`check-markdown-format.sh`](../../scripts/githooks/check-markdown-format.sh)
-  - [`scan-secrets.sh`](../../scripts/githooks/scan-secrets.sh)
+  - [`check-file-format.sh`](../../scripts/quality/check-file-format.sh)
+  - [`check-markdown-format.sh`](../../scripts/quality/check-markdown-format.sh)
+  - [`scan-secrets.sh`](../../scripts/quality/scan-secrets.sh)
 - Configuration
   - [`pre-commit.yaml`](../../scripts/config/pre-commit.yaml)
   - [`init.mk`](../../scripts/init.mk): make targets

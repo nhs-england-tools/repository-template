@@ -44,7 +44,7 @@ _docker: # Docker command wrapper - mandatory: cmd=[command to execute]; optiona
 
 docker-shellscript-lint: # Lint all Docker module shell scripts @Quality
 	for file in $$(find scripts/docker -type f -name "*.sh"); do
-		file=$${file} scripts/shellscript-linter.sh
+		file=$${file} scripts/quality/check-shell-lint.sh
 	done
 
 # ==============================================================================

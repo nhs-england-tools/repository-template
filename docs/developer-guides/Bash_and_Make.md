@@ -39,8 +39,6 @@ It is worth noting that by default, `make` creates a new system process to execu
 
 To see all available make targets, run `make help`.
 
-![make help](./assets/make_help.png)
-
 ## Using Bash
 
 When working in the command-line ensure the environment variables are reset to their initial state. This can be done by reloading shell using the `env -i $SHELL` command.
@@ -135,7 +133,7 @@ VERBOSE=1 make docker-example-build
 for Bash scripts
 
 ```shell
-VERBOSE=1 scripts/shellscript-linter.sh
+VERBOSE=1 scripts/quality/check-shell-lint.sh
 ```
 
 ### Scripts
@@ -143,11 +141,11 @@ VERBOSE=1 scripts/shellscript-linter.sh
 Most scripts provided with this repository template can use tools installed on your `PATH` if they are available or run them from within a Docker container. To force a script to use Docker, the `FORCE_USE_DOCKER` variable is provided. This feature allows you to use custom tooling if it is present on the command-line path. Here is how to use it:
 
 ```shell
-FORCE_USE_DOCKER=1 scripts/shellscript-linter.sh
+FORCE_USE_DOCKER=1 scripts/quality/check-shell-lint.sh
 ```
 
 You can combine it with the `VERBOSE` flag to see the details of the execution flow:
 
 ```shell
-VERBOSE=1 FORCE_USE_DOCKER=1 scripts/shellscript-linter.sh
+VERBOSE=1 FORCE_USE_DOCKER=1 scripts/quality/check-shell-lint.sh
 ```
