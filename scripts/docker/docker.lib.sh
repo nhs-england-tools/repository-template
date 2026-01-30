@@ -49,7 +49,7 @@ function docker-build() {
 
   # Tag the image with all the stated versions, see the documentation for more details
   for version in $(_get-all-effective-versions) latest; do
-    if [ ! -z "$version" ]; then
+    if [ -n "$version" ]; then
       docker tag "${tag}" "${DOCKER_IMAGE}:${version}"
     fi
   done
@@ -189,7 +189,7 @@ function docker-get-image-version-and-pull() {
   local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
   local version="latest"
   if [ -f "$versions_file" ]; then
-    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-".*"}")
+    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-".*"}" || true)
     [ -n "$line" ] && version=$(echo "$line" | awk '{print $2}')
   fi
 
@@ -198,7 +198,7 @@ function docker-get-image-version-and-pull() {
   local digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already
-  if ! docker images | awk '{ print $1 ":" $2 }' | grep -q "^${name}:${tag}$"; then
+  if ! docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -q "^${name}:${tag}$"; then
     if [ "$digest" != "latest" ]; then
       # Pull image by the digest sha256 and tag it
       docker pull \
@@ -312,7 +312,7 @@ function _get-effective-tag() {
 
   local tag=$DOCKER_IMAGE
   version=$(_get-effective-version)
-  if [ ! -z "$version" ]; then
+  if [ -n "$version" ]; then
     tag="${tag}:${version}"
   fi
   echo "$tag"

@@ -1,7 +1,18 @@
 {
+  // SEE: scripts/config/markdownlint.yaml
   "markdownlint.config": {
+    "MD010": {
+      "ignore_code_languages": ["makefile"]
+    },
     "MD013": false,
-    "MD024": { "siblings_only": true },
-    "MD033": false
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD029": {
+      "style": "ordered"
+    },
+    "MD033": false,
+    "MD036": false,
+    "MD041": false
   }
 }

@@ -1,11 +1,26 @@
-# This file is for you! Edit it to implement your own hooks (make targets) into
-# the project as automated steps to be executed on locally and in the CD pipeline.
-
 include scripts/init.mk
 
 # ==============================================================================
+# Project targets
 
-# Example CI/CD targets are: dependencies, build, publish, deploy, clean, etc.
+format: # Auto-format code @Quality
+	# No formatting required for this repository
+
+lint-file-format: # Check file formats @Quality
+	$(MAKE) check-file-format check=branch
+
+lint-markdown-format: # Check markdown formatting @Quality
+	$(MAKE) check-markdown-format check=branch
+
+lint: # Run linter to check code style and errors @Quality
+	$(MAKE) lint-file-format
+	$(MAKE) lint-markdown-format
+
+test: # Run all tests @Testing
+	# No tests required for this repository
+
+# ==============================================================================
+# CI/CD targets
 
 dependencies: # Install dependencies needed to build and test the project @Pipeline
 	# TODO: Implement installation of your project dependencies
@@ -34,3 +49,8 @@ ${VERBOSE}.SILENT: \
 	config \
 	dependencies \
 	deploy \
+	format \
+	lint \
+	lint-file-format \
+	lint-markdown-format \
+	test \
