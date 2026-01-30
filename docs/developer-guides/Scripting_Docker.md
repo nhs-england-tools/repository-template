@@ -68,9 +68,9 @@ Here are some key features built into this repository's Docker module:
 
 ### Quick start
 
-The Repository Template assumes that you will want to build more than one docker image as part of your project.  As such, we do not use a `Dockerfile` at the root of the project.  Instead, each docker image that you create should go in its own folder under `infrastructure/images`.  So, if your application has a docker image called `my-shiny-app`, you should create the file `infrastructure/images/my-shiny-app/Dockerfile`.  Let's do that.
+The Repository Template assumes that you will want to build more than one docker image as part of your project. As such, we do not use a `Dockerfile` at the root of the project. Instead, each docker image that you create should go in its own folder under `infrastructure/images`. So, if your application has a docker image called `my-shiny-app`, you should create the file `infrastructure/images/my-shiny-app/Dockerfile`. Let's do that.
 
-First, we need an application to package.  Let's do the simplest possible thing, and create a file called `main.py` in the root of the template with a familiar command in it:
+First, we need an application to package. Let's do the simplest possible thing, and create a file called `main.py` in the root of the template with a familiar command in it:
 
 ```python
 print("hello world")
@@ -92,9 +92,9 @@ COPY ./main.py .
 CMD ["python", "main.py"]
 ```
 
-Note the paths in the `COPY` command.  The `Dockerfile` is stored in a subdirectory, but when `docker` runs it is executed in the root of the repository so that's where all paths are relative to.  This is because you can't `COPY` from parent directories. `COPY ../../main.py .` wouldn't work.
+Note the paths in the `COPY` command. The `Dockerfile` is stored in a subdirectory, but when `docker` runs it is executed in the root of the repository so that's where all paths are relative to. This is because you can't `COPY` from parent directories. `COPY ../../main.py .` wouldn't work.
 
-The name of the folder is also significant. It should match the name of the docker image that you want to create.  With that name, you can run the following `make` task to run `hadolint` over your `Dockerfile` to check for common anti-patterns:
+The name of the folder is also significant. It should match the name of the docker image that you want to create. With that name, you can run the following `make` task to run `hadolint` over your `Dockerfile` to check for common anti-patterns:
 
 ```shell
  $ DOCKER_IMAGE=my-shiny-app make docker-lint
@@ -105,7 +105,7 @@ make: *** [scripts/docker/docker.mk:20: docker-lint] Error 2
 
 All the provided docker `make` tasks take the `DOCKER_IMAGE` parameter.
 
-`hadolint` found a problem, so let's fix that.  It's complaining that we've not specified which version of the `python` docker container we want. Change the first line of the `Dockerfile` to:
+`hadolint` found a problem, so let's fix that. It's complaining that we've not specified which version of the `python` docker container we want. Change the first line of the `Dockerfile` to:
 
 ```dockerfile
 FROM python:3.12-slim-bookworm
@@ -113,7 +113,7 @@ FROM python:3.12-slim-bookworm
 
 Run `DOCKER_IMAGE=my-shiny-app make docker-lint` again, and you will see that it is silent.
 
-Now let's actually build the image.  Run the following:
+Now let's actually build the image. Run the following:
 
 ```shell
 DOCKER_IMAGE=my-shiny-app make docker-build
@@ -136,7 +136,7 @@ docker.io/library/python     3.12-slim-bookworm  d9f1825e4d49  5 weeks ago    13
 localhost/hadolint/hadolint  2.12.0-alpine       19b38dcec411  16 months ago  8.3 MB
 ```
 
-Your process might want to add specific tag formats so you can identify docker images by date-stamps, or git hashes.  The Repository Template supports that with a `VERSION` file.  Create a new file called `infrastructure/images/my-shiny-app/VERSION`, and put the following into it:
+Your process might want to add specific tag formats so you can identify docker images by date-stamps, or git hashes. The Repository Template supports that with a `VERSION` file. Create a new file called `infrastructure/images/my-shiny-app/VERSION`, and put the following into it:
 
 ```text
 ${yyyy}${mm}${dd}-${hash}
@@ -148,23 +148,23 @@ Now, run the `docker-build` command again, and towards the end of the output you
 Successfully tagged localhost/my-shiny-app:20240314-07ee679
 ```
 
-Obviously the specific values will be different for you.  See the Versioning section below for more on this.
+Obviously the specific values will be different for you. See the Versioning section below for more on this.
 
-It is usually the case that there is a specific image that you will most often want to build, run, and deploy.  You should edit the root-level `Makefile` to document this and to provide shortcuts.  Edit `Makefile`, and change the `build` task to look like this:
+It is usually the case that there is a specific image that you will most often want to build, run, and deploy. You should edit the root-level `Makefile` to document this and to provide shortcuts. Edit `Makefile`, and change the `build` task to look like this:
 
-```make
+```makefile
 build: # Build the project artefact @Pipeline
-	DOCKER_IMAGE=my-shiny-app
-	make docker-build
+  DOCKER_IMAGE=my-shiny-app
+  make docker-build
 ```
 
-Now when you run `make build`, it will do the right thing.  Keeping this convention consistent across projects means that new starters can be on-boarded quickly, without needing to learn a new set of conventions each time.
+Now when you run `make build`, it will do the right thing. Keeping this convention consistent across projects means that new starters can be on-boarded quickly, without needing to learn a new set of conventions each time.
 
 ### Your image implementation
 
 Always follow [Docker best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) while developing images.
 
-Here is a step-by-step guide for an image which packages a third-party tool.  It is mostly similar to the example above, but demonstrates the `.tool-versions` mechanism.
+Here is a step-by-step guide for an image which packages a third-party tool. It is mostly similar to the example above, but demonstrates the `.tool-versions` mechanism.
 
 1. Create `infrastructure/images/cypress/Dockerfile`
 
@@ -274,7 +274,7 @@ For cross-platform image support, the `--platform linux/amd64` flag is used to b
 
 ### `Dockerignore` file
 
-If you need to exclude files from a `COPY` command, put a [`Dockerfile.dockerignore`](https://docs.docker.com/build/building/context/#filename-and-location) file next to the relevant `Dockerfile`.  They do not live in the root directory.  Any paths within `Dockerfile.dockerignore` must be relative to the repository root.
+If you need to exclude files from a `COPY` command, put a [`Dockerfile.dockerignore`](https://docs.docker.com/build/building/context/#filename-and-location) file next to the relevant `Dockerfile`. They do not live in the root directory. Any paths within `Dockerfile.dockerignore` must be relative to the repository root.
 
 ## FAQ
 

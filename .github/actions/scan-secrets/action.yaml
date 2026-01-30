@@ -7,4 +7,4 @@ runs:
       shell: bash
       run: |
         # Please do not change this `check=whole-history` setting, as new patterns may be added or history may be rewritten.
-        check=whole-history ./scripts/githooks/scan-secrets.sh
+        make scan-secrets check=whole-history

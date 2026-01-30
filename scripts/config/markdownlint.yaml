@@ -1,17 +1,52 @@
 # SEE: https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml
+#
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ AI ASSISTANT DIRECTIVE                                                      │
+# │                                                                             │
+# │ Do NOT modify this file to fix markdown lint errors.                        │
+# │ Instead, fix the markdown files themselves:                                 │
+# │   - Indent list sub-content with 4 spaces to maintain list continuity       │
+# │   - Add blank lines between headings and content                            │
+# │   - Use proper fenced code block language specifiers                        │
+# │                                                                             │
+# │ This configuration is intentional and stable.                               │
+# └─────────────────────────────────────────────────────────────────────────────┘
 
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md010.md
+# No hard tabs: Flags tab characters used for indentation instead of spaces.
+# Configured to ignore tabs in make/makefile code blocks where tabs are required.
 MD010: # no-hard-tabs
   ignore_code_languages:
-    - make
-    - console
+    - makefile
 
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md013.md
+# Line length: Flags lines exceeding a maximum character limit.
+# Disabled: Long lines are acceptable for readability in documentation.
 MD013: false
 
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
+# Multiple headings with same content: Flags duplicate heading text.
+# Configured to only flag duplicates among sibling headings (same parent level).
 MD024:
   siblings_only: true
 
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md029.md
+# Ordered list item prefix: Enforces consistent numbering style in ordered lists.
+# Using 'ordered' style to allow incremental numbering (1. 2. 3.) for readability.
+MD029:
+  style: ordered
+
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md033.md
+# Inline HTML: Flags raw HTML elements in Markdown content.
+# Disabled: HTML is used for advanced formatting (e.g. <details>, <kbd>).
 MD033: false
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md036.md
+# Emphasis used instead of heading: Flags bold/italic text on its own line.
+# Disabled: Bold text is intentionally used for emphasis without heading semantics.
+MD036: false
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md
+# First line in file should be a top-level heading: Flags files not starting with H1.
+# Disabled: Many prompt/agent files start with YAML front-matter.
+MD041: false
