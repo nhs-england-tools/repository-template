@@ -1,51 +1,30 @@
 # Repository Template
 
-[![CI/CD Pull Request](https://github.com/nhs-england-tools/repository-template/actions/workflows/cicd-1-pull-request.yaml/badge.svg)](https://github.com/nhs-england-tools/repository-template/actions/workflows/cicd-1-pull-request.yaml)
+A repository template that provides a baseline structure and quality checks for new projects.
 
-Start with an overview or a brief description of what the project is about and what it does. For example -
+## Why this project exists
 
-Welcome to our repository template designed to streamline your project setup! This robust template provides a reliable starting point for your new projects, covering an essential tech stack and encouraging best practices in documenting.
+**Purpose**
+Provide a reliable starting point for new repositories by including a concise, self-documented structure and a small, essential tooling set.
 
-This repository template aims to foster a user-friendly development environment by ensuring that every included file is concise and adequately self-documented. By adhering to this standard, we can promote increased clarity and maintainability throughout your project's lifecycle. Bundled within this template are resources that pave the way for seamless repository creation. Currently supported technologies are:
+**Benefit to the engineers**
+Reduce the time spent on initial setup and documentation, while encouraging clarity and maintainability from the outset.
 
-- Docker
+**Problem it solves**
+New projects often need consistent structure, tooling, and documentation patterns before any delivery work can begin. This template standardises that starting point.
 
-Make use of this repository template to expedite your project setup and enhance your productivity right from the get-go. Enjoy the advantage of having a well-structured, self-documented project that reduces overhead and increases focus on what truly matters - coding!
+**How it solves it (high level)**
+It bundles a minimal project layout, a Makefile with quality targets, scripts for common checks, and documentation guides so teams can configure and extend them for their needs.
 
-## Table of Contents
-
-- [Repository Template](#repository-template)
-  - [Table of Contents](#table-of-contents)
-  - [Setup](#setup)
-    - [Prerequisites](#prerequisites)
-    - [Configuration](#configuration)
-  - [Usage](#usage)
-    - [Testing](#testing)
-  - [Design](#design)
-    - [Diagrams](#diagrams)
-    - [Modularity](#modularity)
-  - [Contributing](#contributing)
-  - [Contacts](#contacts)
-  - [Licence](#licence)
-
-## Setup
-
-By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
-
-Clone the repository
-
-```shell
-git clone https://github.com/nhs-england-tools/repository-template.git
-cd nhs-england-tools/repository-template
-```
+## Quick start
 
 ### Prerequisites
 
 The following software packages, or their equivalents, are expected to be installed and configured:
 
-- [Docker](https://www.docker.com/) container runtime or a compatible tool, e.g. [Podman](https://podman.io/),
-- [asdf](https://asdf-vm.com/) version manager,
-- [GNU make](https://www.gnu.org/software/make/) 3.82 or later,
+- [GNU make](https://www.gnu.org/software/make/) 3.82 or later
+- [Docker](https://www.docker.com/) container runtime or a compatible tool, for example [Podman](https://podman.io/)
+- [asdf](https://asdf-vm.com/) version manager
 
 > [!NOTE]<br>
 > The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [Homebrew](https://brew.sh/) installed, then to install `make`, like so:
@@ -56,71 +35,148 @@ The following software packages, or their equivalents, are expected to be instal
 >
 > You will then see instructions to fix your [`$PATH`](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl) variable to make the newly installed version available. If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
 
-- [GNU sed](https://www.gnu.org/software/sed/) and [GNU grep](https://www.gnu.org/software/grep/) are required for the scripted command-line output processing,
-- [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation,
+- [GNU sed](https://www.gnu.org/software/sed/) and [GNU grep](https://www.gnu.org/software/grep/) are required for scripted command-line output processing
+- [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation
 
 > [!NOTE]<br>
 > For macOS users, installation of the GNU toolchain has been scripted and automated as part of the `dotfiles` project. Please see this [script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
 
-- [Python](https://www.python.org/) required to run Git hooks,
-- [`jq`](https://jqlang.github.io/jq/) a lightweight and flexible command-line JSON processor.
+- [Python](https://www.python.org/) required to run Git hooks
+- [`jq`](https://jqlang.github.io/jq/) a lightweight and flexible command-line JSON processor
 
-### Configuration
+### Set up
 
-Installation and configuration of the toolchain dependencies
+Clone the repository:
+
+```shell
+git clone https://github.com/nhs-england-tools/repository-template.git
+cd repository-template
+```
+
+Install and configure tooling:
 
 ```shell
 make config
 ```
 
-## Usage
+### First run
 
-After a successful installation, provide an informative example of how this project can be used. Additional code snippets, screenshots and demos work well in this space. You may also link to the other documentation resources, e.g. the [user guides](./docs/user-guides) to demonstrate more use cases and to show more features.
+Run the default quality checks:
 
-### Testing
+```shell
+make lint
+```
 
-There are `make` tasks for you to configure to run your tests. Run `make test` to see how they work. You should be able to use the same entry points for local development as in your CI pipeline.
+Expected result:
 
-## Design
+```plaintext
+file format: ok
+markdown format: ok
+markdown links: ok
+```
+
+## What it does
+
+**Key features**
+
+- Provides a baseline repository structure with documentation and scripts.
+- Includes Makefile targets for configuration, linting, and testing.
+- Supplies quality check scripts for file format, markdown format, markdown links, shell linting, and secrets scanning.
+- Offers developer and user guidance in the docs directory.
+- Includes workflow definitions under the .github directory for CI/CD configuration.
+
+**Out of scope / non-goals**
+
+- Project-specific dependency installation, build, publish, and deploy steps (they are marked as TODOs in the Makefile).
+- Repository-specific tests (the Makefile notes that no tests are required for this template).
+- Code formatting automation (the Makefile notes that no formatting is required for this template).
+
+## How it solves the problem
+
+1. A team clones the repository and installs the documented prerequisites.
+2. The `make config` target sets up the development tooling entry points.
+3. Quality checks are run through Makefile targets that call scripts in [scripts/quality](scripts/quality).
+4. Documentation templates and guides in [docs](docs) are used to capture design and delivery decisions.
+
+Key terms:
+
+- **Quality checks**: the scripts in [scripts/quality](scripts/quality) that validate formatting, linting, links, and secrets scanning.
+- **Makefile targets**: standard entry points in [Makefile](Makefile) for configuration, linting, and testing tasks.
+
+## How to use
+
+### Configuration
+
+- Run `make config` to configure the local development environment.
+- Tooling configuration files live in [scripts/config](scripts/config); update these to match your project needs.
+- TODO: confirm any additional configuration steps required for new projects.
+
+### Common workflows
+
+Run the standard quality checks:
+
+```shell
+make lint
+```
+
+Run specific checks when you only need one:
+
+```shell
+make lint-file-format
+make lint-markdown-format
+make lint-markdown-links
+```
+
+Run the test entry point (template placeholder):
+
+```shell
+make test
+```
+
+### Examples
+
+- Guides live in [docs/guides](docs/guides).
+- ADR templates are stored in [docs/adr](docs/adr).
+
+## Design notes
 
 ### Diagrams
 
-The [C4 model](https://c4model.com/) is a simple and intuitive way to create software architecture diagrams that are clear, consistent, scalable and most importantly collaborative. This should result in documenting all the system interfaces, external dependencies and integration points.
-
-The source for diagrams should be in Git for change control and review purposes. Recommendations are [draw.io](https://app.diagrams.net/) (example above in the [docs](./docs/) folder) and [Mermaids](https://github.com/mermaid-js/mermaid). Here is an example Mermaids sequence diagram:
-
-```mermaid
-sequenceDiagram
-    User->>+Service: GET /users?params=...
-    Service->>Service: auth request
-    Service->>Database: get all users
-    Database-->>Service: list of users
-    Service->>Service: filter users
-    Service-->>-User: list[User]
-```
+The [C4 model](https://c4model.com/) provides a simple, consistent way to capture architecture diagrams. Keep diagram sources under version control. Suggested tools are [draw.io](https://app.diagrams.net/) and [Mermaid](https://github.com/mermaid-js/mermaid).
 
 ### Modularity
 
-Most of the projects are built with customisability and extendability in mind. At a minimum, this can be achieved by implementing service level configuration options and settings. The intention of this section is to show how this can be used. If the system processes data, you could mention here for example how the input is prepared for testing - anonymised, synthetic or live data.
+Aim for modular, configurable components so projects can extend or replace parts without large rewrites. TODO: add project-specific modularity guidance when this template is adopted.
+
+## Security
+
+For vulnerability reporting guidance, see [security.md](.github/security.md).
+
+## Support
+
+TODO: confirm the support or contact route for this repository (for example issues, discussions, or a team mailbox).
 
 ## Contributing
 
-Describe or link templates on how to raise an issue, feature request or make a contribution to the codebase. Reference the other documentation files, like
+See the contributing guide at [contributing.md](.github/contributing.md).
 
-- Environment setup for contribution, i.e. [contributing.md](./.github/contributing.md)
-- Coding standards, branching, linting, practices for development and testing
-- Release process, versioning, changelog
-- Backlog, board, roadmap, ways of working
-- High-level requirements, guiding principles, decision records, etc.
+At a high level:
 
-## Contacts
+- Configure your environment with `make config`.
+- Run quality checks using `make lint` before raising a change.
+- Run the test entry point with `make test`.
+- TODO: confirm the contribution workflow (issues, pull requests, and review expectations).
 
-Provide a way to contact the owners of this project. It can be a team, an individual or information on the means of getting in touch via active communication channels, e.g. opening a GitHub discussion, raising an issue, etc.
+## Repository layout
+
+- [.github/workflows](.github/workflows) — CI/CD workflow definitions for the template.
+- [docs/adr](docs/adr) — Architecture Decision Record template.
+- [docs/guides](docs/guides) — guides for developers and users (for example Bash and Make, Git hooks, secrets scanning).
+- [scripts/config](scripts/config) — configuration for quality and tooling checks.
+- [scripts/quality](scripts/quality) — scripts for file format, markdown, shell linting, and secrets scanning.
+- [scripts/docker](scripts/docker) — Docker helper scripts and related test assets.
+- [Makefile](Makefile) — primary entry point for quality and configuration tasks.
 
 ## Licence
 
-> The [LICENCE.md](./LICENCE.md) file will need to be updated with the correct year and owner
-
-Unless stated otherwise, the codebase is released under the MIT License. This covers both the codebase and any sample code in the documentation.
-
-Any HTML or Markdown documentation is [© Crown Copyright](https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/) and available under the terms of the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+Released under the [MIT Licence](LICENCE.md)
