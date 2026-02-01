@@ -4,49 +4,117 @@
 # - https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/common-validation-errors-when-creating-issue-forms
 
 name: 🔧 Support Request
-description: Get help
+description: Get help using this project
+title: "[Support]: "
 labels: ["support"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a support request. Please fill out this form as completely as possible.
-  - type: textarea
+        Thanks for taking the time to file a support request.
+        Please fill out this form as completely as you can.
+  - type: checkboxes
+    id: preflight
     attributes:
-      label: What exactly are you trying to do?
-      description: Describe in as much detail as possible.
+      label: Existing issues
+      description: Please search existing issues before raising a new one.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: A short summary of the help you need.
+      placeholder: e.g. Unable to run make config on macOS
     validations:
       required: true
   - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: Describe your goal and the outcome you want.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
     attributes:
       label: What have you tried so far?
-      description: Describe what you have tried so far.
+      description: Include commands, config changes, and references you followed.
     validations:
       required: true
   - type: textarea
+    id: expected
     attributes:
-      label: Output of any commands you have tried
-      description: Please copy and paste any relevant output. This will be automatically formatted into codeblock.
-      render: Shell
+      label: What did you expect to happen?
+      description: If helpful, describe the expected result.
     validations:
       required: false
   - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+      description: Describe the result you saw, including errors or warnings.
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (if relevant)
+      description: Provide clear steps if the issue is repeatable.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Add relevant details about your setup.
+      value: |
+        - OS:
+        - Tool versions:
+        - Runtime:
+      render: markdown
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Project version or commit
+      description: If known, provide a version, tag, or commit SHA.
+      placeholder: e.g. v1.2.3 or abc1234
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant command output
+      description: Please copy and paste relevant output. This will be formatted as code.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: context
     attributes:
       label: Additional context
-      description: Add any other context about the problem here.
+      description: Add any other context or screenshots that might help.
     validations:
       required: false
   - type: checkboxes
+    id: conduct
     attributes:
       label: Code of Conduct
-      description: By submitting this issue you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow this project's Code of Conduct.
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
   - type: checkboxes
+    id: sensitive
     attributes:
-      label: Sensitive Information Declaration
-      description: To ensure the utmost confidentiality and protect your privacy, we kindly ask you to NOT including [PII (Personal Identifiable Information) / PID (Personal Identifiable Data)](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public) or any other sensitive data in this form. We appreciate your cooperation in maintaining the security of your information.
+      label: Sensitive information
+      description: Please do not include PII or PID, or any other sensitive data. See [data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public).
       options:
-        - label: I confirm that neither PII/PID nor sensitive data are included in this form
+        - label: I confirm this request does not include PII/PID, or sensitive data
           required: true
