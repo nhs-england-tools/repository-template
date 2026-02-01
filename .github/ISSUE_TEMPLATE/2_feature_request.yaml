@@ -5,38 +5,88 @@
 
 name: 🚀 Feature Request
 description: Suggest an idea for this project
+title: "[Feature]: "
 labels: ["feature request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a feature request. Please fill out this form as completely as possible.
-  - type: textarea
-    attributes:
-      label: What is the problem this feature will solve?
-      description: Tell us why this change is needed or helpful and what problems it may help solve.
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: What is the feature that you are proposing to solve the problem?
-      description: Provide detailed information for what we should add.
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: What alternatives have you considered?
+        Thanks for taking the time to file a feature request.
+        Please fill out this form as completely as you can.
   - type: checkboxes
+    id: preflight
+    attributes:
+      label: Existing issues
+      description: Please search existing issues before raising a new one.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: A short summary of the feature you want.
+      placeholder: e.g. Add a make target for dependency updates
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Explain why this change is needed and who it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe what you would like to see built.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternatives or workarounds you have considered.
+    validations:
+      required: false
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Expected benefits
+      description: Describe the impact, including users, performance, or maintainability.
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (if any)
+      description: List any clear conditions for success.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots that might help.
+    validations:
+      required: false
+  - type: checkboxes
+    id: conduct
     attributes:
       label: Code of Conduct
-      description: By submitting this issue you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow this project's Code of Conduct.
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
   - type: checkboxes
+    id: sensitive
     attributes:
-      label: Sensitive Information Declaration
-      description: To ensure the utmost confidentiality and protect your privacy, we kindly ask you to NOT including [PII (Personal Identifiable Information) / PID (Personal Identifiable Data)](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public) or any other sensitive data in this form. We appreciate your cooperation in maintaining the security of your information.
+      label: Sensitive information
+      description: Please do not include PII or PID, or any other sensitive data. See [data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public).
       options:
-        - label: I confirm that neither PII/PID nor sensitive data are included in this form
+        - label: I confirm this request does not include PII/PID, or sensitive data
           required: true
