@@ -16,7 +16,7 @@ check-markdown-format: # Check markdown formatting (set check=all|staged-changes
 
 check-markdown-links: check ?= all
 check-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
-	output=$$(check=all ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
+	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
 check-shell-lint: # Lint all shell scripts in this project, do not fail on error, just print the error messages @Quality
 	output=$$(for file in $$(find . -type f -name "*.sh"); do

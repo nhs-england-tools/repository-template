@@ -8,4 +8,5 @@ pre-commit 4.5.1
 # docker/ghcr.io/igorshubovych/markdownlint-cli v0.47.0@sha256:9f06c8c9a75aa08b87b235b66d618f7df351f09f08faf703177f670e38ee6511 # SEE: https://github.com/igorshubovych/markdownlint-cli/pkgs/container/markdownlint-cli
 # docker/hadolint/hadolint 2.14.0-alpine@sha256:7aba693c1442eb31c0b015c129697cb3b6cb7da589d85c7562f9deb435a6657c # SEE: https://hub.docker.com/r/hadolint/hadolint/tags
 # docker/koalaman/shellcheck v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
+# docker/lycheeverse/lychee 0.22.0@sha256:ea5b34df7f5b1ea32a029027234e158af77ba1e3ae96e7554c3942d56de7cc13 # SEE: https://hub.docker.com/r/lycheeverse/lychee
 # docker/mstruebing/editorconfig-checker v3.6@sha256:af556694c3eb0a16b598efbe84c1171d40dfb779fdac6f01b89baedde065556f # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags
