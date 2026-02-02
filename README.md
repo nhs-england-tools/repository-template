@@ -142,7 +142,7 @@ make test
 
 ### Diagrams
 
-The [C4 model](https://c4model.com/) provides a simple, consistent way to capture architecture diagrams. Keep diagram sources under version control. Suggested tools are [draw.io](https://app.diagrams.net/) and [Mermaid](https://github.com/mermaid-js/mermaid).
+The [C4 model](https://c4model.com/) provides a simple, consistent way to capture architecture diagrams. Keep diagram sources under version control. Suggested tools are [Structurizr](https://structurizr.com/), [LikeC4](https://likec4.dev/), [Mermaid](https://github.com/mermaid-js/mermaid) and [draw.io](https://app.diagrams.net/).
 
 ### Modularity
 
