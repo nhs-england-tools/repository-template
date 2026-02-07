@@ -1,36 +1,29 @@
 repos:
-- repo: local
-  hooks:
-  - id: scan-secrets
-    name: Scan secrets
-    entry: bash -c 'check=staged-changes ./scripts/githooks/scan-secrets.sh'
-    language: system
-    pass_filenames: false
-- repo: local
-  hooks:
-  - id: check-file-format
-    name: Check file format
-    entry: bash -c 'check=staged-changes ./scripts/githooks/check-file-format.sh'
-    language: system
-    pass_filenames: false
-- repo: local
-  hooks:
-  - id: check-markdown-format
-    name: Check Markdown format
-    entry: bash -c 'check=staged-changes ./scripts/githooks/check-markdown-format.sh'
-    language: system
-    pass_filenames: false
-- repo: local
-  hooks:
-  - id: check-english-usage
-    name: Check English usage
-    entry: bash -c 'check=staged-changes ./scripts/githooks/check-english-usage.sh'
-    language: system
-    pass_filenames: false
-- repo: local
-  hooks:
-  - id: lint-terraform
-    name: Lint Terraform
-    entry: bash -c './scripts/githooks/check-terraform-format.sh'
-    language: system
-    pass_filenames: false
+  - repo: local
+    hooks:
+      - id: scan-secrets
+        name: Scan secrets
+        entry: make scan-secrets check=whole-history
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: check-file-format
+        name: Check file format
+        entry: make check-file-format check=all
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: check-markdown-format
+        name: Check Markdown format
+        entry: make check-markdown-format check=all
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: check-markdown-links
+        name: Check Markdown links
+        entry: make check-markdown-links check=all
+        language: system
+        pass_filenames: false

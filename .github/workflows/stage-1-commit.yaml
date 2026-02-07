@@ -23,14 +23,13 @@ on:
         description: "Python version, set by the CI/CD pipeline workflow"
         required: true
         type: string
-      terraform_version:
-        description: "Terraform version, set by the CI/CD pipeline workflow"
-        required: true
-        type: string
       version:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
         type: string
+
+permissions:
+  contents: read
 
 jobs:
   scan-secrets:
@@ -39,7 +38,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Full history is needed to scan all commits
       - name: "Scan secrets"
@@ -50,7 +49,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check file format"
@@ -61,66 +60,19 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Full history is needed to compare branches
       - name: "Check Markdown format"
         uses: ./.github/actions/check-markdown-format
-  check-english-usage:
-    name: "Check English usage"
+  check-markdown-links:
+    name: "Check Markdown links"
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Full history is needed to compare branches
-      - name: "Check English usage"
-        uses: ./.github/actions/check-english-usage
-  lint-terraform:
-    name: "Lint Terraform"
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Lint Terraform"
-        uses: ./.github/actions/lint-terraform
-  count-lines-of-code:
-    name: "Count lines of code"
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Count lines of code"
-        uses: ./.github/actions/create-lines-of-code-report
-        with:
-          build_datetime: "${{ inputs.build_datetime }}"
-          build_timestamp: "${{ inputs.build_timestamp }}"
-          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
-          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
-          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
-          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
-  scan-dependencies:
-    name: "Scan dependencies"
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-      - name: "Scan dependencies"
-        uses: ./.github/actions/scan-dependencies
-        with:
-          build_datetime: "${{ inputs.build_datetime }}"
-          build_timestamp: "${{ inputs.build_timestamp }}"
-          idp_aws_report_upload_account_id: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}"
-          idp_aws_report_upload_region: "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}"
-          idp_aws_report_upload_role_name: "${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}"
-          idp_aws_report_upload_bucket_endpoint: "${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}"
+      - name: "Check Markdown links"
+        uses: ./.github/actions/check-markdown-links

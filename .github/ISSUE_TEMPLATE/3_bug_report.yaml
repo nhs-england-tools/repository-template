@@ -5,59 +5,103 @@
 
 name: 🐞 Bug Report
 description: File a bug report
+title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a bug report. Please fill out this form as completely as possible.
+        Thanks for taking the time to file a bug report.
+        Please fill out this form as completely as you can.
   - type: checkboxes
+    id: preflight
     attributes:
-      label: Is there an existing issue for this?
-      description: Please, search the Issues to see if an issue already exists for the bug you have encountered.
+      label: Existing issues
+      description: Please search existing issues before raising a new one.
       options:
-      - label: I have searched the existing Issues
-        required: true
-  - type: textarea
+        - label: I have searched the existing issues
+          required: true
+  - type: input
+    id: summary
     attributes:
-      label: Current Behavior
+      label: Summary
+      description: A short summary of the bug.
+      placeholder: e.g. make lint fails on macOS
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behaviour
       description: A concise description of what you are experiencing.
     validations:
       required: true
   - type: textarea
+    id: expected
     attributes:
-      label: Expected Behavior
+      label: Expected behaviour
       description: A concise description of what you expect to happen.
     validations:
       required: true
   - type: textarea
+    id: steps
     attributes:
-      label: Steps To Reproduce
-      description: Steps to reproduce the behavior
+      label: Steps to reproduce
+      description: Steps to reproduce the behaviour.
       placeholder: |
-        1. In this environment...
-        2. With this config...
-        3. Run `...`
+        1. ...
+        2. ...
+        3. ...
     validations:
       required: false
   - type: textarea
+    id: environment
     attributes:
-      label: Output
-      description: Please copy and paste any relevant output. This will be automatically formatted into codeblock.
-      render: Shell
+      label: Environment
+      description: Add relevant details about your setup.
+      value: |
+        - OS:
+        - Tool versions:
+        - Runtime:
+      render: markdown
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Project version or commit
+      description: If known, provide a version, tag, or commit SHA.
+      placeholder: e.g. v1.2.3 or abc1234
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant command output
+      description: Please copy and paste relevant output. This will be formatted as code.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots that might help.
     validations:
       required: false
   - type: checkboxes
+    id: conduct
     attributes:
       label: Code of Conduct
-      description: By submitting this issue you agree to follow our [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow this project's Code of Conduct.
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
   - type: checkboxes
+    id: sensitive
     attributes:
-      label: Sensitive Information Declaration
-      description: To ensure the utmost confidentiality and protect your privacy, we kindly ask you to NOT including [PII (Personal Identifiable Information) / PID (Personal Identifiable Data)](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public) or any other sensitive data in this form. We appreciate your cooperation in maintaining the security of your information.
+      label: Sensitive information
+      description: Please do not include PII or PID, or any other sensitive data. See [data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public).
       options:
-        - label: I confirm that neither PII/PID nor sensitive data are included in this form
+        - label: I confirm this report does not include PII/PID, or sensitive data
           required: true

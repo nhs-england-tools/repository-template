@@ -1,0 +1,108 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Pre-commit git hook to check the Markdown file links compliance over changed
+# files. This is a lychee command wrapper. It will run lychee natively if it is
+# installed, otherwise it will run it in a Docker container.
+#
+# Usage:
+#   $ [options] ./check-markdown-links.sh
+#
+# Options:
+#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'all'
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
+#   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                                            # Show all the executed commands, default is `false`
+#
+# Exit codes:
+#   0 - All links are valid
+#   1 - Invalid links found
+#
+# Notes:
+#   1) The lychee configuration file is located at './scripts/config/lychee.toml'.
+#   2) For more information, visit https://github.com/lycheeverse/lychee
+
+# ==============================================================================
+
+function main() {
+
+  cd "$(git rev-parse --show-toplevel)"
+
+  check=${check:-all}
+  case $check in
+    "all")
+      files="$(git ls-files "*.md")"
+      ;;
+    "staged-changes")
+      files="$(git diff --diff-filter=ACMRT --name-only --cached "*.md")"
+      ;;
+    "working-tree-changes")
+      files="$(git diff --diff-filter=ACMRT --name-only "*.md")"
+      ;;
+    "branch")
+      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --name-only "*.md") | sort | uniq )"
+      ;;
+  esac
+
+  if [ -n "$files" ]; then
+    if command -v lychee > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+      files="$files" run-lychee-natively
+    else
+      files="$files" run-lychee-in-docker
+    fi
+  fi
+}
+
+# Run lychee natively.
+# Arguments (provided as environment variables):
+#   files=[files to check]
+function run-lychee-natively() {
+
+  # shellcheck disable=SC2086
+  lychee \
+    --config "$PWD/scripts/config/lychee.toml" \
+    --no-progress \
+    --quiet \
+    $files
+}
+
+# Run lychee in a Docker container.
+# Arguments (provided as environment variables):
+#   files=[files to check]
+function run-lychee-in-docker() {
+
+  # shellcheck disable=SC1091
+  source ./scripts/docker/docker.lib.sh
+
+  # shellcheck disable=SC2155
+  local image=$(name=lycheeverse/lychee docker-get-image-version-and-pull)
+  # shellcheck disable=SC2086
+  docker run --rm --platform linux/amd64 \
+    --volume "$PWD":/workdir \
+    --workdir /workdir \
+    "$image" \
+      --config /workdir/scripts/config/lychee.toml \
+      --no-progress \
+      --quiet \
+      $files
+}
+
+# ==============================================================================
+
+function is-arg-true() {
+
+  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# ==============================================================================
+
+is-arg-true "${VERBOSE:-false}" && set -x
+
+main "$@"
+
+exit 0

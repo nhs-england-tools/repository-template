@@ -2,14 +2,14 @@
 
 set -euo pipefail
 
-# Hadolint command wrapper. It will run hadolint natively if it is installed,
-# otherwise it will run it in a Docker container.
+# ShellCheck command wrapper. It will run ShellCheck natively if it is
+# installed, otherwise it will run it in a Docker container.
 #
 # Usage:
-#   $ [options] ./dockerfile-linter.sh
+#   $ [options] ./check-shell-lint.sh
 #
 # Arguments (provided as environment variables):
-#   file=Dockerfile         # Path to the Dockerfile to lint, relative to the project's top-level directory, default is './Dockerfile.effective'
+#   file=shellscript        # Path to the shell script to lint, relative to the project's top-level directory, default is itself
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
 #   VERBOSE=true            # Show all the executed commands, default is 'false'
 
@@ -19,41 +19,40 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  local file=${file:-./Dockerfile.effective}
-  if command -v hadolint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    file="$file" run-hadolint-natively
+  [ -z "${file:-}" ] && echo "WARNING: 'file' variable not set, defaulting to itself"
+  local file=${file:-scripts/quality/check-shell-lint.sh}
+  if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    file="$file" run-shellcheck-natively
   else
-    file="$file" run-hadolint-in-docker
+    file="$file" run-shellcheck-in-docker
   fi
 }
 
-# Run hadolint natively.
+# Run ShellCheck natively.
 # Arguments (provided as environment variables):
-#   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
-function run-hadolint-natively() {
+#   file=[path to the shell script to lint, relative to the project's top-level directory]
+function run-shellcheck-natively() {
 
   # shellcheck disable=SC2001
-  hadolint "$(echo "$file" | sed "s#$PWD#.#")"
+  shellcheck "$(echo "$file" | sed "s#$PWD#.#")"
 }
 
-# Run hadolint in a Docker container.
+# Run ShellCheck in a Docker container.
 # Arguments (provided as environment variables):
-#   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
-function run-hadolint-in-docker() {
+#   file=[path to the shell script to lint, relative to the project's top-level directory]
+function run-shellcheck-in-docker() {
 
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
   # shellcheck disable=SC2155
-  local image=$(name=hadolint/hadolint docker-get-image-version-and-pull)
+  local image=$(name=koalaman/shellcheck docker-get-image-version-and-pull)
   # shellcheck disable=SC2001
   docker run --rm --platform linux/amd64 \
     --volume "$PWD:/workdir" \
     --workdir /workdir \
     "$image" \
-      hadolint \
-        --config /workdir/scripts/config/hadolint.yaml \
-        "/workdir/$(echo "$file" | sed "s#$PWD#.#")"
+      "/workdir/$(echo "$file" | sed "s#$PWD#.#")"
 }
 
 # ==============================================================================

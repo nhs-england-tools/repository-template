@@ -6,6 +6,7 @@
 
 DOCKER_IMAGE ?= $(or ${docker_image}, $(or ${IMAGE}, $(or ${image}, ghcr.io/org/repo)))
 DOCKER_TITLE ?= $(or "${docker_title}", $(or "${TITLE}", $(or "${title}", "Service Docker image")))
+FORCE_USE_DOCKER ?= true
 
 docker-bake-dockerfile: # Create Dockerfile.effective - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
 	make _docker cmd="bake-dockerfile" \
@@ -44,7 +45,7 @@ _docker: # Docker command wrapper - mandatory: cmd=[command to execute]; optiona
 
 docker-shellscript-lint: # Lint all Docker module shell scripts @Quality
 	for file in $$(find scripts/docker -type f -name "*.sh"); do
-		file=$${file} scripts/shellscript-linter.sh
+		file=$${file} scripts/quality/check-shell-lint.sh
 	done
 
 # ==============================================================================

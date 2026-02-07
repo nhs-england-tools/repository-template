@@ -10,6 +10,8 @@ jobs:
   metadata:
     name: "Set CI/CD metadata"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.event.pull_request.merged == true
     timeout-minutes: 1
     outputs:
@@ -18,11 +20,10 @@ jobs:
       build_epoch: ${{ steps.variables.outputs.build_epoch }}
       nodejs_version: ${{ steps.variables.outputs.nodejs_version }}
       python_version: ${{ steps.variables.outputs.python_version }}
-      terraform_version: ${{ steps.variables.outputs.terraform_version }}
       version: ${{ steps.variables.outputs.version }}
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -32,7 +33,6 @@ jobs:
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "nodejs_version=$(grep "^nodejs\s" .tool-versions | cut -f2 -d' ')" >> $GITHUB_OUTPUT
           echo "python_version=$(grep "^python\s" .tool-versions | cut -f2 -d' ')" >> $GITHUB_OUTPUT
-          echo "terraform_version=$(grep "^terraform\s" .tool-versions | cut -f2 -d' ')" >> $GITHUB_OUTPUT
           # TODO: Get the version, but it may not be the .version file as this should come from the CI/CD Pull Request Workflow
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
       - name: "List variables"
@@ -42,25 +42,26 @@ jobs:
           export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
           export NODEJS_VERSION="${{ steps.variables.outputs.nodejs_version }}"
           export PYTHON_VERSION="${{ steps.variables.outputs.python_version }}"
-          export TERRAFORM_VERSION="${{ steps.variables.outputs.terraform_version }}"
           export VERSION="${{ steps.variables.outputs.version }}"
           make list-variables
   publish:
     name: "Publish packages"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs: [metadata]
     if: github.event.pull_request.merged == true
     timeout-minutes: 3
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Get the artefacts"
         run: |
           echo "Getting the artefacts created by the build stage ..."
           # TODO: Use either action/cache or action/upload-artifact
       - name: "Create release"
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4 FIXME: This action is public archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -82,6 +83,8 @@ jobs:
   success:
     name: "Success notification"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [publish]
     steps:
       - name: "Check prerequisites for notification"
@@ -89,7 +92,7 @@ jobs:
         run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
       - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
-        uses: nhs-england-tools/notify-msteams-action@v1.0.0
+        uses: nhs-england-tools/notify-msteams-action@450ab55046abcfb0ea7d0943e04aa1b950f08e01 # v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}

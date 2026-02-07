@@ -7,4 +7,4 @@ runs:
       shell: bash
       run: |
         export BRANCH_NAME=origin/${{ github.event.repository.default_branch }}
-        check=branch ./scripts/githooks/check-markdown-format.sh
+        make check-markdown-format check=all

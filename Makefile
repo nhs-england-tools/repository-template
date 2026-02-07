@@ -1,30 +1,51 @@
-# This file is for you! Edit it to implement your own hooks (make targets) into
-# the project as automated steps to be executed on locally and in the CD pipeline.
-
 include scripts/init.mk
 
 # ==============================================================================
+# Project targets
 
-# Example CI/CD targets are: dependencies, build, publish, deploy, clean, etc.
+env: # Set up project environment @Configuration
+	# TODO: Implement environment setup steps
 
-dependencies: # Install dependencies needed to build and test the project @Pipeline
+deps: # Install dependencies needed to build and test the project @Build
 	# TODO: Implement installation of your project dependencies
 
-build: # Build the project artefact @Pipeline
+format: # Auto-format code @Quality
+	# TODO: Implement formatting required for this repository
+
+lint-file-format: # Check file formats @Quality
+	$(MAKE) check-file-format check=branch
+
+lint-markdown-format: # Check markdown formatting @Quality
+	$(MAKE) check-markdown-format check=branch
+
+lint-markdown-links: # Check markdown links @Quality
+	$(MAKE) check-markdown-links check=branch
+
+lint: # Run linter to check code style and errors @Quality
+	$(MAKE) lint-file-format
+	$(MAKE) lint-markdown-format
+	$(MAKE) lint-markdown-links
+
+typecheck: # Run type checker @Quality
+	# TODO: Implement type checking required for this repository
+
+test: # Run all tests @Quality
+	# TODO: Implement tests required for this repository
+
+build: # Build the project artefact @Build
 	# TODO: Implement the artefact build step
 
-publish: # Publish the project artefact @Pipeline
+publish: # Publish the project artefact @Release
 	# TODO: Implement the artefact publishing step
 
-deploy: # Deploy the project artefact to the target environment @Pipeline
+deploy: # Deploy the project artefact to the target environment @Release
 	# TODO: Implement the artefact deployment step
 
 clean:: # Clean-up project resources (main) @Operations
 	# TODO: Implement project resources clean-up step
 
 config:: # Configure development environment (main) @Configuration
-	# TODO: Use only 'make' targets that are specific to this project, e.g. you may not need to install Node.js
-	make _install-dependencies
+	$(MAKE) _install-dependencies
 
 # ==============================================================================
 
@@ -32,5 +53,14 @@ ${VERBOSE}.SILENT: \
 	build \
 	clean \
 	config \
-	dependencies \
 	deploy \
+	deps \
+	env \
+	format \
+	lint \
+	lint-file-format \
+	lint-markdown-format \
+	lint-markdown-links \
+	publish \
+	test \
+	typecheck \

@@ -1,78 +1,131 @@
-# ADR-nnn: Any Decision Record Template
+# ADR-nnn: Any Decision Record Template 🧾
 
->|              |                                                                                                                                                                                    |
->| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
->| Date         | `dd/mm/YYYY` _when the decision was last updated_                                                                                                                                  |
->| Status       | `RFC by dd/mm/YYYY, Proposed, In Discussion, Pending Approval, Withdrawn, Rejected, Accepted, Deprecated, ..., Superseded by ADR-XXX or Supersedes ADR-XXX`                        |
->| Deciders     | `Tech Radar, Engineering, Architecture, Solution Assurance, Clinical Assurance, Technical Review and Governance, Information Governance, Cyber Security, Live Services Board,` ... |
->| Significance | `Structure, Nonfunctional characteristics, Dependencies, Interfaces, Construction techniques,` ...                                                                                 |
->| Owners       |                                                                                                                                                                                    |
+> |              |                                                                                                                                                                |
+> | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | Date         | `YYYY-MM-DD` _when the decision was last updated_                                                                                                              |
+> | Status       | `RFC by dd/mm/YYYY, Proposed, In Discussion, Pending Approval, Withdrawn, Rejected, Accepted, Deprecated, Superseded by ADR-XXX, Supersedes ADR-XXX`           |
+> | Significance | `Architecture, Quality attributes, Data, Interfaces & contracts, Dependencies, Delivery & build, Operations, Security & privacy, Governance & compliance,` ... |
 
 ---
 
-- [ADR-nnn: Any Decision Record Template](#adr-nnn-any-decision-record-template)
-  - [Context](#context)
-  - [Decision](#decision)
-    - [Assumptions](#assumptions)
-    - [Drivers](#drivers)
-    - [Options](#options)
-    - [Outcome](#outcome)
-    - [Rationale](#rationale)
-  - [Consequences](#consequences)
-  - [Compliance](#compliance)
-  - [Notes](#notes)
-  - [Actions](#actions)
-  - [Tags](#tags)
+- [ADR-nnn: Any Decision Record Template 🧾](#adr-nnn-any-decision-record-template-)
+  - [Context 🧭](#context-)
+  - [Decision ✅](#decision-)
+    - [Assumptions 🧩](#assumptions-)
+    - [Drivers 🎯](#drivers-)
+    - [Options 🔀](#options-)
+      - [Option A: {Descriptive name} (Selected) ✅](#option-a-descriptive-name-selected-)
+      - [Option B: {Descriptive name}](#option-b-descriptive-name)
+      - [Option C: {Descriptive name}](#option-c-descriptive-name)
+    - [Outcome 🏁](#outcome-)
+    - [Rationale 🧠](#rationale-)
+  - [Consequences ⚖️](#consequences-️)
+  - [Compliance 📏](#compliance-)
+  - [Notes 🔗](#notes-)
+  - [Actions ✅](#actions-)
+  - [Tags 🏷️](#tags-️)
 
-## Context
+## Context 🧭
 
-Describe the context and the problem statement. Is there a relationship to other decisions previously made? Are there any dependencies and/or constraints within which the decision will be made? Do these need to be reviewed or validated? Please note that environmental limitations or restrictions such as accepted technology standards, commonly recognised and used patterns, engineering and architecture principles, organisation policies, governance and so on, may as an effect narrow down the choices. This should also be explicitly documented, as this is a point-in-time decision with the intention of being able to articulate it clearly and justify it later.
+Describe the context and the problem statement. Is there a relationship to other decisions already recorded? Which **feature**, **specification**, **functional requirements**, or **success criteria** does this decision relate to? Are there any dependencies and/or constraints within which the decision must be made? Do any of these need to be reviewed or validated?
 
-## Decision
+Note that environmental limitations or restrictions (for example accepted technology standards, commonly recognised patterns, engineering and architecture principles, organisational policies, and governance) may narrow the options. This must be explicitly documented. This is a point-in-time decision, recorded so it can be understood, justified, and revisited when needed.
 
-### Assumptions
+## Decision ✅
 
-Summarise the underlying assumptions in the environment in which you make the decision. This could be related to technology changes, forecast of the monetary and non-monetary costs, further delivery commitments, impact from external drivers etc., and any known unknowns that translate to risks.
+### Assumptions 🧩
 
-### Drivers
+Summarise the underlying assumptions in the environment in which you are making the decision. This could relate to technology changes, forecasts of monetary and non-monetary costs, delivery commitments, impactful external drivers, and any known unknowns that translate into risks.
 
-List the decision drivers that motivate this change or course of action. This may include any identified risks and residual risks after applying the decision.
+### Drivers 🎯
 
-### Options
+List the decision drivers that motivate this decision or course of action. This may include risks and residual risks after applying the decision.
 
-Consider a comprehensive set of alternative options; provide weighting if applicable.
+### Options 🔀
 
-### Outcome
+Consider a comprehensive set of alternative options. Include weighting or scoring if it improves clarity.
 
-State the decision outcome as a result of taking into account all of the above. Is it a reversible or irreversible decision?
+#### Option A: {Descriptive name} (Selected) ✅
 
-### Rationale
+Summarise the core idea behind the selected option, including how it works at a high level and any critical constraints or prerequisites.
 
-Provide a rationale for the decision that is based on weighing the options to ensure that the same questions are not going to be asked again and again unless the decision needs to be superseded.
+| Criteria (example) | Score/Notes                                   |
+| ------------------ | --------------------------------------------- |
+| Criterion 1        | ⭐⭐⭐ {reasoning for score}                  |
+| Criterion 2        | ⭐⭐ {reasoning for score}                    |
+| Criterion 3        | ⭐⭐⭐ {reasoning for score}                  |
+| Criterion 4        | ⭐⭐ {reasoning for score}                    |
+| Effort             | {T-shirt size or estimate with justification} |
 
-For non-trivial decisions a comparison table can be useful for the reviewer. Decision criteria down one side, options across the top. You'll likely find decision criteria come from the Drivers section above. Effort can be an important driving factor.  You may have an intuitive feel for this, but reviewers will not. T-shirt sizing the effort for each option may help communicate.
+#### Option B: {Descriptive name}
 
-## Consequences
+Describe the second viable option, including the mechanisms involved and notable strengths/weaknesses.
 
-Describe the resulting context, after applying the decision. All the identified consequences should be listed here, not just the positive ones. Any decision comes with many implications. For example, it may introduce a need to make other decisions as an effect of cross-cutting concerns; it may impact structural or operational characteristics of the software, and influence non-functional requirements; as a result, some things may become easier or more difficult to do because of this change. What are the trade-offs?
+| Criteria (example) | Score/Notes                                   |
+| ------------------ | --------------------------------------------- |
+| Criterion 1        | ⭐⭐ {reasoning for score}                    |
+| Criterion 2        | ⭐⭐ {reasoning for score}                    |
+| Criterion 3        | ⭐ {reasoning for score}                      |
+| Criterion 4        | ⭐⭐⭐ {reasoning for score}                  |
+| Effort             | {T-shirt size or estimate with justification} |
 
-What are the conditions under which this decision no longer applies or becomes irrelevant?
+**Why not chosen**: Capture the concrete reasons this option was rejected. Reference measurable risks, constraints, or trade-offs evidenced in the codebase or architecture.
 
-## Compliance
+#### Option C: {Descriptive name}
 
-Establish how the success is going to be measured. Once implemented, the effect might lend itself to be measured, therefore if appropriate a set of criteria for success could be established. Compliance checks of the decision can be manual or automated using a fitness function. If it is the latter this section can then specify how that fitness function would be implemented and whether there are any other changes to the codebase needed to measure this decision for compliance.
+Describe the third option (or more if needed) with enough detail for readers to evaluate it at a glance.
 
-## Notes
+| Criteria (example) | Score/Notes                                   |
+| ------------------ | --------------------------------------------- |
+| Criterion 1        | ⭐⭐ {reasoning for score}                    |
+| Criterion 2        | ⭐ {reasoning for score}                      |
+| Criterion 3        | ⭐ {reasoning for score}                      |
+| Criterion 4        | ⭐⭐ {reasoning for score}                    |
+| Effort             | {T-shirt size or estimate with justification} |
 
-Include any links to existing epics, decisions, dependencies, risks, and policies related to this decision record. This section could also include any further links to configuration items within the project or the codebase, signposting to the areas of change.
+**Why not chosen**: Explain the specific drawbacks, blockers, or context conflicts that ruled out this option.
 
-It is important that if the decision is sub-optimal or the choice is tactical or misaligned with the strategic directions the risk related to it is identified and clearly articulated. As a result of that, the expectation is that a [Tech Debt](./tech-debt.md) record is going to be created on the backlog.
+### Outcome 🏁
 
-## Actions
+State the decision outcome, based on the information above. State whether the decision is reversible or irreversible, and what would trigger revisiting it.
+
+### Rationale 🧠
+
+Provide a rationale for the decision based on weighing the options, so the same questions do not need to be answered repeatedly unless the decision is superseded.
+
+For non-trivial decisions, a comparison table can be useful: decision criteria down one side, options across the top. The criteria will often come from the Drivers section above. Effort is commonly a key driver; consider T-shirt sizing the effort for each option to make trade-offs explicit.
+
+## Consequences ⚖️
+
+Describe the resulting context after applying the decision. List all identified consequences, not just the positive ones. Any decision comes with trade-offs. For example, it may introduce the need for further decisions due to cross-cutting concerns; it may impact structure, operational characteristics, or quality attributes; as a result, some things may become easier or more difficult.
+
+State the conditions under which this decision no longer applies or becomes irrelevant.
+
+## Compliance 📏
+
+Define how compliance with this decision will be measured and validated. Where possible, specify **deterministic, testable** criteria.
+
+Compliance checks can be manual or automated using a fitness function. If automated, specify:
+
+- Where it runs (for example CI, pre-merge, scheduled job)
+- What it evaluates (inputs/outputs, constraints, thresholds)
+- What evidence it produces (logs, reports, artefacts)
+- What changes are needed in the repository to support the measurement
+- A command or script Copilot can run locally to assert compliance automatically when reading this ADR; update the ADR whenever that command changes so automation stays accurate.
+
+## Notes 🔗
+
+Link to related **features**, **specifications**, **functional requirements**, **success criteria**, other ADRs, risks, policies, and any relevant repository artefacts (for example configuration, schemas, contracts, or code entry points).
+
+If the decision is tactical, sub-optimal, or misaligned with strategic direction, identify and articulate the associated risk clearly. Where appropriate, create a Tech Debt record on the backlog and link it here.
+
+## Actions ✅
 
 - [x] name, date by, action
 - [ ] name, date by, action
 
-## Tags
+## Tags 🏷️
 
-`#availability|#scalability|#elasticity|#performance|#reliability|#resilience|#maintainability|#testability|#deployability|#modularity|#simplicity|#security|#data|#cost|#usability|#accessibility|…` these tags are intended to be operational, structural or cross-cutting architecture characteristics to link to related decisions.
+Use tags to link related ADRs by cross-cutting concern and quality attribute. Prefer a small, consistent set.
+
+`#availability|#reliability|#resilience|#recoverability|#scalability|#performance|#latency|#throughput|#efficiency|#cost|#security|#privacy|#compliance|#auditability|#observability|#operability|#maintainability|#testability|#deployability|#portability|#interoperability|#compatibility|#usability|#accessibility|#simplicity|#modularity|#extensibility|#data-integrity|#data-quality|#data-retention|#data-lineage|#idempotency|#consistency|…`
