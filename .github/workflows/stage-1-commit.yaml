@@ -31,6 +31,19 @@ on:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
         type: string
+    secrets:
+      IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID:
+        description: "AWS account ID for IDP report upload"
+        required: false
+      IDP_AWS_REPORT_UPLOAD_REGION:
+        description: "AWS region for IDP report upload"
+        required: false
+      IDP_AWS_REPORT_UPLOAD_ROLE_NAME:
+        description: "AWS IAM role name for IDP report upload"
+        required: false
+      IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT:
+        description: "AWS S3 bucket endpoint for IDP report upload"
+        required: false
 
 jobs:
   scan-secrets:
