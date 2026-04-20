@@ -31,6 +31,10 @@ on:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
         type: string
+    secrets:
+      SONAR_TOKEN:
+        description: "SonarCloud token for static analysis"
+        required: true
 
 jobs:
   test-unit:
