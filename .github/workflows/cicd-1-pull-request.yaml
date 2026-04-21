@@ -78,7 +78,11 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
+    secrets:
+      IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID: ${{ secrets.IDP_AWS_REPORT_UPLOAD_ACCOUNT_ID }}
+      IDP_AWS_REPORT_UPLOAD_REGION: ${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}
+      IDP_AWS_REPORT_UPLOAD_ROLE_NAME: ${{ secrets.IDP_AWS_REPORT_UPLOAD_ROLE_NAME }}
+      IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT: ${{ secrets.IDP_AWS_REPORT_UPLOAD_BUCKET_ENDPOINT }}
   test-stage: # Recommended maximum execution time is 5 minutes
     name: "Test stage"
     needs: [metadata, commit-stage]
@@ -91,7 +95,8 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   build-stage: # Recommended maximum execution time is 3 minutes
     name: "Build stage"
     needs: [metadata, test-stage]
@@ -105,7 +110,6 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
   acceptance-stage: # Recommended maximum execution time is 10 minutes
     name: "Acceptance stage"
     needs: [metadata, build-stage]
@@ -119,4 +123,3 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
