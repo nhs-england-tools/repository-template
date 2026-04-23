@@ -37,6 +37,15 @@ on:
         required: true
 
 jobs:
+  test-inherit:
+  - name: "Debug secret availability"
+  run: |
+    if [ -n "${{ secrets.IDP_AWS_REPORT_UPLOAD_REGION }}" ]; then
+      echo "Secret is available"
+    else
+      echo "Secret is EMPTY"
+    fi
+
   test-unit:
     name: "Unit tests"
     runs-on: ubuntu-latest

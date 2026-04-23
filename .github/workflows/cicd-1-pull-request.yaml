@@ -95,8 +95,7 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       terraform_version: "${{ needs.metadata.outputs.terraform_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    secrets: inherit
   build-stage: # Recommended maximum execution time is 3 minutes
     name: "Build stage"
     needs: [metadata, test-stage]
