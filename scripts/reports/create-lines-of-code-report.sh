@@ -24,6 +24,8 @@ function main() {
 
   create-report
   enrich-report
+
+  return 0
 }
 
 function create-report() {
@@ -38,11 +40,15 @@ function create-report() {
     | jq -r '["Language","files","blank","comment","code"],["--------"],(.languages[]|[.name,.files,.blank,.comment,.code]),["-----"],(.total|["TOTAL",.files,.blank,.comment,.code])|@tsv' \
     | sed 's/Plain Text/Plaintext/g' \
     | column -t
+
+  return 0
 }
 
 function run-gocloc-natively() {
 
   gocloc --output-type=json . > lines-of-code-report.tmp.json
+
+  return 0
 }
 
 function run-gocloc-in-docker() {
@@ -58,6 +64,8 @@ function run-gocloc-in-docker() {
       --output-type=json \
       . \
   > lines-of-code-report.tmp.json
+
+  return 0
 }
 
 function enrich-report() {
@@ -77,6 +85,8 @@ function enrich-report() {
     lines-of-code-report.tmp.json \
       > lines-of-code-report.json
   rm -f lines-of-code-report.tmp.json
+
+  return 0
 }
 
 # ==============================================================================
