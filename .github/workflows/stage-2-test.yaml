@@ -40,7 +40,7 @@ jobs:
   test-inherit:
   - name: "Debug secret availability"
   run: |
-    if [ -n "${{ secrets.TEST_SECRET }}" ]; then
+    if [ -n "${{ secret.TEST_SECRET }}" ]; then
       echo "Secret is available"
     else
       echo "Secret is EMPTY"
