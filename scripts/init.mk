@@ -45,9 +45,17 @@ _install-dependency: # Install asdf dependency - mandatory: name=[listed in the 
 	asdf plugin add ${name} ||:
 	asdf install ${name} $(or ${version},)
 
-_install-dependencies: # Install all the dependencies listed in .tool-versions
-	for plugin in $$(grep ^[a-z] .tool-versions | sed 's/[[:space:]].*//'); do
-		make _install-dependency name="$${plugin}"
+# Updated to recursively install dependencies from all .tool-versions files
+# This is not in the repository template yet - needs a discussion and probably a backport there
+_install-dependencies: # Install all dependencies from all .tool-versions files in the repository
+	@for toolfile in $$(find . -name ".tool-versions" -type f | sort); do \
+		echo "Processing $$toolfile"; \
+		while IFS=' ' read -r tool version; do \
+			if [[ "$$tool" =~ ^[a-z] ]] && [[ -n "$$version" ]]; then \
+				echo "  Installing $$tool $$version"; \
+				make _install-dependency name="$$tool" version="$$version"; \
+			fi; \
+		done < "$$toolfile"; \
 	done
 
 clean:: # Remove all generated and temporary files (common) @Operations
