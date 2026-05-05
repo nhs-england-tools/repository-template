@@ -1,5 +1,5 @@
 {
-  "name": "Ubuntu",
+  "name": "Codespaces Development Container",
   "image": "mcr.microsoft.com/devcontainers/base:noble",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
@@ -26,8 +26,5 @@
       "omzPlugins": "https://github.com/zsh-users/zsh-autosuggestions.git https://github.com/zsh-users/zsh-syntax-highlighting.git"
     }
   },
-  "postCreateCommand": "pipx install pre-commit && make config && echo 'export GPG_TTY=$TTY' | cat - ~/.zshrc > temp && mv temp ~/.zshrc",
-  "mounts": [
-    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached"
-  ]
+  "postCreateCommand": "pipx install pre-commit && make config && echo 'export GPG_TTY=$TTY' | cat - ~/.zshrc > temp && mv temp ~/.zshrc"
 }
