@@ -12,9 +12,9 @@ set -euo pipefail
 #   $ [options] ./scan-secrets.sh
 #
 # Options:
-#   check={whole-history,last-commit,staged-changes}  # Type of the check to run, default is 'staged-changes'
-#   FORCE_USE_DOCKER=true                             # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                      # Show all the executed commands, default is 'false'
+#   check={whole-history,branch-changes,last-commit,staged-changes} # Type of the check to run, default is 'staged-changes'
+#   FORCE_USE_DOCKER=true                                           # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                                                    # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - No leaks present
@@ -34,6 +34,8 @@ function main() {
     dir="/workdir"
     cmd="$(get-cmd-to-run)" run-gitleaks-in-docker
   fi
+
+  return 0
 }
 
 # Get Gitleaks command to execute and configuration.
@@ -45,6 +47,9 @@ function get-cmd-to-run() {
   case $check in
     "whole-history")
       cmd="detect --source $dir --verbose --redact"
+      ;;
+    "branch-changes")
+      cmd="detect --source $dir --verbose --redact --log-opts origin/main..HEAD"
       ;;
     "last-commit")
       cmd="detect --source $dir --verbose --redact --log-opts -1"
@@ -61,6 +66,8 @@ function get-cmd-to-run() {
   cmd="$cmd --config $dir/scripts/config/gitleaks.toml"
 
   echo "$cmd"
+
+  return 0
 }
 
 # Run Gitleaks natively.
@@ -70,6 +77,8 @@ function run-gitleaks-natively() {
 
   # shellcheck disable=SC2086
   gitleaks $cmd
+
+  return 0
 }
 
 # Run Gitleaks in a Docker container.
@@ -89,6 +98,8 @@ function run-gitleaks-in-docker() {
     --workdir $dir \
     "$image" \
       $cmd
+
+  return 0
 }
 
 # ==============================================================================

@@ -31,16 +31,21 @@ function main() {
   else
     run-sonar-scanner-in-docker
   fi
+
+  return 0
 }
 
 function run-sonar-scanner-natively() {
 
   sonar-scanner \
     -Dproject.settings="$PWD/scripts/config/sonar-scanner.properties" \
+    -Dsonar.projectName="${PROJECT_NAME:-$(basename -s .git "$(git remote get-url origin)")}" \
     -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
     -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
     -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
     -Dsonar.token="$SONAR_TOKEN"
+
+  return 0
 }
 
 function run-sonar-scanner-in-docker() {
@@ -54,10 +59,13 @@ function run-sonar-scanner-in-docker() {
     --volume "$PWD":/usr/src \
     "$image" \
       -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
+      -Dsonar.projectName="${PROJECT_NAME:-$(basename -s .git "$(git remote get-url origin)")}" \
       -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
       -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
       -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
       -Dsonar.token="$SONAR_TOKEN"
+
+  return 0
 }
 
 # ==============================================================================
