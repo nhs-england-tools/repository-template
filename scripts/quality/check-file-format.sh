@@ -31,6 +31,9 @@ set -euo pipefail
 #   check=working-tree-changes: check modified, unstaged files. This is the default.
 #   check=branch: check for all changes since branching from $BRANCH_NAME
 #
+# Note: All modes operate on files known to Git. Untracked files (never
+# added with `git add`) are invisible to every mode, including `all`.
+#
 # Notes:
 #   Please make sure to enable EditorConfig linting in your IDE. For the
 #   Visual Studio Code editor it is `editorconfig.editorconfig` that is already
