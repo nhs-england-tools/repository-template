@@ -3,4 +3,4 @@ scripts/docker/** linguist-vendored
 scripts/quality/** linguist-vendored
 scripts/init.mk linguist-vendored
 
-* text eol=lf
+* text=auto eol=lf
