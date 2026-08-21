@@ -3,10 +3,6 @@ description: "Check file format"
 runs:
   using: "composite"
   steps:
-    - name: "Install editorconfig-checker"
-      uses: editorconfig-checker/action-editorconfig-checker@840e866d93b8e032123c23bac69dece044d4d84c # v2.2.0
-      with:
-        version: "v3.11.1" # Keep in sync with the editorconfig-checker version in .tool-versions
     - name: "Check file format"
       shell: bash
       run: |
