@@ -52,12 +52,12 @@ function run-sonar-scanner-in-docker() {
   local image=$(name=sonarsource/sonar-scanner-cli docker-get-image-version-and-pull)
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/usr/src \
+    --env SONAR_TOKEN \
     "$image" \
       -Dproject.settings=/usr/src/scripts/config/sonar-scanner.properties \
       -Dsonar.branch.name="${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}" \
       -Dsonar.organization="$SONAR_ORGANISATION_KEY" \
-      -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
-      -Dsonar.token="$SONAR_TOKEN"
+      -Dsonar.projectKey="$SONAR_PROJECT_KEY"
 }
 
 # ==============================================================================
