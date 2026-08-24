@@ -6,7 +6,7 @@
 
 DOCKER_IMAGE ?= $(or ${docker_image}, $(or ${IMAGE}, $(or ${image}, ghcr.io/org/repo)))
 DOCKER_TITLE ?= $(or "${docker_title}", $(or "${TITLE}", $(or "${title}", "Service Docker image")))
-FORCE_USE_DOCKER ?= true
+FORCE_USE_DOCKER ?= false
 
 docker-bake-dockerfile: # Create Dockerfile.effective - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
 	make _docker cmd="bake-dockerfile" \
