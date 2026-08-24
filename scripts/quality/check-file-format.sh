@@ -4,9 +4,9 @@ set -euo pipefail
 
 # Pre-commit git hook to check the EditorConfig rules compliance over changed
 # files. It ensures all non-binary files across the codebase are formatted
-# according to the style defined in the `.editorconfig` file. This is a
-# editorconfig command wrapper. It will run editorconfig natively if it is
-# installed, otherwise it will run it in a Docker container.
+# according to the style defined in the `.editorconfig` file. This is an
+# `ec` (editorconfig-checker) command wrapper. It will run `ec` natively if it
+# is installed, otherwise it will run it in a Docker container.
 #
 # Usage:
 #   $ [options] ./check-file-format.sh
@@ -30,6 +30,9 @@ set -euo pipefail
 #   check=staged-changes: check only files staged for commit.
 #   check=working-tree-changes: check modified, unstaged files. This is the default.
 #   check=branch: check for all changes since branching from $BRANCH_NAME
+#
+# Note: All modes operate on files known to Git. Untracked files (never
+# added with `git add`) are invisible to every mode, including `all`.
 #
 # Notes:
 #   Please make sure to enable EditorConfig linting in your IDE. For the
@@ -64,7 +67,7 @@ function main() {
       ;;
   esac
 
-  if command -v editorconfig > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  if command -v ec > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     filter="$filter" dry_run_opt="${dry_run_opt:-}" run-editorconfig-natively
   else
     filter="$filter" dry_run_opt="${dry_run_opt:-}" run-editorconfig-in-docker
@@ -78,7 +81,7 @@ function main() {
 function run-editorconfig-natively() {
 
   # shellcheck disable=SC2046,SC2086
-  editorconfig \
+  ec \
     -config "$PWD/scripts/config/editorconfig-checker.json" \
     --exclude '.git/' $dry_run_opt $($filter)
 }
