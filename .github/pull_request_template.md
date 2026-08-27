@@ -1,12 +1,47 @@
-<!-- markdownlint-disable-next-line first-line-heading -->
+<!-- markdownlint-disable-file first-line-heading -->
 
 ## Description
 
-<!-- Describe your changes in detail. -->
+<!--
+Describe WHAT changed and WHY, so a reviewer understands the PR without reading
+every line. Aim for the depth of a good commit body.
+
+Please include:
+  1. A short summary (1-3 sentences): what this PR does and the value it delivers.
+  2. A file-by-file bulleted list of the substantive changes, each linking the
+     file with a repository-relative path. For example:
+       - [scripts/quality/check-file-format.sh](scripts/quality/check-file-format.sh): what changed and why
+  3. Any notable implementation details, follow-ups, or explicitly out-of-scope items.
+-->
 
 ## Context
 
-<!-- Why is this change required? What problem does it solve? -->
+<!--
+Explain the background and motivation so the change is justified and can be
+revisited later.
+
+Please answer:
+  - Why is this change required? What problem, risk, or friction does it solve?
+  - What was the previous behaviour, and why was it inadequate (bug, gap, overhead)?
+  - What alternatives or trade-offs were considered, and why this approach?
+  - Link any related issue, ADR, or discussion.
+-->
+
+## How to test it
+
+<!--
+Give the reviewer a repeatable way to verify the change; prefer concrete commands
+over prose. For docs-only or config-only changes, state that and why no manual
+test applies.
+
+Recommended structure:
+  - "Prerequisites:" — any setup or install commands (for example: make config).
+  - One numbered test per behaviour ("Test 1: ...", "Test 2: ..."), each with:
+      * "Commands:" — the exact command(s) to run, inside a fenced bash code block;
+      * "Expected:" — line describing the correct result;
+      * "Clean up:" — step when the test changes the working tree
+        (for example: git checkout -- <file>).
+-->
 
 ## Type of changes
 
@@ -25,6 +60,7 @@
 - [ ] I have followed the code style of the project
 - [ ] I have added tests to cover my changes
 - [ ] I have updated the documentation accordingly
+- [ ] I have described how to test these changes in the section above
 - [ ] This PR is a result of pair or mob programming
 - [ ] This PR is a result of AI-assisted development sessions
 
