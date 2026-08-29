@@ -10,7 +10,7 @@ set -euo pipefail
 #   $ [options] ./check-markdown-links.sh
 #
 # Options:
-#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'all'
+#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
 #   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
 #   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
 #   VERBOSE=true                                            # Show all the executed commands, default is `false`
@@ -25,11 +25,13 @@ set -euo pipefail
 
 # ==============================================================================
 
+# Run markdown links checks in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  check=${check:-all}
+  local check=${check:-working-tree-changes}
+  local files
   case $check in
     "all")
       files="$(git ls-files "*.md")"
@@ -43,6 +45,9 @@ function main() {
     "branch")
       files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --name-only "*.md") | sort | uniq )"
       ;;
+    *)
+      echo "Unrecognised check mode: $check" >&2 && exit 1
+      ;;
   esac
 
   if [ -n "$files" ]; then
@@ -52,6 +57,8 @@ function main() {
       files="$files" run-lychee-in-docker
     fi
   fi
+
+  return 0
 }
 
 # Run lychee natively.
@@ -65,6 +72,8 @@ function run-lychee-natively() {
     --no-progress \
     --quiet \
     $files
+
+  return 0
 }
 
 # Run lychee in a Docker container.
@@ -86,10 +95,15 @@ function run-lychee-in-docker() {
       --no-progress \
       --quiet \
       $files
+
+  return 0
 }
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
