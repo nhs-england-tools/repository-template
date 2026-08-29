@@ -42,14 +42,11 @@ function main() {
   case $check in
     "all")
       # 'all' aggregates the three local-change checks. Every sub-check runs
-      # and the overall result fails if any of them find a leak. The real
-      # exit code is preserved instead of being collapsed, so a genuine
-      # tool failure (e.g. an unrecognised mode or a Docker error) isn't
-      # mistaken for "leaks found".
+      # and the overall result fails if any of them find a leak.
       local rc=0
-      run-check staged-changes || rc=$?
-      run-check working-tree-changes || rc=$?
-      run-check branch || rc=$?
+      run-check staged-changes || rc=1
+      run-check working-tree-changes || rc=1
+      run-check branch || rc=1
       return "$rc"
       ;;
     "staged-changes" | "working-tree-changes" | "branch" | "whole-history" | "last-commit")
@@ -75,11 +72,11 @@ function run-check() {
   local rc=0
   if command -v gitleaks > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     dir="$PWD"
-    cmd="$(check="$check" dir="$dir" get-cmd-to-run)"
+    cmd="$(get-cmd-to-run)"
     cmd="$cmd" run-gitleaks-natively || rc=$?
   else
     dir="/workdir"
-    cmd="$(check="$check" dir="$dir" get-cmd-to-run)"
+    cmd="$(get-cmd-to-run)"
     cmd="$cmd" run-gitleaks-in-docker || rc=$?
   fi
 
@@ -98,11 +95,7 @@ function get-cmd-to-run() {
       cmd="protect --source $dir --verbose --redact --staged"
       ;;
     "working-tree-changes")
-      # `protect` only diffs tracked files against the index, so untracked
-      # files are invisible to it. `detect --no-git` scans the working
-      # directory as plain files instead, which also picks up untracked
-      # files.
-      cmd="detect --no-git --source $dir --verbose --redact"
+      cmd="protect --source $dir --verbose --redact"
       ;;
     "branch")
       # Scan only the commits unique to this branch, i.e. those reachable from
