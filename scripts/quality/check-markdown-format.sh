@@ -26,6 +26,8 @@ set -euo pipefail
 #   specified in the `./.vscode/extensions.json` file.
 #   2) To see the full list of the rules, please visit
 #   https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+#   3) The frontmatter blank-line check requires `python3` on the host; it is not
+#   run through Docker. `python3` is present wherever `pre-commit` runs.
 
 # ==============================================================================
 
@@ -60,6 +62,7 @@ function main() {
     else
       files="$files" run-markdownlint-in-docker
     fi
+    files="$files" check-frontmatter-blank-line
   fi
 
   return 0
@@ -99,6 +102,42 @@ function run-markdownlint-in-docker() {
       --ignore-path /workdir/scripts/config/.markdownlintignore
 
   return 0
+}
+
+# Enforce a blank line between the YAML frontmatter closing `---` and the
+# following content. `markdownlint` does not provide a built-in rule for this
+# (MD022 ignores frontmatter delimiters), so we enforce it here.
+# Arguments (provided as environment variables):
+#   files=[files to check]
+function check-frontmatter-blank-line() {
+
+  # No explicit `return 0` here: the python3 exit status is the result of the
+  # check, so a violation (exit 1) must propagate to fail the check under set -e.
+  python3 - <<'PY'
+import os, sys
+files = os.environ.get("files", "").split()
+violations = []
+for path in files:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except (OSError, UnicodeDecodeError):
+        continue
+    if not lines or lines[0].rstrip() != "---":
+        continue
+    end = None
+    for i in range(1, len(lines)):
+        if lines[i].rstrip() == "---":
+            end = i
+            break
+    if end is None:
+        continue
+    if end + 1 < len(lines) and lines[end + 1].strip() != "":
+        violations.append(f"{path}:{end + 2}: missing blank line after YAML frontmatter")
+if violations:
+    sys.stderr.write("\n".join(violations) + "\n")
+    sys.exit(1)
+PY
 }
 
 # ==============================================================================
