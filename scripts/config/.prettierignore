@@ -1,0 +1,2 @@
+# Paths excluded from `make format` (Prettier markdown table formatting).
+# Add generated or vendored markdown here.
