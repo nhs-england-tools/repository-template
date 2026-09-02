@@ -28,7 +28,7 @@ function main() {
   # never handed a path deleted in the working tree but not yet staged. Ignore
   # rules are applied by prettier itself via --ignore-path below.
   local files
-  files="$(git ls-files "*.md" | while IFS= read -r f; do if [ -f "$f" ]; then printf '%s\n' "$f"; fi; done)"
+  files="$(git ls-files "*.md" | while IFS= read -r f; do if [[ -f "$f" ]]; then printf '%s\n' "$f"; fi; done)"
 
   if [ -z "$files" ]; then
     return 0
