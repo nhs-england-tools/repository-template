@@ -72,11 +72,11 @@ function run-check() {
   local rc=0
   if command -v gitleaks > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     dir="$PWD"
-    cmd="$(get-cmd-to-run)"
+    cmd="$(check="$check" dir="$dir" get-cmd-to-run)"
     cmd="$cmd" run-gitleaks-natively || rc=$?
   else
     dir="/workdir"
-    cmd="$(get-cmd-to-run)"
+    cmd="$(check="$check" dir="$dir" get-cmd-to-run)"
     cmd="$cmd" run-gitleaks-in-docker || rc=$?
   fi
 
