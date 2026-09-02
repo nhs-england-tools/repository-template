@@ -34,7 +34,7 @@ function main() {
   local files
   case $check in
     "all")
-      files="$(git ls-files "*.md" | while IFS= read -r f; do if [ -f "$f" ]; then printf '%s\n' "$f"; fi; done)"
+      files="$(git ls-files "*.md" | while IFS= read -r f; do if [[ -f "$f" ]]; then printf '%s\n' "$f"; fi; done)"
       ;;
     "staged-changes")
       files="$(git diff --diff-filter=ACMRT --name-only --cached "*.md")"
