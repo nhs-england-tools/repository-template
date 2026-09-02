@@ -3,7 +3,7 @@ include scripts/docker/docker.mk
 # ==============================================================================
 
 scan-secrets: check ?= whole-history
-scan-secrets: # Scan for secrets (set check=whole-history|last-commit|staged-changes) @Quality
+scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit) @Quality
 	check=$(check) ./scripts/quality/scan-secrets.sh
 
 check-file-format: check ?= all
