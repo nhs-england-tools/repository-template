@@ -10,7 +10,7 @@ deps: # Install dependencies needed to build and test the project @Build
 	# TODO: Implement installation of your project dependencies
 
 format: # Auto-format code @Quality
-	# TODO: Implement formatting required for this repository
+	./scripts/quality/format-markdown-tables.sh
 
 lint-file-format: # Check file formats @Quality
 	$(MAKE) check-file-format check=branch

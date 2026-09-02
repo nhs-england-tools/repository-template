@@ -1,5 +1,6 @@
 editorconfig-checker 3.11.1
 gitleaks 8.30.0
+nodejs 22.23.2
 pre-commit 4.5.1
 
 # ==============================================================================
@@ -11,3 +12,4 @@ pre-commit 4.5.1
 # docker/koalaman/shellcheck v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
 # docker/lycheeverse/lychee 0.22.0@sha256:ea5b34df7f5b1ea32a029027234e158af77ba1e3ae96e7554c3942d56de7cc13 # SEE: https://hub.docker.com/r/lycheeverse/lychee
 # docker/mstruebing/editorconfig-checker v3.11.1@sha256:6780223109e9270cd08644dbbc9304d173793d1ab8bb2aa11a1481f920288bb5 # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags keep in sync with the editorconfig-checker version above
+# docker/node 22.23.2-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 # SEE: https://hub.docker.com/_/node/tags (prettier runtime) keep in sync with the nodejs version above
