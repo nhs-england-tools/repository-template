@@ -17,6 +17,7 @@ regexes = [
 
 [allowlist]
 paths = [
-  # Allow well-known dependency lock files for Python, JavaScript/TypeScript and Terraform
-  '''(?:^|/)[^/]*\.lock(?:\..*)?$''',
+  # Additional dependency lockfiles not covered by the Gitleaks defaults
+  '''(?:^|/)(?:uv|pdm|bun)\.lock$''',
+  '''(?:^|/)\.terraform\.lock\.hcl$''',
 ]
