@@ -22,7 +22,7 @@ check-shell-lint: # Lint all shell scripts in this project, do not fail on error
 	output=$$(for file in $$(find . -type f -name "*.sh"); do
 		file=$${file} scripts/quality/check-shell-lint.sh ||:;
 	done 2>&1)
-	if [ -z "$$output" ]; then
+	if [[ -z "$$output" ]]; then
 		echo "shell lint: ok"
 	else
 		printf "%s\n" "$$output";
