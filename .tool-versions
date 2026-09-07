@@ -1,11 +1,11 @@
 editorconfig-checker 3.11.1
-gitleaks 8.30.0
+gitleaks 8.30.1
 pre-commit 4.5.1
 
 # ==============================================================================
 # The section below is reserved for Docker image versions.
 
-# docker/ghcr.io/gitleaks/gitleaks v8.30.0@sha256:691af3c7c5a48b16f187ce3446d5f194838f91238f27270ed36eef6359a574d9 # SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks
+# docker/ghcr.io/gitleaks/gitleaks v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f # SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks
 # docker/ghcr.io/igorshubovych/markdownlint-cli v0.47.0@sha256:9f06c8c9a75aa08b87b235b66d618f7df351f09f08faf703177f670e38ee6511 # SEE: https://github.com/igorshubovych/markdownlint-cli/pkgs/container/markdownlint-cli
 # docker/hadolint/hadolint 2.14.0-alpine@sha256:7aba693c1442eb31c0b015c129697cb3b6cb7da589d85c7562f9deb435a6657c # SEE: https://hub.docker.com/r/hadolint/hadolint/tags
 # docker/koalaman/shellcheck v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
