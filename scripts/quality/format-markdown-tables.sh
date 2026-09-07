@@ -30,7 +30,7 @@ function main() {
   local files
   files="$(git ls-files "*.md" | while IFS= read -r f; do if [[ -f "$f" ]]; then printf '%s\n' "$f"; fi; done)"
 
-  if [ -z "$files" ]; then
+  if [[ -z "$files" ]]; then
     return 0
   fi
 
