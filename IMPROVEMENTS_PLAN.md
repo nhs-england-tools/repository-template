@@ -11,10 +11,13 @@ they exist.
 
 ## PR index — what each PR is about
 
-All 20 PRs plus one optional tweak, with a one-line summary each; full detail
+All 22 PRs plus one optional tweak, with a one-line summary each; full detail
 is in the correspondingly named section below. They are listed in application
 order — raise them as a stack, each PR branched off the one above it; per-PR
 dependencies are called out in the _Status_ column and in the [Notes](#notes).
+**PR 22 is a fixed exception to "application order"**: it must be the very last
+commit on `v2`, applied immediately before merging `v2` into `main`, regardless
+of where it is raised in the stack — see its entry for why.
 
 | PR             | What it is about                                                                                                                                                                                                                                                                          | Status                                                                                |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -39,6 +42,8 @@ dependencies are called out in the _Status_ column and in the [Notes](#notes).
 | **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                      | New · touches PR 7/8 files + PR 19                                                    |
 | **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.          | New · expected · touches PR 7/8/16/18 files                                           |
 | **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                          | New · analysis-only, ADR-gated                                                        |
+| **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                        | New                                                                                   |
+| **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                           | New · must land last                                                                  |
 
 ## Notes
 
@@ -2138,3 +2143,229 @@ the `# docker/...` block, and account for the `mise.toml` trust prompt in CI
 **Out of scope**: the Docker-image pinning mechanism (unchanged); the _what-to-pin_
 decisions (owned by PR 15); forcing a `mise.toml`/tasks model (optional follow-up);
 migrating `uv` under mise.
+
+---
+
+## PR 21: SonarQube Cloud scan via the official GitHub Action
+
+**Scope**: CI / quality gate
+**Risk**: Low — new job only; skips gracefully if `SONAR_TOKEN` is not available
+(for example on a fork pull request, or before the token is configured)
+**Depends on**: nothing
+**Files**: `.github/workflows/stage-2-test.yaml`, `.github/workflows/cicd-1-pull-request.yaml`,
+`.gitignore`
+
+**Context**: `v2` currently has no static-analysis integration at all (no
+`sonar-scanner.properties`, no CI job). The GitHub organisation has since moved to
+a SonarQube Cloud **Scoped Organization Token** (Team plan) — project-scoped,
+"Execute Analysis" only, so it no longer needs to be owned by a dedicated
+bot/service account — and disabled **Automatic Analysis** in the SonarQube Cloud
+UI, which means analysis results now only reach SonarQube Cloud via CI.
+
+This PR adds a `perform-static-analysis` job directly to `stage-2-test.yaml`,
+calling the official [`SonarSource/sonarqube-scan-action`](https://github.com/SonarSource/sonarqube-scan-action)
+(pinned by SHA). Deliberately **no composite action and no custom shell script**:
+the action already downloads and GPG-verifies the scanner CLI, and the scanner's
+own GitHub Actions CI-detection automatically reports the correct branch (on a
+`push`) or PR context (on a `pull_request`) from the standard `GITHUB_*` runner
+environment variables — no explicit `sonar.branch.name` / `sonar.pullrequest.*`
+properties are needed. All analysis-scope properties are passed as inline `args:`
+rather than a `sonar-scanner.properties` file, keeping this PR to workflow-only
+changes.
+
+Because `secrets` isn't available in `steps.if` conditions, a job-level `env` var
+captures whether the token is set, and the scan step is skipped (not failed) when
+it isn't. `SONAR_TOKEN` is declared as a required `workflow_call` secret on
+`stage-2-test.yaml` and passed through explicitly from `cicd-1-pull-request.yaml`
+(no `secrets: inherit`, matching least-privilege secret exposure).
+
+**Prerequisites (admin-side, not part of this PR's diff)**: a GitHub Admin must
+create the `SONAR_TOKEN` repository secret (the Scoped Organization Token) and the
+`SONAR_ORGANISATION_KEY` / `SONAR_PROJECT_KEY` repository variables, and confirm
+the SonarQube Cloud project already exists with Automatic Analysis turned off. The
+project must also be a **bound** project (created via GitHub import/binding, i.e.
+the DevOps Platform Integration) — pull request decoration (the inline
+comment/check on the PR) is only supported on a bound project and is a separate
+requirement from the token. Without it, this job still uploads results to the
+SonarQube Cloud UI, but nothing appears on the GitHub PR itself. Once bound, add
+`SonarCloud Code Analysis` (the literal GitHub check name Sonar posts — unaffected
+by the product's "SonarQube Cloud" rebrand) as a required status check on `main`
+via a branch ruleset or classic branch protection rule ("Require status checks to
+pass before merging"), so a failed quality gate actually blocks merge rather than
+being purely informational. **Sequencing note**: GitHub's required-checks picker
+only lists checks that have already reported at least once, so this cannot be
+configured until after PR 21 has been merged and the job has run successfully at
+least once — it is a follow-up admin action, not something that can be done in
+advance.
+
+**Known limitation (out of scope, fixed by PR 22)**: `cicd-1-pull-request.yaml`'s
+`push` trigger still matches `branches: ["**"]` on `v2` (unlike `main`, which
+restricts it to `main` only). A commit to an open PR branch therefore fires both
+a `push` and a `pull_request: synchronize` event, so this job — like the rest of
+`test-stage` — currently runs twice per PR commit, doubling both CI time and
+SonarQube Cloud analysis submissions. **PR 22** carries this fix, but must be
+sequenced last (immediately before merging `v2` into `main`) rather than
+landing here — see PR 22 for why.
+
+**Verification**: open a PR → the "Perform static analysis" job runs and reports
+to SonarQube Cloud; a PR from a fork (no secrets) → the job's checkout step runs
+but the scan step is skipped, job still succeeds; merge to `main` → the same job
+re-runs as a branch analysis.
+
+**Diff**:
+
+```diff
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore
++++ b/.gitignore
+@@ -3,4 +3,7 @@
+ *.code-workspace
+ !project.code-workspace
+
++# SonarQube Cloud scanner working directory
++.scannerwork
++
+ # Please add your custom content below!
+```
+
+```diff
+diff --git a/.github/workflows/stage-2-test.yaml b/.github/workflows/stage-2-test.yaml
+--- a/.github/workflows/stage-2-test.yaml
++++ b/.github/workflows/stage-2-test.yaml
+@@ -18,6 +18,10 @@ on:
+       version:
+         description: "Version of the software, set by the CI/CD pipeline workflow"
+         required: true
+         type: string
++    secrets:
++      SONAR_TOKEN:
++        description: "SonarQube Cloud token for static analysis"
++        required: true
+
+ permissions:
+   contents: read
+
+@@ -33,3 +37,20 @@ jobs:
+       - name: "Save the result of fast test suite"
+         run: |
+           echo "Nothing to save"
++  perform-static-analysis:
++    name: "Perform static analysis"
++    needs: [test-unit]
++    runs-on: ubuntu-latest
++    permissions:
++      contents: read
++    timeout-minutes: 5
++    env:
++      SONAR_TOKEN_SET: ${{ secrets.SONAR_TOKEN != '' }} # 'secrets' isn't available in steps.if, so capture it here first
++    steps:
++      - name: "Checkout code"
++        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
++        with:
++          fetch-depth: 0 # Full history improves the relevancy of reporting
++      - name: "Perform static analysis"
++        if: env.SONAR_TOKEN_SET == 'true'
++        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
++        env:
++          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
++        with:
++          args: >
++            -Dsonar.organization=${{ vars.SONAR_ORGANISATION_KEY }}
++            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
++            -Dsonar.sources=.
++            -Dsonar.sourceEncoding=UTF-8
++            -Dsonar.qualitygate.wait=true
+```
+
+```diff
+diff --git a/.github/workflows/cicd-1-pull-request.yaml b/.github/workflows/cicd-1-pull-request.yaml
+--- a/.github/workflows/cicd-1-pull-request.yaml
++++ b/.github/workflows/cicd-1-pull-request.yaml
+@@ -90,6 +90,8 @@ jobs:
+       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
+       python_version: "${{ needs.metadata.outputs.python_version }}"
+       version: "${{ needs.metadata.outputs.version }}"
++    secrets:
++      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+   build-stage: # Recommended maximum execution time is 3 minutes
+```
+
+---
+
+## PR 22: Fix the `push` trigger double-run — last commit before merging `v2` to `main`
+
+**Scope**: CI / trigger correctness
+**Risk**: Low change, but **timing-sensitive** — see below for why this cannot land
+early
+**Depends on**: every other PR in this plan already merged into `v2`. This must be
+the **final** commit on `v2`, applied **immediately before** merging `v2` into
+`main`, not raised in normal stack order.
+**Files**: `.github/workflows/cicd-1-pull-request.yaml`
+
+**Context**: `main` already carries this fix, as commit `c861edf` ("ci: restrict
+push trigger to main and add synchronize to PR trigger - ENG-1023 (#210)",
+2026-04-21). `v2` forked from `main` before that commit and has diverged
+independently since — verified with `git merge-base --is-ancestor c861edf v2`,
+which returns false even though `v2`'s own tip is newer by calendar date. `v2`'s
+`cicd-1-pull-request.yaml` still triggers on:
+
+```yaml
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    types: [opened, reopened, synchronize]
+```
+
+`push` and `pull_request` are independent, OR'd triggers. A commit pushed to any
+branch with an open PR fires **both** a `push` event (matched by `branches:
+["**"]`) and a `pull_request: synchronize` event, starting two independent runs
+of the whole workflow. `test-stage` (and therefore **PR 21**'s
+`perform-static-analysis` job) has no conditional gate, so it runs twice per PR
+commit — doubling CI time and, for PR 21, doubling SonarQube Cloud analysis
+submissions for identical code. `main`'s fix narrows the `push` trigger to
+`branches: [main]` only, so a PR-branch commit only ever triggers via
+`pull_request`, and `push` only fires once — on the eventual merge commit.
+
+**Why this must be the last commit on `v2`, not an ordinary stacked PR**: this
+whole work package is built as a stack of branches merged into `v2` over time,
+and `v2` — not `main` — is the effective integration branch for that entire
+period. Narrowing `push` to `branches: [main]` early would mean `v2` itself (a
+branch literally named `v2`, not `main`) stops matching the `push` trigger for
+the rest of the work package's lifetime: every subsequent merge of a stacked PR
+into `v2` would silently lose its push-triggered CI run (build/acceptance
+stages, the Sonar job, etc.), leaving `v2`'s own HEAD unvalidated between merges
+except while a PR is still open against it. Landing this fix only immediately
+before the `v2` → `main` merge means `v2` keeps its current full CI coverage
+for as long as it is being actively built up, and the corrected trigger takes
+effect at exactly the moment `v2`'s content becomes `main`'s content.
+
+**Sequencing**: raise this as the top-most commit on `v2`, after every other PR
+in this plan that is going into the same release has already been merged. Do not
+branch further PRs on top of it. Merge it into `v2`, then merge `v2` into `main`
+in the same change window.
+
+**Verification**: before this lands, a commit to a branch with an open PR
+against `v2` triggers the workflow twice (`push` + `pull_request: synchronize` —
+confirm via the Actions run list). After this PR is merged into `v2` and `v2` is
+merged into `main`: a commit to a PR branch triggers only via `pull_request`; a
+merge to `main` triggers only via `push`; `git diff v2..main --
+.github/workflows/cicd-1-pull-request.yaml` shows no difference on this trigger
+block.
+
+**Diff**:
+
+```diff
+diff --git a/.github/workflows/cicd-1-pull-request.yaml b/.github/workflows/cicd-1-pull-request.yaml
+--- a/.github/workflows/cicd-1-pull-request.yaml
++++ b/.github/workflows/cicd-1-pull-request.yaml
+@@ -5,7 +5,7 @@
+ on:
+   push:
+     branches:
+-      - "**"
++      - main
+   pull_request:
+     types: [opened, reopened, synchronize]
+```
