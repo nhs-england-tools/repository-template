@@ -52,6 +52,7 @@ _install-dependencies: # Install all the dependencies listed in .tool-versions
 
 clean:: # Remove all generated and temporary files (common) @Operations
 	rm -rf \
+		.github/skills/repository-template/assets \
 		.scannerwork \
 		*report*.json \
 		*report*json.zip \

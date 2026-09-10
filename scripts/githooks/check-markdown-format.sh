@@ -58,6 +58,8 @@ function main() {
       files="$files" run-markdownlint-in-docker
     fi
   fi
+
+  return 0
 }
 
 # Run markdownlint natively.
@@ -69,6 +71,8 @@ function run-markdownlint-natively() {
   markdownlint \
     $files \
     --config "$PWD/scripts/config/markdownlint.yaml"
+
+  return 0
 }
 
 # Run markdownlint in a Docker container.
@@ -87,6 +91,8 @@ function run-markdownlint-in-docker() {
     "$image" \
       $files \
       --config /workdir/scripts/config/markdownlint.yaml
+
+  return 0
 }
 
 # ==============================================================================
