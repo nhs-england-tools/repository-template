@@ -50,3 +50,8 @@ MD036: false
 # First line in file should be a top-level heading: Flags files not starting with H1.
 # Disabled: Many prompt/agent files start with YAML front-matter.
 MD041: false
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md060.md
+# Table column style: Enforces vertically aligned pipe characters in tables.
+MD060:
+  style: aligned

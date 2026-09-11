@@ -1,0 +1,3 @@
+# Prettier configuration scoped to markdown table formatting.
+# Invoked by scripts/quality/format-markdown-tables.sh
+proseWrap: preserve
