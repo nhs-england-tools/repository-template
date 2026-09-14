@@ -29,6 +29,10 @@ shellscript-lint-all: # Lint all shell scripts in this project, do not fail on e
 		file=$${file} scripts/shellscript-linter.sh ||:
 	done
 
+scan-secrets: check ?= whole-history
+scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit) @Quality
+	check=$(check) ./scripts/githooks/scan-secrets.sh
+
 githooks-config: # Trigger Git hooks on commit that are defined in this repository @Configuration
 	make _install-dependency name="pre-commit"
 	pre-commit install \
