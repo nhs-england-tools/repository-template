@@ -54,6 +54,7 @@ jobs:
   #   - Install the SonarQube Cloud GitHub App on this repo and bind the project (enables pull request decoration)
   #   - Require the always-reporting "Perform static analysis" job on main (green when Sonar is skipped, red on gate failure)
   #   - Do NOT require Sonar's own "SonarCloud Code Analysis" check, it never reports on unconfigured or fork PRs and blocks merges
+  #   - In the Sonar project's Administration > Analysis Method, turn OFF "Automatic Analysis" (mutually exclusive with this CI-based scan, leaving it on makes this job fail)
   perform-static-analysis:
     name: "Perform static analysis"
     needs: [test-unit]
