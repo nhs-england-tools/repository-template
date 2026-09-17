@@ -79,7 +79,6 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
   test-stage: # Recommended maximum execution time is 5 minutes
     name: "Test stage"
     permissions:
@@ -93,7 +92,8 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   build-stage: # Recommended maximum execution time is 3 minutes
     name: "Build stage"
     permissions:
@@ -108,7 +108,6 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
   acceptance-stage: # Recommended maximum execution time is 10 minutes
     name: "Acceptance stage"
     permissions:
@@ -123,4 +122,3 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
