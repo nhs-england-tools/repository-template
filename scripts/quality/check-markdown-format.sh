@@ -29,11 +29,13 @@ set -euo pipefail
 
 # ==============================================================================
 
+# Run markdown format checks in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  check=${check:-working-tree-changes}
+  local check=${check:-working-tree-changes}
+  local files
   case $check in
     "all")
       files="$(git ls-files "*.md")"
@@ -47,6 +49,9 @@ function main() {
     "branch")
       files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --name-only "*.md") | sort | uniq )"
       ;;
+    *)
+      echo "Unrecognised check mode: $check" >&2 && exit 1
+      ;;
   esac
 
   if [ -n "$files" ]; then
@@ -56,6 +61,8 @@ function main() {
       files="$files" run-markdownlint-in-docker
     fi
   fi
+
+  return 0
 }
 
 # Run markdownlint natively.
@@ -68,6 +75,8 @@ function run-markdownlint-natively() {
     $files \
     --config "$PWD/scripts/config/markdownlint.yaml" \
     --ignore-path "$PWD/scripts/config/.markdownlintignore"
+
+  return 0
 }
 
 # Run markdownlint in a Docker container.
@@ -83,14 +92,20 @@ function run-markdownlint-in-docker() {
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
+    --workdir /workdir \
     "$image" \
       $files \
       --config /workdir/scripts/config/markdownlint.yaml \
       --ignore-path /workdir/scripts/config/.markdownlintignore
+
+  return 0
 }
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
