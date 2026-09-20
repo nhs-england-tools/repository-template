@@ -23,7 +23,7 @@ jobs:
       version: ${{ steps.variables.outputs.version }}
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -54,7 +54,7 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: "Get the artefacts"
         run: |
           echo "Getting the artefacts created by the build stage ..."
@@ -92,7 +92,7 @@ jobs:
         run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
       - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
-        uses: nhs-england-tools/notify-msteams-action@450ab55046abcfb0ea7d0943e04aa1b950f08e01 # v1.0.0
+        uses: nhs-england-tools/notify-msteams-action@3d354c122e09513108d34d93c729874da45d26a2 # v1.0.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
