@@ -27,6 +27,10 @@ on:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
         type: string
+    secrets:
+      SONAR_TOKEN:
+        description: "SonarQube Cloud token for static analysis"
+        required: false
 
 permissions:
   contents: read
@@ -38,10 +42,48 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: "Run unit test suite"
         run: |
           make test
       - name: "Save the result of fast test suite"
         run: |
           echo "Nothing to save"
+  # Admin setup (not enforceable from this workflow):
+  #   - Set up repo secret SONAR_TOKEN and repo variables SONAR_ORGANISATION_KEY, SONAR_PROJECT_KEY
+  #   - Install the SonarQube Cloud GitHub App on this repo and bind the project (enables pull request decoration)
+  #   - Require the always-reporting "Perform static analysis" job on main (green when Sonar is skipped, red on gate failure)
+  #   - Do NOT require Sonar's own "SonarCloud Code Analysis" check, it never reports on unconfigured or fork PRs and blocks merges
+  #   - In the Sonar project's Administration > Analysis Method, turn OFF "Automatic Analysis" (mutually exclusive with this CI-based scan, leaving it on makes this job fail)
+  perform-static-analysis:
+    name: "Perform static analysis"
+    needs: [test-unit]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    env:
+      HAS_SONAR_CONFIGURATION: ${{ secrets.SONAR_TOKEN != '' && vars.SONAR_ORGANISATION_KEY != '' && vars.SONAR_PROJECT_KEY != '' }}
+    steps:
+      - name: "Checkout code"
+        if: env.HAS_SONAR_CONFIGURATION == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Full history is needed to improve the relevancy of reporting
+      - name: "Perform static analysis"
+        if: env.HAS_SONAR_CONFIGURATION == 'true'
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # Test coverage: add sonar.*.coverage.reportPaths and sonar.exclusions
+          args: >
+            -Dsonar.organization=${{ vars.SONAR_ORGANISATION_KEY }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=.
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true
+      - name: "Skip static analysis"
+        if: env.HAS_SONAR_CONFIGURATION != 'true'
+        run: |
+          echo "Sonar is not configured (missing token or org/project variables), skipping static analysis..."

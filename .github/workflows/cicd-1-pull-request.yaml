@@ -28,7 +28,7 @@ jobs:
       does_pull_request_exist: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -79,7 +79,6 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
   test-stage: # Recommended maximum execution time is 5 minutes
     name: "Test stage"
     permissions:
@@ -93,7 +92,8 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   build-stage: # Recommended maximum execution time is 3 minutes
     name: "Build stage"
     permissions:
@@ -108,7 +108,6 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
   acceptance-stage: # Recommended maximum execution time is 10 minutes
     name: "Acceptance stage"
     permissions:
@@ -123,4 +122,3 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
-    secrets: inherit
