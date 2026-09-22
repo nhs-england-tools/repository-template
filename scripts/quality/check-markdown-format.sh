@@ -26,6 +26,8 @@ set -euo pipefail
 #   specified in the `./.vscode/extensions.json` file.
 #   2) To see the full list of the rules, please visit
 #   https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+#   3) The frontmatter blank-line check requires `python3` on the host; it is not
+#   run through Docker. `python3` is present wherever `pre-commit` runs.
 
 # ==============================================================================
 
@@ -60,6 +62,7 @@ function main() {
     else
       files="$files" run-markdownlint-in-docker
     fi
+    files="$files" check-frontmatter-blank-line
   fi
 
   return 0
@@ -70,9 +73,12 @@ function main() {
 #   files=[files to check]
 function run-markdownlint-natively() {
 
-  # shellcheck disable=SC2086
+  local IFS=$'\n'
+  # shellcheck disable=SC2206
+  local -a file_list=($files)
+
   markdownlint \
-    $files \
+    "${file_list[@]}" \
     --config "$PWD/scripts/config/markdownlint.yaml" \
     --ignore-path "$PWD/scripts/config/.markdownlintignore"
 
@@ -89,16 +95,63 @@ function run-markdownlint-in-docker() {
 
   # shellcheck disable=SC2155
   local image=$(name=ghcr.io/igorshubovych/markdownlint-cli docker-get-image-version-and-pull)
-  # shellcheck disable=SC2086
+
+  local IFS=$'\n'
+  # shellcheck disable=SC2206
+  local -a file_list=($files)
+
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
     "$image" \
-      $files \
+      "${file_list[@]}" \
       --config /workdir/scripts/config/markdownlint.yaml \
       --ignore-path /workdir/scripts/config/.markdownlintignore
 
   return 0
+}
+
+# Enforce a blank line between the YAML frontmatter closing `---` and the
+# following content. `markdownlint` does not provide a built-in rule for this
+# (MD022 ignores frontmatter delimiters), so we enforce it here.
+# Arguments (provided as environment variables):
+#   files=[files to check]
+function check-frontmatter-blank-line() {
+
+  # No explicit `return 0` here: the python3 exit status is the result of the
+  # check, so a violation (exit 1) must propagate to fail the check under set -e.
+  python3 - <<'PY'
+import os, sys
+files = [f for f in os.environ.get("files", "").splitlines() if f]
+violations = []
+encoding_warnings = []
+for path in files:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        continue
+    except UnicodeDecodeError as exc:
+        # Surface non-UTF-8 files instead of silently skipping the check for them.
+        encoding_warnings.append(f"{path}: skipped, not valid UTF-8 ({exc})")
+        continue
+    if not lines or lines[0].rstrip() != "---":
+        continue
+    end = None
+    for i in range(1, len(lines)):
+        if lines[i].rstrip() == "---":
+            end = i
+            break
+    if end is None:
+        continue
+    if end + 1 < len(lines) and lines[end + 1].strip() != "":
+        violations.append(f"{path}:{end + 2}: missing blank line after YAML frontmatter")
+if encoding_warnings:
+    sys.stderr.write("\n".join(encoding_warnings) + "\n")
+if violations:
+    sys.stderr.write("\n".join(violations) + "\n")
+    sys.exit(1)
+PY
 }
 
 # ==============================================================================
