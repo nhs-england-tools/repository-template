@@ -20,31 +20,32 @@ _Status_ column names each outstanding PR's stack and its in-stack dependency.
 **PR 22 is a fixed exception**: it must be the very last commit on `v2`, applied
 immediately before merging `v2` into `main` — see its entry for why.
 
-| PR             | What it is about                                                                                                                                                                                                                                                                          | Status                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **PR 1**       | ADR template: require NHS Tech Radar alignment and replace star ratings with a weighted-scoring model (weights + totals).                                                                                                                                                                 | ✅ Merged ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)) |
-| **PR 2**       | Make `check-shell-lint` a real gate — fail on any finding — with a fast single native run and a pinned per-file Docker fallback.                                                                                                                                                          | Stack 1 · base                                                                        |
-| **PR 3**       | Add a discoverable `lint-shell` target and wire it into `make lint`.                                                                                                                                                                                                                      | Stack 1 · needs PR 2                                                                  |
-| **PR 4**       | Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI.                                                                                                                                                                                      | Stack 1 · needs PR 2–3                                                                |
-| **PR 5**       | Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts.                                                                                                                                                                  | Stack 2 · base                                                                        |
-| **PR 6**       | Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation.                                                                                                                                                                                                   | Stack 2 · needs PR 5                                                                  |
-| **PR 7**       | Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`.                                                                                                                                                                    | ✅ Merged ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)) |
-| **PR 8**       | `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing. | ✅ Merged ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)) |
-| **Optional C** | Document shell linting and `FORCE_USE_DOCKER` in the README.                                                                                                                                                                                                                              | Stack 1 · top (docs)                                                                  |
-| **PR 9**       | Enforce a blank line after YAML frontmatter (markdownlint rule + fixes).                                                                                                                                                                                                                  | ✅ Merged ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)) |
-| **PR 10**      | Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config.                                                                                                                                                                               | ✅ Merged ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)) |
-| **PR 11**      | Skip deleted files in the markdown link check (branch mode).                                                                                                                                                                                                                              | ✅ Merged ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)) |
-| **PR 12**      | Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist).                                                                                                                                                                               | ✅ Merged ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)) |
-| **PR 13**      | Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging).                                                                                                                                                                          | Standalone · opt-in (Preview)                                                         |
-| **PR 14**      | Enrich the pull-request template with description/context guidance and a "How to test it" section.                                                                                                                                                                                        | ✅ Merged ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)) |
-| **PR 15**      | Native/Docker tool parity: add native `.tool-versions` pins for the CLIs still missing one (shellcheck, hadolint, lychee, jq) so native runs match the Docker images. Stays on asdf; foundation for PR 20.                                                                                | Stack 4 · base                                                                        |
-| **PR 16**      | Harmonise the "unrecognised check mode" exit code across the quality-script suite so a usage error is distinct from a check failure.                                                                                                                                                      | Stack 3 · needs PR 19                                                                 |
-| **PR 17**      | Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly.                                                                                                                                                | Stack 3 · needs PR 16                                                                 |
-| **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                      | Stack 3 · top · needs PR 17                                                           |
-| **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.          | Stack 3 · base                                                                        |
-| **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                          | Stack 4 · top · needs PR 15, ADR-gated                                                |
-| **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                        | ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)) |
-| **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                           | Standalone · must land last                                                           |
+| PR             | What it is about                                                                                                                                                                                                                                                                                                                                                                                     | Status                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **PR 1**       | ADR template: require NHS Tech Radar alignment and replace star ratings with a weighted-scoring model (weights + totals).                                                                                                                                                                                                                                                                            | ✅ Merged ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)) |
+| **PR 2**       | Make `check-shell-lint` a real gate — fail on any finding — with a fast single native run and a pinned per-file Docker fallback.                                                                                                                                                                                                                                                                     | Stack 1 · base                                                                        |
+| **PR 3**       | Add a discoverable `lint-shell` target and wire it into `make lint`.                                                                                                                                                                                                                                                                                                                                 | Stack 1 · needs PR 2                                                                  |
+| **PR 4**       | Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI.                                                                                                                                                                                                                                                                                                 | Stack 1 · needs PR 2–3                                                                |
+| **PR 5**       | Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts.                                                                                                                                                                                                                                                                             | Stack 2 · base                                                                        |
+| **PR 6**       | Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation.                                                                                                                                                                                                                                                                                                              | Stack 2 · needs PR 5                                                                  |
+| **PR 7**       | Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`.                                                                                                                                                                                                                                                                               | ✅ Merged ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)) |
+| **PR 8**       | `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing.                                                                                                            | ✅ Merged ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)) |
+| **Optional C** | Document shell linting and `FORCE_USE_DOCKER` in the README.                                                                                                                                                                                                                                                                                                                                         | Stack 1 · top (docs)                                                                  |
+| **PR 9**       | Enforce a blank line after YAML frontmatter (markdownlint rule + fixes).                                                                                                                                                                                                                                                                                                                             | ✅ Merged ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)) |
+| **PR 10**      | Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config.                                                                                                                                                                                                                                                                                          | ✅ Merged ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)) |
+| **PR 11**      | Skip deleted files in the markdown link check (branch mode).                                                                                                                                                                                                                                                                                                                                         | ✅ Merged ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)) |
+| **PR 12**      | Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist).                                                                                                                                                                                                                                                                                          | ✅ Merged ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)) |
+| **PR 13**      | Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging).                                                                                                                                                                                                                                                                                     | Standalone · opt-in (Preview)                                                         |
+| **PR 14**      | Enrich the pull-request template with description/context guidance and a "How to test it" section.                                                                                                                                                                                                                                                                                                   | ✅ Merged ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)) |
+| **PR 15**      | Native/Docker tool parity: add native `.tool-versions` pins for the CLIs still missing one (shellcheck, hadolint, lychee, jq) so native runs match the Docker images. Stays on asdf; foundation for PR 20.                                                                                                                                                                                           | Stack 4 · base                                                                        |
+| **PR 16**      | Harmonise the "unrecognised check mode" exit code across the quality-script suite so a usage error is distinct from a check failure.                                                                                                                                                                                                                                                                 | Stack 3 · needs PR 19                                                                 |
+| **PR 17**      | Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly.                                                                                                                                                                                                                                                           | Stack 3 · needs PR 16                                                                 |
+| **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                                                                                                                                 | Stack 3 · top · needs PR 17                                                           |
+| **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.                                                                                                                     | Stack 3 · base                                                                        |
+| **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                                                                                                                                     | Stack 4 · top · needs PR 15, ADR-gated                                                |
+| **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                                                                                                                                   | ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)) |
+| **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                                                                                                                                      | Standalone · must land last                                                           |
+| **PR 23**      | Repo-wide word-splitting/quoting/globbing audit: harden the remaining unquoted `$filter`/`$cmd`/`$args` command-string splats and `for x in $(find …)` loops in `check-file-format.sh`, `scan-secrets.sh`, `docker.lib.sh`, `init.mk`, and `docker.mk` — the same anti-pattern PR 17 fixes, but for the scripts and Makefiles it doesn't touch. Confirms there are no tracked Python files affected. | Stack 3 · top · needs PR 18                                                           |
 
 ## Notes
 
@@ -100,13 +101,13 @@ standalone PRs. Stacks are independent of each other and may be raised in
 parallel; within a stack, branch each PR off the one below it and land them
 bottom-up. The one fixed rule across everything is that **PR 22 lands last**.
 
-| Stack | Theme                      | Order (bottom → top)            | Notes                                                                    |
-| ----- | -------------------------- | ------------------------------- | ------------------------------------------------------------------------ |
-| 1     | Shell-lint gate            | PR 2 → PR 3 → PR 4 → Optional C | Genuine dependency chain; the only hard sequence in the plan             |
-| 2     | Shell hygiene              | PR 5 → PR 6                     | Behaviour-preserving; disjoint files from Stack 1                        |
-| 3     | Quality-script consistency | PR 19 → PR 16 → PR 17 → PR 18   | Regrouped; all re-touch the same `scripts/quality/*` files               |
-| 4     | Toolchain modernisation    | PR 15 → PR 20                   | PR 20 is ADR-gated                                                       |
-| —     | Standalone                 | PR 13; PR 22                    | PR 13 opt-in any time; PR 22 must be the final commit before `v2`→`main` |
+| Stack | Theme                      | Order (bottom → top)                  | Notes                                                                                                                 |
+| ----- | -------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1     | Shell-lint gate            | PR 2 → PR 3 → PR 4 → Optional C       | Genuine dependency chain; the only hard sequence in the plan                                                          |
+| 2     | Shell hygiene              | PR 5 → PR 6                           | Behaviour-preserving; disjoint files from Stack 1                                                                     |
+| 3     | Quality-script consistency | PR 19 → PR 16 → PR 17 → PR 18 → PR 23 | Regrouped; all re-touch the same `scripts/quality/*` files; PR 23 also reaches into `docker.lib.sh` and the Makefiles |
+| 4     | Toolchain modernisation    | PR 15 → PR 20                         | PR 20 is ADR-gated                                                                                                    |
+| —     | Standalone                 | PR 13; PR 22                          | PR 13 opt-in any time; PR 22 must be the final commit before `v2`→`main`                                              |
 
 **Stack 1 — Shell-lint gate.** `PR 2` (real gate in `init.mk`) → `PR 3`
 (`lint-shell` target) → `PR 4` (CI action + job) → `Optional C` (README note). A
@@ -121,12 +122,18 @@ parallel.
 `check-file-format.sh` + adopt `.editorconfigignore`) → `PR 16` (harmonise the
 `*)` unrecognised-mode exit code to `126`) → `PR 17` (bash arrays instead of
 `$files` word-splitting) → `PR 18` (dynamic `check=branch` base via a shared
-`quality.lib.sh`). Originally these were meant to fold into the per-file PRs
+`quality.lib.sh`) → `PR 23` (repo-wide word-splitting/quoting/globbing audit).
+Originally these were meant to fold into the per-file PRs
 7/8/10, but those are now merged and closed, so they are raised as one ordered
 stack instead. Because 16/17/18 each re-touch the same markdown/format scripts,
 stacking them turns unavoidable overlap into clean successive layers: baseline
 hygiene first, then a one-line exit-code change, then the array refactor, then the
-larger base-resolution change on top.
+larger base-resolution change on top. `PR 23` sits on top of all three, extending
+the same word-splitting fix to the scripts PR 17 doesn't touch —
+`check-file-format.sh`'s `$($filter)` splat, `scan-secrets.sh`'s `$cmd` splat, and
+the equivalent `docker.lib.sh` / Makefile `for … in $(find …)` loops — so every
+place the repo builds a dynamic argument or file list from an unquoted string is
+treated consistently.
 
 **Stack 4 — Toolchain modernisation.** `PR 15` (add the missing native
 `.tool-versions` pins — `shellcheck`, `hadolint`, `lychee`, `jq` — so native runs
@@ -146,6 +153,11 @@ PR 15 settles _what_ to pin, PR 20 changes _how_ it is provisioned.
   concurrently; only the order _within_ each stack is fixed.
 - Stack 1's `PR 4` and Stack 4's `PR 15` both edit `.github/workflows/*`, but add
   different jobs/steps — trivial to reconcile.
+- Stack 3's `PR 23` also touches `scripts/docker/docker.lib.sh` (Stack 2's file)
+  and `scripts/init.mk` / `scripts/docker/docker.mk` (untouched by any other
+  stack) to close out the remaining word-splitting instances outside the
+  markdown scripts — a deliberate, small overlap with Stack 2, same precedent as
+  the PR 4/PR 15 case above.
 - Final landing order into `v2`: any of Stacks 1–4 and PR 13 in any order, then
   **PR 22 last**.
 
@@ -1535,24 +1547,49 @@ are green.
 `scripts/quality/format-markdown-tables.sh` (PR 10); optionally
 `scripts/quality/check-file-format.sh` (the `$($filter)` splat)
 
-**Context**: The markdown scripts build a newline-separated `files` string and then
-rely on **unquoted** `$files` (guarded by `# shellcheck disable=SC2086`) to split
-it into arguments for `markdownlint` / `lychee`. This is the repo-wide pattern, but
-it is the classic word-splitting anti-pattern (`[SH-ANT-001]`, `[SH-ANT-006]`): any
-tracked Markdown path containing a space or glob character is split or expanded
-incorrectly. It works today only because the repository has no such paths.
+**Context**: All three scripts build a newline-separated `files` string, but they
+are not equally exposed — the space-splitting half of this bug is already fixed
+in two of the three:
 
-**Proposed change**: Collect the file list into a bash array and expand it quoted,
-removing the `SC2086` disables:
+- `check-markdown-links.sh` expands **`$files` fully unquoted** (`# shellcheck
+disable=SC2086`) under the default `IFS`, so a tracked path containing a space
+  is split into separate arguments, _and_ any literal glob metacharacter (`*`,
+  `?`, `[...]`) in a path is pathname-expanded. Both failure modes apply.
+- `check-markdown-format.sh` and `format-markdown-tables.sh` already scope
+  `IFS=$'\n'` before building `file_list=($files)` (`# shellcheck disable=SC2206`),
+  which **does** stop the space-splitting failure — verified: with `IFS=$'\n'`, a
+  `files` string containing the line `a b.md` yields a single array element
+  `a b.md`, not two. But the array assignment is still an **unquoted** expansion,
+  so bash still performs pathname (glob) expansion on each line: a tracked path
+  containing `*`, `?`, or `[...]` can be silently replaced by an unrelated file
+  that happens to match the pattern elsewhere in the repository. Verified with a
+  live repro: with both `notes[draft].md` and `notesd.md` present in the same
+  directory, `IFS=$'\n'; a=(notes[draft].md)` yields `a[0]=notesd.md` — the
+  **wrong file**, silently, with no error. That is a worse failure than plain
+  word-splitting: it doesn't just mis-parse, it lints/links the wrong file
+  instead of the intended one, and nothing signals that it happened.
+
+So the space-vs-newline half of this bug is essentially solved already for two of
+the three scripts; the glob-expansion half is unsolved in all three, and
+`check-markdown-links.sh` still has neither protection.
+
+**Proposed change**: Replace the string-based `files` variable and the
+`IFS=$'\n'`/`($files)` construct with a real array built via `mapfile`, which
+performs no word-splitting _or_ pathname expansion on its input, removing the
+`SC2086`/`SC2206` disables:
 
 ```bash
 local -a files
-mapfile -t files < <(git ls-files "*.md")   # or the per-mode git command
+mapfile -t files < <(git ls-files "*.md")   # or the per-mode git command, one path per line
 # ...
 if [ "${#files[@]}" -gt 0 ]; then
-  files=("${files[@]}") run-…            # pass via a name-ref or a positional splat
+  run-markdownlint-natively "${files[@]}"   # passed positionally, not via env var
 fi
 ```
+
+Verified: re-running the `notes[draft].md` / `other.md` repro above with
+`mapfile -t files <<< "$files"` instead of the `IFS`/array construct preserves
+both filenames exactly, with no glob expansion.
 
 Because the current design passes `files` to the runner functions **as an
 environment variable** (a string), this PR also adjusts the runner interface to
@@ -1954,3 +1991,97 @@ diff --git a/.github/workflows/cicd-1-pull-request.yaml b/.github/workflows/cicd
    pull_request:
      types: [opened, reopened, synchronize]
 ```
+
+---
+
+## PR 23: Repo-wide word-splitting, quoting, and globbing audit
+
+**Status**: New — surfaced while reviewing PR 17's markdown-script fix. A
+repo-wide scan (grepping every tracked `.sh`, `.mk`, and `Makefile` for
+`SC2086`/`SC2206`/`SC2046` disables, `for … in $(…)` loops, and unquoted
+command-string splats) confirmed the same anti-pattern recurs outside the
+markdown scripts PR 17 covers. Recorded only (not yet built).
+
+**Scope**: Shell script / Makefile correctness / defensive scripting
+**Risk**: Low–Medium (behavioural parity to verify per script; same class of
+risk as PR 17)
+**Type**: hardening
+**Depends on**: PR 18 (branches off the top of Stack 3, after the array pattern
+and base-resolution logic land)
+**Files**: `scripts/quality/check-file-format.sh`,
+`scripts/quality/scan-secrets.sh`, `scripts/docker/docker.lib.sh`,
+`scripts/init.mk`, `scripts/docker/docker.mk`
+
+**Context**: PR 17 fixes the `$files` word-splitting anti-pattern in the three
+markdown scripts only. The repo-wide scan found the identical pattern —
+building a dynamic argument or file list as a plain string, then expanding it
+unquoted — recurring in scripts and Makefiles PR 17 does not touch:
+
+- **`check-file-format.sh`** (`run-editorconfig-natively`/`-in-docker`):
+  `filter` holds a _git command string_ (e.g. `"git diff --diff-filter=ACMRT
+--name-only origin/main"`), executed unquoted via `$($filter)` (`# shellcheck
+disable=SC2046,SC2086`) — double word-splitting: the filter command itself is
+  split by `IFS`, then its file-list output is split/glob-expanded again. The
+  Docker path re-splits it a third time inside a `sh -c "... \$($filter) ..."`
+  string.
+- **`scan-secrets.sh`** (`run-gitleaks-natively`/`-in-docker`, already merged as
+  PR 8): `cmd` holds a full `gitleaks` command line built up piecewise, then
+  invoked unquoted (`gitleaks $cmd`, `docker run … $cmd`, both `# shellcheck
+disable=SC2086`). Any interpolated segment containing a space (a custom
+  `--config`/`--gitleaks-ignore-path`, a `BRANCH_NAME` with a space) would
+  silently mis-split.
+- **`docker.lib.sh`**: `for version in $(_get-all-effective-versions) latest;
+do …` (in `docker-build`, `docker-push`, `docker-clean`) word-splits _and_
+  glob-expands the unquoted command substitution; `docker-check-test`/
+  `docker-run` expand `${args:-}`/`${cmd:-}` unquoted (`# shellcheck
+disable=SC2086,SC2154`) to build the `docker run` argument list from a
+  caller-supplied string — the same class of issue as `scan-secrets.sh`'s
+  `$cmd`.
+- **`init.mk`** (`check-shell-lint`) and **`docker.mk`**
+  (`docker-shellscript-lint`): both do `for file in $$(find … -name "*.sh");
+do …`, unquoted inside a Make recipe — any script path containing a space or
+  glob character is split/expanded incorrectly. PR 2's own rewrite of
+  `check-shell-lint` switches to `echo "$$files" | xargs shellcheck`; plain
+  `xargs` still splits on whitespace by default, so that replacement needs
+  `xargs -d '\n'` (or `-0`) too, rather than being assumed safe — this is
+  flagged here and re-checked as part of PR 23's verification, cross-referenced
+  against PR 2.
+- **Python**: no `.py` files are tracked in the repository (`git ls-files
+'*.py'` is empty). The only embedded Python — the frontmatter-blank-line
+  check's heredoc in `check-markdown-format.sh` — receives the file list via a
+  `files` environment variable and splits it with `.splitlines()`, not shell
+  word-splitting, so it was reviewed and found clean; no fix needed there.
+- Reviewed and found **already correct** (no change needed, listed here so the
+  audit is documented as complete rather than silently skipped): `docker.lib.sh`'s
+  `_replace-image-latest-by-specific-version` (`echo "$content" | while IFS=
+read -r line; do …`); the markdown scripts' `git ls-files … | while IFS= read
+-r f; do …`; and `docker.test.sh`'s `for test in "${tests[@]}"; do …`.
+  `scripts/docker/dgoss.sh` is a vendored upstream script (see its own header)
+  and is explicitly out of scope for repo-authored fixes.
+
+**Proposed change**: Apply the same treatment as PR 17 throughout — replace
+command-string splats with arrays passed positionally, and replace `for x in
+$(find …)` with a `find … -print0 | while IFS= read -r -d '' file; do …` (or a
+quoted array populated via `mapfile -d ''`) so filenames survive intact. For
+`check-file-format.sh` and `scan-secrets.sh`, build the underlying `git`/
+`gitleaks` invocation as a bash array (`cmd=(gitleaks detect --source "$dir"
+…)`) and call it with `"${cmd[@]}"` instead of composing a single string. For
+`docker.lib.sh`'s `docker run` wrappers, accept `args`/`cmd` as arrays rather
+than free-form strings.
+
+**Placement**: New top layer of **Stack 3** (`PR 19` → `PR 16` → `PR 17` →
+`PR 18` → `PR 23`), branched off PR 18. It deliberately also touches
+`scripts/docker/docker.lib.sh` (Stack 2's file) and `scripts/init.mk`/
+`scripts/docker/docker.mk` (untouched by any other stack) — a small, acceptable
+overlap with Stack 2, the same precedent as PR 4/PR 15 both touching
+`.github/workflows/*` above.
+
+**Verification**: For each touched script, add a temporary tracked file/path
+with a space in its name (or a version/branch value with a space where
+applicable) and confirm the command still runs against the exact intended
+target; `shellcheck` passes with the `SC2086`/`SC2046`/`SC2206` disables removed
+(or narrowed to only the cases that genuinely still need them); `make lint` and
+`make test` are green; re-run the grep sweep used to build this audit
+(`SC2086`/`SC2206`/`SC2046` disables and `for … in $(` across every tracked
+`.sh`/`.mk`/`Makefile`) and confirm no unaddressed instance remains outside
+vendored/third-party files.
