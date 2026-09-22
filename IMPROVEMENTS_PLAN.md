@@ -27,13 +27,13 @@ of where it is raised in the stack — see its entry for why.
 | **PR 4**       | Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI.                                                                                                                                                                                      | New · needs PR 2–3                                                                    |
 | **PR 5**       | Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts.                                                                                                                                                                  | Recommended                                                                           |
 | **PR 6**       | Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation.                                                                                                                                                                                                   | Recommended · pattern of PR 5                                                         |
-| **PR 7**       | Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`.                                                                                                                                                                    | ✅ Built locally · 3 of 6                                                             |
-| **PR 8**       | `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing. | ✅ Built locally · 2 of 6                                                             |
+| **PR 7**       | Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`.                                                                                                                                                                    | ✅ Merged ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)) |
+| **PR 8**       | `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing. | ✅ Merged ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)) |
 | **Optional C** | Document shell linting and `FORCE_USE_DOCKER` in the README.                                                                                                                                                                                                                              | Optional                                                                              |
-| **PR 9**       | Enforce a blank line after YAML frontmatter (markdownlint rule + fixes).                                                                                                                                                                                                                  | ✅ Built locally · 4 of 6                                                             |
-| **PR 10**      | Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config.                                                                                                                                                                               | ✅ Built locally · 6 of 6                                                             |
-| **PR 11**      | Skip deleted files in the markdown link check (branch mode).                                                                                                                                                                                                                              | ✅ Built locally · 5 of 6                                                             |
-| **PR 12**      | Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist).                                                                                                                                                                               | ✅ Built locally · 1 of 6                                                             |
+| **PR 9**       | Enforce a blank line after YAML frontmatter (markdownlint rule + fixes).                                                                                                                                                                                                                  | ✅ Merged ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)) |
+| **PR 10**      | Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config.                                                                                                                                                                               | ✅ Merged ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)) |
+| **PR 11**      | Skip deleted files in the markdown link check (branch mode).                                                                                                                                                                                                                              | ✅ Merged ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)) |
+| **PR 12**      | Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist).                                                                                                                                                                               | ✅ Merged ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)) |
 | **PR 13**      | Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging).                                                                                                                                                                          | Optional · needs jq + Preview hooks                                                   |
 | **PR 14**      | Enrich the pull-request template with description/context guidance and a "How to test it" section.                                                                                                                                                                                        | ✅ Merged ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)) |
 | **PR 15**      | Native/Docker tool parity: pin every natively-used CLI in `.tool-versions` to match its Docker image and fix version drift (editorconfig-checker, hadolint, jq, yq). Stays on asdf; foundation for PR 20.                                                                                 | New · foundation for PR 20                                                            |
@@ -42,7 +42,7 @@ of where it is raised in the stack — see its entry for why.
 | **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                      | New · touches PR 7/8 files + PR 19                                                    |
 | **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.          | New · expected · touches PR 7/8/16/18 files                                           |
 | **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                          | New · analysis-only, ADR-gated                                                        |
-| **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                        | New                                                                                   |
+| **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                        | ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)) |
 | **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                           | New · must land last                                                                  |
 
 ## Notes
@@ -89,146 +89,39 @@ of where it is raised in the stack — see its entry for why.
   it fixes `check=branch` base resolution so branch-scoped link checking is correct
   and consistent with the other `lint-*` targets. Optional A and its branch
   `pr/A-lint-all-links` have been removed from this plan and the local stack.
-- **Progress**: PR 1 and PR 14 are merged into `v2` (as
-  [#226](https://github.com/nhs-england-tools/repository-template/pull/226) and
-  [#225](https://github.com/nhs-england-tools/repository-template/pull/225)
-  respectively). All other PRs in the index remain outstanding.
-- **This plan document is its own branch, first in the local stack**: `v2` →
-  **`pr/00-improvements-plan`** (this file, no code) → the six scan-secret +
-  markdown-linting PRs below. Keeping the plan out of the code PRs means it can
-  be reviewed and merged independently of any of them.
-- **Built locally — scan-secret + markdown-linting stack**: this batch has been
-  built as a local stack of six branches on top of `pr/00-improvements-plan`, in
-  the order **PR 12** → **PR 8** → **PR 7** → **PR 9** → **PR 11** → **PR 10**,
-  each branched off the one before it. The two scan-secret PRs are deliberately at
-  the front. **PR 12** (gitleaks allowlist) lands the link-local IP and Terraform
-  lockfile false-positive fixes before any other commit, and **PR 8** hardens
-  `scan-secrets.sh`. Landing these first clears the secret-scan pre-commit blocker
-  (see the next note) so the later markdown PRs are not stopped by unrelated,
-  invalid findings. **PR 7** is the markdown base (both check scripts). **PR 9** and
-  **PR 11** build on it. **PR 10**
-  adds `make format`. Branch names, commit hashes, the review outcome, and the
-  CLI commands to switch, review, and push the stack are in the
-  [Local stacked PRs](#local-stacked-prs--build-record-and-cli) section below.
-- **Secret-scan blocker resolved by PR 12**: while building the stack, the
-  `scan-secrets` pre-commit hook flagged `169.254.0.0` (the documented
-  `169.254.0.0/16` link-local range) through the `ipv4` rule in this plan file and
-  blocked commits. This is a false positive and is fully addressed by **PR 12**,
-  which adds `169.254.x.x` to the gitleaks `ipv4` allowlist. Verified against the
-  regex: the current allowlist does not suppress it, the PR 12 allowlist does, and
-  genuine public IPs are still detected. No extra fix is required, and placing
-  PR 12 first removes the blocker for the rest of the stack.
+- **Progress**: nine PRs are merged into `v2` — PR 1
+  ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)),
+  PR 14 ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)),
+  and the scan-secret + markdown-linting stack: PR 12
+  ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)),
+  PR 8 ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)),
+  PR 7 ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)),
+  PR 9 ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)),
+  PR 11 ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)),
+  PR 10 ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)),
+  plus PR 21 ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)).
+  All other PRs in the index remain outstanding.
 
 ---
 
-## Local stacked PRs — build record and CLI
+## Merged record — scan-secret + markdown-linting stack
 
-This batch was built as a **local** stack of seven branches off `v2` using the
-`gh stack` (gh-stack) extension: the plan document's own branch
-(`pr/00-improvements-plan`), followed by the six scan-secret + markdown-linting
-PRs. Nothing has been pushed to the remote. Every commit passed the full
-pre-commit gate (`scan-secrets`, `check-file-format`, `check-markdown-format`,
-`check-markdown-links`), and `make lint` and `make test` pass on the top of the
-stack.
+The scan-secret + markdown-linting batch was built as a local stack off `v2`,
+reviewed, and has now been merged into `v2` in the order below. Each layer passed
+the full pre-commit gate (`scan-secrets`, `check-file-format`,
+`check-markdown-format`, `check-markdown-links`) and `make lint` / `make test`.
 
-### Build record
+| Order | PR    | Merged PR                                                                 | Summary                                                         |
+| ----- | ----- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1     | PR 12 | [#229](https://github.com/nhs-england-tools/repository-template/pull/229) | gitleaks allowlist: link-local IPs + lockfiles                  |
+| 2     | PR 8  | [#230](https://github.com/nhs-england-tools/repository-template/pull/230) | `scan-secrets.sh` best practices + guard + six check modes      |
+| 3     | PR 7  | [#231](https://github.com/nhs-england-tools/repository-template/pull/231) | markdown check scripts: best practices + guard + Docker workdir |
+| 4     | PR 9  | [#232](https://github.com/nhs-england-tools/repository-template/pull/232) | enforce blank line after YAML frontmatter                       |
+| 5     | PR 11 | [#233](https://github.com/nhs-england-tools/repository-template/pull/233) | skip deleted files in both markdown checks                      |
+| 6     | PR 10 | [#234](https://github.com/nhs-england-tools/repository-template/pull/234) | `make format` via prettier + MD060 rule                         |
 
-Branches are listed bottom (closest to `v2`) to top. Commit hashes are the current
-local values and will change if the stack is rebased or pushed.
-
-| Order | PR    | Branch                         | Commit    | Summary                                                                                         |
-| ----- | ----- | ------------------------------ | --------- | ----------------------------------------------------------------------------------------------- |
-| 0     | —     | `pr/00-improvements-plan`      | `HEAD`    | this plan document (no code)                                                                    |
-| 1     | PR 12 | `pr/12-gitleaks-allowlist`     | `836bce5` | gitleaks allowlist: link-local IPs + lockfiles                                                  |
-| 2     | PR 8  | `pr/08-scan-secrets-hardening` | `cd17054` | `scan-secrets.sh` best practices + guard + 6 check modes + scenario-testing fixes               |
-| 3     | PR 7  | `pr/07-markdown-check-scripts` | `4cde6f5` | markdown check scripts: best practices + guard + explicit Docker workdir + aligned default mode |
-| 4     | PR 9  | `pr/09-frontmatter-blank-line` | `7009b81` | enforce blank line after YAML frontmatter                                                       |
-| 5     | PR 11 | `pr/11-skip-deleted-links`     | `7f7fdf7` | skip deleted files in both markdown checks                                                      |
-| 6     | PR 10 | `pr/10-prettier-tables`        | `e3fcb4e` | `make format` via prettier + MD060 rule                                                         |
-
-### Review outcome
-
-Each layer was reviewed by two independent code-review agents (shell correctness,
-and config/build/security). High-confidence findings were sent back and fixed
-before this record was written:
-
-- **PR 11 `set -e` bug (caught during build):** the deleted-file filter first used
-  `[ -f "$f" ] && printf …`; under `set -euo pipefail` that aborts when the deleted
-  file is last in the list. Replaced with an `if/then/fi` body that always exits 0.
-- **PR 11 scope (review):** the same deleted-file filter was extended to
-  `check-markdown-format.sh` (its `all` mode is the pre-commit and CI default), so
-  the commit now hardens both check scripts.
-- **PR 10 prettier filter (review):** the hand-rolled `.prettierignore` pre-filter
-  fed globs into `grep -E` and could silently format nothing on GNU grep. Removed
-  it; prettier honours `.prettierignore` itself via `--ignore-path`. Also added the
-  deleted-file filter and replaced `echo … | xargs` with a direct argument splat.
-- **PR 9 (review):** documented the `python3` host dependency in the script header.
-
-Both reviewers re-verified the fixes and reported no remaining findings and no
-regressions. All four shell scripts pass `shellcheck`.
-
-### Known limitation (out of scope)
-
-The `branch` check mode of the markdown check scripts can still pass a
-deleted-but-unstaged path to the linter (its second `git diff --name-only` has no
-existence filter). This is pre-existing behaviour, not introduced by this stack,
-and `branch` is not the pre-commit or CI default (both use `check=all`, which is
-fixed here). Left as a follow-up.
-
-### CLI: switch, review, and push the local stack
-
-Prerequisite: the gh-stack extension (`gh extension install github/gh-stack`).
-
-> Note: `v2` may carry uncommitted local changes (for example edits to
-> `Makefile`, `.gitignore`, or `.github/copilot-instructions.md` from unrelated
-> local tooling). Because the stack also edits `Makefile`, git will refuse to
-> switch branches until those are dealt with. Run `git stash` (or commit them)
-> before switching to a stack branch, then `git stash pop` after returning to
-> `v2`. Run `gh stack view --json` from any stack branch, not from `v2` (the
-> trunk is not part of the stack).
-
-Switch between the local PRs:
-
-```bash
-git stash                                          # park any local changes first
-gh stack checkout pr/07-markdown-check-scripts     # jump to a specific layer
-gh stack view --json                               # see the whole stack (JSON)
-gh stack bottom          # go to the first layer above v2 (the plan document)
-gh stack top             # go to the last layer (PR 10)
-gh stack down            # move one layer toward v2
-gh stack up              # move one layer away from v2
-git checkout pr/09-frontmatter-blank-line          # plain git also works
-```
-
-Review the changes, one layer at a time or cumulatively:
-
-```bash
-git --no-pager log --oneline --reverse v2..pr/10-prettier-tables   # the 7 commits
-git show pr/11-skip-deleted-links                                  # one layer: message + diff
-git --no-pager diff v2..pr/10-prettier-tables                      # the whole stack as one diff
-```
-
-Run the quality gates on any layer (checkout the branch first):
-
-```bash
-make lint      # file-format + markdown-format + markdown-links
-make test      # template stub in this repo
-```
-
-Push to the remote only when you are ready (this is the first network step):
-
-```bash
-gh stack push                # push all seven branches, do NOT open PRs
-gh stack submit --auto       # push AND open a draft PR per branch, linked as a stack
-gh stack submit --auto --open   # same, but open the PRs ready for review
-```
-
-To tear the stack down locally without touching the remote:
-
-```bash
-gh stack unstack --local     # remove local stack tracking (keeps the branches)
-git branch -D pr/00-improvements-plan pr/12-gitleaks-allowlist ...   # delete branches if desired
-```
+SonarQube Cloud static analysis (PR 21) was merged separately as
+[#242](https://github.com/nhs-england-tools/repository-template/pull/242).
 
 ---
 
@@ -937,177 +830,49 @@ diff --git a/scripts/docker/tests/docker.test.sh b/scripts/docker/tests/docker.t
 
 ## PR 7: Markdown check scripts — best practices and check-mode guard
 
-**Status**: ✅ Built locally — position 3 of 6 in the scan-secret + markdown-linting
-stack (`v2` → PR 12 → PR 8 → **PR 7** → PR 9 → PR 11 → PR 10). Branch
-off PR 8.
+**Status**: ✅ Merged into `v2` as [#231](https://github.com/nhs-england-tools/repository-template/pull/231).
 
 **Scope**: Shell script quality / defensive scripting
 **Risk**: Low
-**Depends on**: PR 5 (shared conventions; different files, no conflict)
 **Files**: `scripts/quality/check-markdown-format.sh`,
 `scripts/quality/check-markdown-links.sh`
 
-**Context**: Applies the PR 5 patterns (`local check`/`local files`, `return 0`,
-`main`/`is-arg-true` docs) and adds a `*)` catch-all to the `case $check` dispatch
-so an unrecognised mode fails loudly instead of silently producing an empty file
-list. (Upstream `check-file-format.sh` already has this guard; these two scripts
-are the ones missing it among the markdown checks.) It also lands two consistency
-fixes surfaced during review:
-
-- **Explicit `--workdir /workdir` on the markdownlint Docker run.** The command
-  passed repo-relative file paths and absolute config paths but set no working
-  directory, so it worked only because the `markdownlint-cli` image ships with an
-  implicit `WORKDIR /workdir`. `check-markdown-links.sh`, `check-shell-lint.sh`
-  and `scan-secrets.sh` all set `--workdir` explicitly; this makes the markdown
-  format script match and removes the reliance on an image default.
-- **`check-markdown-links.sh` default mode `all` → `working-tree-changes`.** Every
-  caller (pre-commit, the Makefile targets, the CI composite actions) passes
-  `check=all` explicitly, so this only affects bare direct invocations and brings
-  the script's default into line with `check-markdown-format.sh` and
-  `check-file-format.sh`.
-
-**Verification**:
-`make check-markdown-format check=all` and `make check-markdown-links check=all`
-→ ok; `check=nonsense ./scripts/quality/check-markdown-format.sh` → exits `1` with
-`Unrecognised check mode: nonsense`. `shellcheck` passes on both scripts. Docker
-mode resolves relative file paths under `/workdir`, and
-`./scripts/quality/check-markdown-links.sh` with no `check` set now scans
-working-tree changes.
-
-**Diff**: Removed — built locally on `pr/07-markdown-check-scripts`
-(commit `4cde6f5`); see `git show pr/07-markdown-check-scripts` or
-`git diff v2..pr/07-markdown-check-scripts -- scripts/quality/check-markdown-format.sh scripts/quality/check-markdown-links.sh`
-for the change.
+**Summary**: Applies the shared shell conventions and adds a `*)` catch-all to the
+`case $check` dispatch so an unrecognised mode fails loudly instead of silently
+producing an empty file list. Also sets an explicit `--workdir /workdir` on the
+markdownlint Docker run and aligns `check-markdown-links.sh`'s default mode
+(`all` → `working-tree-changes`) with the sibling check scripts.
 
 ---
 
 ## PR 8: `scan-secrets.sh` — best practices, guard, and a six-mode check vocabulary
 
-**Status**: ✅ Built locally — position 2 of 6 in the scan-secret + markdown-linting
-stack (`v2` → PR 12 → **PR 8** → PR 7 → PR 9 → PR 11 → PR 10). Branch
-off PR 12. Brought to the front with PR 12 as part of the scan-secret group.
+**Status**: ✅ Merged into `v2` as [#230](https://github.com/nhs-england-tools/repository-template/pull/230).
 
 **Scope**: Shell script quality / bug fix
 **Risk**: Low
-**Depends on**: PR 5 (shared conventions; single file, no conflict)
 **Files**: `scripts/quality/scan-secrets.sh`, `scripts/init.mk` (make-target help text)
 
-**Context**: Combines the hygiene and correctness fixes for this file with a
-`check` vocabulary that matches the other quality scripts. `local` declarations,
-`main`/`run-check`/`is-arg-true` docs, a `*)` guard (returns `126`, matching the
-documented exit code), the **quoting fix** `--workdir "$dir"` (prevents
-word-splitting on paths with spaces), consistent `--redact` across all modes,
-and explicit exit-code propagation (`run-check` and the `run-gitleaks-*` helpers
-capture and return gitleaks' code) so the aggregated `all` mode cannot mask a
-leak found by an earlier sub-check.
+**Summary**: Hardens `scan-secrets.sh` (`local` declarations, a `*)` guard that
+exits `126`, quoted `--workdir "$dir"`, consistent `--redact`, and explicit
+exit-code propagation so the aggregated `all` mode cannot mask an earlier leak).
+Replaces the old three-mode dispatch with the same six-mode `check` vocabulary as
+the other quality scripts:
 
-**Check-mode redesign**: `scan-secrets.sh` previously understood only
-`whole-history`, `last-commit` and `staged-changes`, with different semantics
-and a different default from the sibling scripts. It now offers the same
-six-mode vocabulary as `check-file-format.sh` / `check-markdown-format.sh` /
-`check-markdown-links.sh`, each mapped to the appropriate gitleaks invocation:
+| `check=`               | Scans                                                       |
+| ---------------------- | ----------------------------------------------------------- |
+| `all`                  | staged + working-tree + branch (a full local check)         |
+| `staged-changes`       | the index (changes staged for commit)                       |
+| `working-tree-changes` | unstaged working-tree modifications                         |
+| `branch`               | commits made on this branch since it diverged from the base |
+| `whole-history`        | every commit on every branch — **the default**              |
+| `last-commit`          | the tip commit only                                         |
 
-| `check=`               | gitleaks invocation                                   | Scans                                                       |
-| ---------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
-| `all`                  | runs the three below, aggregated                      | staged + working-tree + branch (a full local check)         |
-| `staged-changes`       | `protect --staged`                                    | the index (changes staged for commit)                       |
-| `working-tree-changes` | `protect`                                             | unstaged working-tree modifications                         |
-| `branch`               | `detect --log-opts ${BRANCH_NAME:-origin/main}..HEAD` | commits made on this branch since it diverged from the base |
-| `whole-history`        | `detect` (gitleaks' default `git log --all`)          | every commit on every branch — **the default**              |
-| `last-commit`          | `detect --log-opts -1`                                | the tip commit only                                         |
-
-The default is `whole-history` (all commits on all branches), matching the
-`scan-secrets` make target (`check ?= whole-history`) and the CI/pre-commit
-wiring. `branch` is the scoped mode: it only walks this branch's own commits, so
-it does not fail on secrets that live only on an unrelated branch another
-developer pushed. An unrecognised mode prints `Unrecognised check mode` and
-exits `126`.
-
-> Note: this supersedes the earlier interim change that made `whole-history`
-> itself branch-scoped (`--log-opts HEAD`). Per the maintainers' intent
-> (`whole-history` = the most thorough scan, and the "do not change
-> `check=whole-history`" note on the CI action), `whole-history` again scans all
-> branches, and the new `branch` mode carries the scoped behaviour. CI and the
-> pre-commit hook remain on `check=whole-history`; switch them to `check=branch`
-> if per-branch isolation is preferred over full-history scanning.
-
-**Native/Docker parity fix (kept from the prior round)**: gitleaks' Fingerprint
-is `<commit>:<file>:<rule>:<line>`. On a developer machine with a customised
-global git config (e.g. `git config --global log.date relative`, a common
-dotfiles setting), native gitleaks inherits it and its git-log parser drops the
-commit hash from findings (`Commit: ""`), whereas the pinned Docker image runs
-its own bundled git with no user config. The scan still fails either way (no
-security gap), but the Fingerprint text would diverge between a developer's
-native run and CI's Docker run of the identical commit, silently breaking
-`.gitleaks-baseline.json` suppression consistency. `run-gitleaks-natively` now
-runs gitleaks with `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`,
-making native fingerprints deterministic and identical to Docker's.
-
-**Scenario testing (this update)** — every claim below was proven twice, with
-two independent fixture sets, in disposable `/tmp` sandboxes that copied this
-script, `docker.lib.sh`, `gitleaks.toml` and `.tool-versions` verbatim and ran
-the real code paths (never the real repo). A delegated agent used
-`aws-access-token` fixtures; an independent judging pass used high-entropy
-`generic-api-key` fixtures. Both reached identical conclusions. The sandbox
-planted five distinct secrets: one on an unmerged `other` branch (S_OTHER), two
-committed on the `feature` branch (S_BRANCH in commit C1, S_LAST in the tip
-commit C2), one unstaged working-tree edit (S_WT), and one staged-only file
-(S_STAGED). Results, checked on the `feature` branch:
-
-| `check=`               | Finds                                          | Correctly excludes                     | Exit |
-| ---------------------- | ---------------------------------------------- | -------------------------------------- | ---- |
-| `staged-changes`       | S_STAGED                                       | S_WT, committed, other-branch          | 1    |
-| `working-tree-changes` | S_WT                                           | S_STAGED, committed, other-branch      | 1    |
-| `branch`               | S_BRANCH + S_LAST                              | S_OTHER, uncommitted                   | 1    |
-| `last-commit`          | S_LAST (tip only)                              | S_BRANCH (earlier commit), uncommitted | 1    |
-| `whole-history`        | S_BRANCH + S_LAST + **S_OTHER**                | uncommitted                            | 1    |
-| `all`                  | S_STAGED + S_WT + S_BRANCH + S_LAST (3 passes) | S_OTHER                                | 1    |
-| default (no `check`)   | identical to `whole-history`                   | —                                      | 1    |
-| invalid (`bogus`)      | — (`Unrecognised check mode`)                  | —                                      | 126  |
-
-The decisive proofs: `whole-history` finds the unmerged **other-branch** secret
-(S_OTHER) — confirming the `--all` traversal — while `branch` and `all` exclude
-it; `last-commit` finds only the tip commit; staged vs working-tree are cleanly
-separated; and `all` performs exactly three gitleaks passes and fails if any
-finds a leak.
-
-**Native vs Docker parity** was verified for all six modes plus the default and
-invalid cases: identical exit codes and identical finding sets, with matching
-fingerprints (including commit hashes for the detect modes, thanks to the
-`GIT_CONFIG` isolation above). The `detect` modes (`branch`, `whole-history`,
-`last-commit`) are fully robust. The `staged-changes` mode is likewise robust
-(it diffs the index, not the working tree).
-
-**Documented non-issue (working-tree-changes + Docker)**: running a native
-gitleaks scan and a Docker gitleaks scan back-to-back on the _same_ working tree
-can make the second (Docker) `working-tree-changes` scan miss the change,
-because the native run rewrites git's racy-index stat cache and the container's
-older git then sees the unstaged file as clean across the bind-mount boundary.
-This is a test-sequencing artifact, not a production path — a real scan runs
-once, via one runtime; a single Docker `working-tree-changes` run (even after a
-normal IDE `git status`/`git diff`) detects the secret correctly, and both
-`staged-changes` and all `detect` modes are immune. On developer machines
-gitleaks is a pinned native tool, so the local `protect` modes run natively in
-practice, and CI/pre-commit use `whole-history` (a `detect` mode).
-
-**Verification**: `make scan-secrets check=<mode>` for every mode runs on the
-real tree; `check=bogus` → `Unrecognised check mode` and exit `126`;
-`make check-shell-lint`, `make lint` and `make test` all pass on top of the
-full 6-branch stack; real-tree `check=whole-history` (all branches, ~3.6 MB) and
-`check=branch` scans are clean.
-
-**Diff**: Removed — built locally on `pr/08-scan-secrets-hardening`
-(commit `cd17054`); see `git show pr/08-scan-secrets-hardening` or
-`git diff v2..pr/08-scan-secrets-hardening -- scripts/quality/scan-secrets.sh`
-for the change. Summary of the behavioural core: `main()` dispatches `all` to
-three aggregated `run-check` calls and every other mode (`staged-changes`,
-`working-tree-changes`, `branch`, `whole-history`, `last-commit`) to a single
-`run-check`; `run-check` and the `run-gitleaks-*` helpers capture gitleaks'
-exit code (`|| rc=$?`) and `return "$rc"` so the `all` aggregation is correct,
-and `run-gitleaks-natively` prefixes the call with
-`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`. `scripts/init.mk`
-updates the make-target help to
-`check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit`.
+The default stays `whole-history`, matching the `scan-secrets` make target and the
+CI/pre-commit wiring; the new `branch` mode carries the scoped behaviour. A
+native/Docker fingerprint-parity fix runs native gitleaks with
+`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null` so a developer's global
+git config cannot make native fingerprints diverge from CI's Docker run.
 
 ---
 
@@ -1126,185 +891,70 @@ adopting the template.
 
 ## PR 9: Enforce a blank line after YAML frontmatter
 
-**Status**: ✅ Built locally — position 4 of 6 in the scan-secret + markdown-linting
-stack (`v2` → PR 12 → PR 8 → PR 7 → **PR 9** → PR 11 → PR 10). Branch
-off PR 7.
+**Status**: ✅ Merged into `v2` as [#232](https://github.com/nhs-england-tools/repository-template/pull/232).
 
 **Scope**: Markdown quality
 **Risk**: Low
-**Depends on**: PR 7 (same file — `check-markdown-format.sh`)
 **Files**: `scripts/quality/check-markdown-format.sh`
 
-**Context**: markdownlint does not enforce a blank line between a file's closing
+**Summary**: markdownlint does not enforce a blank line between a file's closing
 YAML frontmatter `---` and the first content line (MD022 ignores frontmatter
 delimiters). A small `check-frontmatter-blank-line` function, invoked after
-markdownlint, flags files whose content starts immediately after the
-frontmatter. Useful for repositories whose instruction/prompt/ADR files begin with
-frontmatter. Dependency: `python3` only (already present wherever `pre-commit`
-runs); native, no Docker path needed.
-
-**Verification**: a `.md` file with frontmatter immediately followed by content
-fails with `missing blank line after YAML frontmatter`; inserting the blank line
-passes. `make check-markdown-format check=all` stays green on the current tree.
-
-**Diff**: Removed — built locally on `pr/09-frontmatter-blank-line`
-(commit `7009b81`); see `git show pr/09-frontmatter-blank-line` or
-`git diff v2..pr/09-frontmatter-blank-line -- scripts/quality/check-markdown-format.sh`
-for the change.
+markdownlint, flags files whose content starts immediately after the frontmatter.
+Native, `python3`-only (already present wherever `pre-commit` runs).
 
 ---
 
 ## PR 10: Auto-format markdown tables with Prettier
 
-**Status**: ✅ Built locally — position 6 of 6 (last) in the scan-secret +
-markdown-linting stack (`v2` → PR 12 → PR 8 → PR 7 → PR 9 → PR 11 →
-**PR 10**). Branch off PR 11. Raised last because it introduces a new runtime
-dependency (Node/`npx` or the Docker `node` image) and has no code dependency on
-the earlier PRs.
+**Status**: ✅ Merged into `v2` as [#234](https://github.com/nhs-england-tools/repository-template/pull/234).
 
 **Scope**: Markdown tooling / developer experience
 **Risk**: Low — **adds a new runtime dependency** (Node/`npx` or the Docker `node` image)
-**Depends on**: nothing (independent; complements PR 7/9)
 **Files**: `scripts/quality/format-markdown-tables.sh` (new),
 `scripts/config/prettierrc.yaml` (new), `scripts/config/.prettierignore` (new),
 `scripts/config/markdownlint.yaml`, `Makefile`, `.tool-versions`
 
-**Context**: This implements the `format` target (a TODO stub in `v2`) as a
-Prettier wrapper that aligns markdown tables to the MD060 `aligned` style, run
-either natively via `npx prettier@3` or through the pinned `node` Docker image.
-Tables are common in READMEs, ADRs, and guides, and manual alignment is tedious —
-this makes `make format` do it automatically and `make lint-markdown-format`
-enforce it via the accompanying MD060 rule.
-
-**Dependency note**: this is the only markdown item that adds a new runtime
-dependency — Node.js/`npx`, or a running Docker daemon plus the pinned `node`
-image. The cost is contained: Prettier is scoped to markdown **tables only**
-(`proseWrap: preserve` prevents any prose or code reformatting), and the script
-falls back to the pinned Docker `node` image when `npx` is absent, so a local Node
-install is not strictly required.
-
-**Native/Docker parity note**: `.tool-versions` pins the `node` Docker image
-(`docker/node 22.23.2-slim@sha256:…`) for the container path. To keep native and
-Docker execution on the same runtime — and to follow the template's dual-pin
-convention already used for `editorconfig-checker` and `gitleaks` — a **matching
-native pin `nodejs 22.23.2`** is added to the asdf section. That is the exact Node
-version inside the pinned digest (read from the image), with a
-`keep in sync with the nodejs version above` note on the Docker line. This also
-populates the `nodejs_version` that the CI pipeline already extracts from
-`.tool-versions` (`grep "^nodejs\s"` in `cicd-1-pull-request.yaml` /
-`cicd-3-deploy.yaml`), which was previously empty. The Docker tag was **narrowed
-from `22-slim` to `22.23.2-slim`** so it reads as an exact version like every other
-pin in the file (`gitleaks v8.30.0`, `shellcheck v0.11.0`, …) and visibly matches the
-native `nodejs` pin. This is cosmetic-but-consistent: `docker.lib.sh` pulls **by
-digest** (`docker pull node@sha256:…`) and only uses the tag as a local label, so the
-**digest is the true immutability guarantee** — indeed the live `22-slim` and even
-`22.23.2-slim` tags have since been rebuilt to a newer digest, while the pinned digest
-stays fixed at the validated 22.23.2 image. When bumping Node, update the native pin,
-the Docker tag, and the digest together. Note the tool that actually governs
-`make format` output is Prettier (`npx --yes prettier@3`), whose exact 3.x is resolved
-at runtime in both paths; pinning Prettier exactly (for example `prettier@3.3.3`) would
-be the
-higher-impact determinism follow-up.
-
-**New/changed files**: `scripts/quality/format-markdown-tables.sh` (new),
-`scripts/config/prettierrc.yaml` (new), `scripts/config/.prettierignore` (new),
-`scripts/config/markdownlint.yaml` (adds MD060), `Makefile` (implements the
-`format` target), `.tool-versions` (pins the `node` image plus the matching
-native `nodejs` version).
-
-**Diff**: Removed — built locally on `pr/10-prettier-tables`
-(commit `e3fcb4e`); see `git show pr/10-prettier-tables` or
-`git diff v2..pr/10-prettier-tables` for the change.
-
-**Verification**: `make format` aligns tracked `*.md` tables in place;
-`make lint-markdown-format check=all` passes MD060; `FORCE_USE_DOCKER=true make format`
-uses the pinned node image.
+**Summary**: Implements the `format` target (previously a TODO stub) as a Prettier
+wrapper that aligns markdown tables to the MD060 `aligned` style, run either
+natively via `npx prettier@3` or through the pinned `node` Docker image. Prettier
+is scoped to tables only (`proseWrap: preserve`), and `.tool-versions` gains a
+matching native `nodejs` pin alongside the pinned `node` Docker image so native
+and Docker execution share the same runtime. `make lint-markdown-format` enforces
+the MD060 rule.
 
 ---
 
 ## PR 11: Skip deleted files in the markdown link check
 
-**Status**: ✅ Built locally — position 5 of 6 in the scan-secret + markdown-linting
-stack (`v2` → PR 12 → PR 8 → PR 7 → PR 9 → **PR 11** → PR 10). Branch
-off PR 9 (or off PR 7, since both touch different files with no conflict).
+**Status**: ✅ Merged into `v2` as [#233](https://github.com/nhs-england-tools/repository-template/pull/233).
 
 **Scope**: Robustness
 **Risk**: Low
-**Depends on**: PR 7 (same file — `check-markdown-links.sh`)
 **Files**: `scripts/quality/check-markdown-links.sh`
 
-**Context**: In `check=all` mode the link checker feeds `git ls-files "*.md"`
-straight to lychee. `git ls-files` can list a tracked file that no longer exists on
-disk (deleted but not yet staged), making lychee error on a missing path. The fix
-filters the list to existing files only — a small, self-contained robustness fix.
-
-**Verification**: `make check-markdown-links check=all` succeeds even when a tracked
-`*.md` file is deleted in the working tree but not yet staged.
-
-**Diff**: Removed — built locally on `pr/11-skip-deleted-links`
-(commit `7f7fdf7`); see `git show pr/11-skip-deleted-links` or
-`git diff v2..pr/11-skip-deleted-links` for the change.
+**Summary**: In `check=all` mode the link checker fed `git ls-files "*.md"`
+straight to lychee, which can list a tracked file deleted but not yet staged,
+making lychee error on a missing path. The fix filters the list to existing files
+only. The same deleted-file filter was extended to `check-markdown-format.sh`.
 
 ---
 
 ## PR 12: Reduce gitleaks false positives (link-local IPs + lockfile allowlist)
 
-**Status**: ✅ Built locally — position 1 of 6 in the scan-secret +
-markdown-linting stack (`v2` → **PR 12** → PR 8 → PR 7 → PR 9 → PR 11 →
-PR 10). Branch off `v2`. Placed first so the gitleaks allowlist fix lands before
-any other commit and stops the link-local IP false positive from blocking the rest
-of the stack.
+**Status**: ✅ Merged into `v2` as [#229](https://github.com/nhs-england-tools/repository-template/pull/229).
 
 **Scope**: Secret-scanning config
 **Risk**: Low
-**Depends on**: nothing
 **Files**: `scripts/config/gitleaks.toml`
 
-**Context**: Extends the gitleaks allowlist with two general-purpose, low-risk
-categories: the `169.254.0.0/16` link-local IPv4 range in the IP-address
-allowlist regex, and a comprehensive dependency-lockfile allowlist covering the
-most popular and modern Python, JavaScript/TypeScript, and Terraform/OpenTofu
-tooling (their hashes routinely trip secret scanners). Both reduce false
-positives for any repository without weakening real secret detection.
-
-**Lockfile coverage (broadened from the original enumerated list)**: rather than
-naming each lockfile individually, the allowlist uses a single regex matching
-any path ending in `.lock` (optionally followed by another extension), at any
-depth — covering Python (`poetry.lock`, `Pipfile.lock`, `uv.lock`, `pdm.lock`),
-JavaScript/TypeScript (`yarn.lock`, `bun.lock`, `deno.lock`), and
-Terraform/OpenTofu (`.terraform.lock.hcl`). `gitleaks` `paths` entries are
-regular expressions, not globs — a literal glob such as `*.lock` would crash
-gitleaks outright (invalid regex, no argument for the repetition operator), so
-proper regex is used. Verified empirically against the installed gitleaks
-binary: `poetry.lock`, `Pipfile.lock`, `uv.lock`, `pdm.lock`, `yarn.lock`,
-`bun.lock`, `deno.lock`, and `.terraform.lock.hcl` are all suppressed
-(including nested paths); `package-lock.json`, `npm-shrinkwrap.json`, and
-`pnpm-lock.yaml` remain covered by gitleaks' own default global allowlist
-(`useDefault = true`), not by this pattern; negative-control files (e.g.
-`requirements.txt`, `unlock.py`, `lockdown.txt`) are still flagged; and a
-genuine injected secret is still detected. Trade-off: this is broader than an
-enumerated list — it would also allowlist any future file whose name happens
-to end in `.lock`, which is an accepted, documented risk for the reduction in
-maintenance burden. The one accepted gap is Bun's legacy binary lockfile
-(`bun.lockb`), which does not end in `.lock` and is not in gitleaks' own
-defaults either; Bun's current default format, the text-based `bun.lock`, is
-covered.
-
-**Resolves a real blocker**: during the first attempt to build this stack, the
-`scan-secrets` pre-commit hook flagged `169.254.0.0` (the `169.254.0.0/16`
-link-local example in `IMPROVEMENTS_PLAN.md`) through the `ipv4` rule and blocked
-every commit. The `169.254.x.x` allowlist entry below removes exactly that false
-positive. Verified against the regex: the current allowlist does not match
-`169.254.0.0`, the updated allowlist does, and genuine public IPs remain detected.
-This is why PR 12 sits at the base of the stack.
-
-**Verification**: `make scan-secrets check=whole-history` no longer flags
-lockfile hashes or link-local addresses; genuine secrets are still detected.
-
-**Diff**: Removed — built locally on `pr/12-gitleaks-allowlist`
-(commit `836bce5`); see `git show pr/12-gitleaks-allowlist` or
-`git diff v2..pr/12-gitleaks-allowlist -- scripts/config/gitleaks.toml`
-for the change.
+**Summary**: Extends the gitleaks allowlist with two general-purpose, low-risk
+categories: the `169.254.0.0/16` link-local IPv4 range in the IP-address allowlist
+regex, and a single regex matching any path ending in `.lock` (at any depth) to
+cover Python, JavaScript/TypeScript, and Terraform/OpenTofu lockfiles whose hashes
+routinely trip secret scanners. `package-lock.json`, `npm-shrinkwrap.json`, and
+`pnpm-lock.yaml` remain covered by gitleaks' own default global allowlist. Both
+reduce false positives without weakening real secret detection.
 
 ---
 
@@ -2148,147 +1798,33 @@ migrating `uv` under mise.
 
 ## PR 21: SonarQube Cloud scan via the official GitHub Action
 
+**Status**: ✅ Merged into `v2` as [#242](https://github.com/nhs-england-tools/repository-template/pull/242).
+
 **Scope**: CI / quality gate
 **Risk**: Low — new job only; skips gracefully if `SONAR_TOKEN` is not available
 (for example on a fork pull request, or before the token is configured)
-**Depends on**: nothing
 **Files**: `.github/workflows/stage-2-test.yaml`, `.github/workflows/cicd-1-pull-request.yaml`,
 `.gitignore`
 
-**Context**: `v2` currently has no static-analysis integration at all (no
-`sonar-scanner.properties`, no CI job). The GitHub organisation has since moved to
-a SonarQube Cloud **Scoped Organization Token** (Team plan) — project-scoped,
-"Execute Analysis" only, so it no longer needs to be owned by a dedicated
-bot/service account — and disabled **Automatic Analysis** in the SonarQube Cloud
-UI, which means analysis results now only reach SonarQube Cloud via CI.
+**Summary**: Adds a `perform-static-analysis` job to `stage-2-test.yaml` calling
+the official [`SonarSource/sonarqube-scan-action`](https://github.com/SonarSource/sonarqube-scan-action)
+(pinned by SHA), so SonarQube Cloud analysis runs on PRs and `main` pushes now
+that Automatic Analysis is disabled. Analysis-scope properties are passed as
+inline `args:` (no composite action, no `sonar-scanner.properties` file), and the
+scan step is skipped rather than failed when `SONAR_TOKEN` is absent. `SONAR_TOKEN`
+is a required `workflow_call` secret passed explicitly from
+`cicd-1-pull-request.yaml`.
 
-This PR adds a `perform-static-analysis` job directly to `stage-2-test.yaml`,
-calling the official [`SonarSource/sonarqube-scan-action`](https://github.com/SonarSource/sonarqube-scan-action)
-(pinned by SHA). Deliberately **no composite action and no custom shell script**:
-the action already downloads and GPG-verifies the scanner CLI, and the scanner's
-own GitHub Actions CI-detection automatically reports the correct branch (on a
-`push`) or PR context (on a `pull_request`) from the standard `GITHUB_*` runner
-environment variables — no explicit `sonar.branch.name` / `sonar.pullrequest.*`
-properties are needed. All analysis-scope properties are passed as inline `args:`
-rather than a `sonar-scanner.properties` file, keeping this PR to workflow-only
-changes.
+**Follow-up (admin-side)**: after the job has run at least once, add
+`SonarCloud Code Analysis` as a required status check on `main` via a branch
+ruleset so a failed quality gate blocks merge. This also depends on the SonarQube
+Cloud project being a **bound** project for PR decoration. GitHub's required-checks
+picker only lists checks that have reported at least once, so this can only be
+configured after this job has run successfully.
 
-Because `secrets` isn't available in `steps.if` conditions, a job-level `env` var
-captures whether the token is set, and the scan step is skipped (not failed) when
-it isn't. `SONAR_TOKEN` is declared as a required `workflow_call` secret on
-`stage-2-test.yaml` and passed through explicitly from `cicd-1-pull-request.yaml`
-(no `secrets: inherit`, matching least-privilege secret exposure).
-
-**Prerequisites (admin-side, not part of this PR's diff)**: a GitHub Admin must
-create the `SONAR_TOKEN` repository secret (the Scoped Organization Token) and the
-`SONAR_ORGANISATION_KEY` / `SONAR_PROJECT_KEY` repository variables, and confirm
-the SonarQube Cloud project already exists with Automatic Analysis turned off. The
-project must also be a **bound** project (created via GitHub import/binding, i.e.
-the DevOps Platform Integration) — pull request decoration (the inline
-comment/check on the PR) is only supported on a bound project and is a separate
-requirement from the token. Without it, this job still uploads results to the
-SonarQube Cloud UI, but nothing appears on the GitHub PR itself. Once bound, add
-`SonarCloud Code Analysis` (the literal GitHub check name Sonar posts — unaffected
-by the product's "SonarQube Cloud" rebrand) as a required status check on `main`
-via a branch ruleset or classic branch protection rule ("Require status checks to
-pass before merging"), so a failed quality gate actually blocks merge rather than
-being purely informational. **Sequencing note**: GitHub's required-checks picker
-only lists checks that have already reported at least once, so this cannot be
-configured until after PR 21 has been merged and the job has run successfully at
-least once — it is a follow-up admin action, not something that can be done in
-advance.
-
-**Known limitation (out of scope, fixed by PR 22)**: `cicd-1-pull-request.yaml`'s
-`push` trigger still matches `branches: ["**"]` on `v2` (unlike `main`, which
-restricts it to `main` only). A commit to an open PR branch therefore fires both
-a `push` and a `pull_request: synchronize` event, so this job — like the rest of
-`test-stage` — currently runs twice per PR commit, doubling both CI time and
-SonarQube Cloud analysis submissions. **PR 22** carries this fix, but must be
-sequenced last (immediately before merging `v2` into `main`) rather than
-landing here — see PR 22 for why.
-
-**Verification**: open a PR → the "Perform static analysis" job runs and reports
-to SonarQube Cloud; a PR from a fork (no secrets) → the job's checkout step runs
-but the scan step is skipped, job still succeeds; merge to `main` → the same job
-re-runs as a branch analysis.
-
-**Diff**:
-
-```diff
-diff --git a/.gitignore b/.gitignore
---- a/.gitignore
-+++ b/.gitignore
-@@ -3,4 +3,7 @@
- *.code-workspace
- !project.code-workspace
-
-+# SonarQube Cloud scanner working directory
-+.scannerwork
-+
- # Please add your custom content below!
-```
-
-```diff
-diff --git a/.github/workflows/stage-2-test.yaml b/.github/workflows/stage-2-test.yaml
---- a/.github/workflows/stage-2-test.yaml
-+++ b/.github/workflows/stage-2-test.yaml
-@@ -18,6 +18,10 @@ on:
-       version:
-         description: "Version of the software, set by the CI/CD pipeline workflow"
-         required: true
-         type: string
-+    secrets:
-+      SONAR_TOKEN:
-+        description: "SonarQube Cloud token for static analysis"
-+        required: true
-
- permissions:
-   contents: read
-
-@@ -33,3 +37,20 @@ jobs:
-       - name: "Save the result of fast test suite"
-         run: |
-           echo "Nothing to save"
-+  perform-static-analysis:
-+    name: "Perform static analysis"
-+    needs: [test-unit]
-+    runs-on: ubuntu-latest
-+    permissions:
-+      contents: read
-+    timeout-minutes: 5
-+    env:
-+      SONAR_TOKEN_SET: ${{ secrets.SONAR_TOKEN != '' }} # 'secrets' isn't available in steps.if, so capture it here first
-+    steps:
-+      - name: "Checkout code"
-+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-+        with:
-+          fetch-depth: 0 # Full history improves the relevancy of reporting
-+      - name: "Perform static analysis"
-+        if: env.SONAR_TOKEN_SET == 'true'
-+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
-+        env:
-+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-+        with:
-+          args: >
-+            -Dsonar.organization=${{ vars.SONAR_ORGANISATION_KEY }}
-+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-+            -Dsonar.sources=.
-+            -Dsonar.sourceEncoding=UTF-8
-+            -Dsonar.qualitygate.wait=true
-```
-
-```diff
-diff --git a/.github/workflows/cicd-1-pull-request.yaml b/.github/workflows/cicd-1-pull-request.yaml
---- a/.github/workflows/cicd-1-pull-request.yaml
-+++ b/.github/workflows/cicd-1-pull-request.yaml
-@@ -90,6 +90,8 @@ jobs:
-       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
-       python_version: "${{ needs.metadata.outputs.python_version }}"
-       version: "${{ needs.metadata.outputs.version }}"
-+    secrets:
-+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-   build-stage: # Recommended maximum execution time is 3 minutes
-```
+**Known limitation (fixed by PR 22)**: on `v2` the `push` trigger still matches
+`branches: ["**"]`, so this job runs twice per PR commit (once for `push`, once for
+`pull_request: synchronize`). **PR 22** carries the fix and must land last.
 
 ---
 
