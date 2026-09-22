@@ -1,94 +1,82 @@
 # Improvements Plan
 
-Each recommended pull request is self-contained, carries the context needed to
-raise it, and (except where noted) includes a copy-paste-ready diff. The PRs form
-a single incremental pipeline intended to be raised as
-[GitHub stacked pull requests](https://docs.github.com/en/pull-requests/how-tos/stacked-pull-requests),
-each branch built on the one before it; dependencies are stated explicitly where
-they exist.
+This plan tracks a batch of repository-template improvements. Nine PRs have
+already merged into `v2` (see [Merged record](#merged-record--scan-secret--markdown-linting-stack));
+the remaining work is organised into a small number of **independent stacks** —
+each an ordered chain of PRs that share files and build on one another — plus two
+standalone PRs, all set out in [Outstanding work](#outstanding-work--proposed-stacks).
+Stacks are independent of each other and can be raised in parallel; within a
+stack, branch each PR off the one below it. Every outstanding PR is self-contained
+and carries the context needed to raise it.
 
 ---
 
 ## PR index — what each PR is about
 
-All 22 PRs plus one optional tweak, with a one-line summary each; full detail
-is in the correspondingly named section below. They are listed in application
-order — raise them as a stack, each PR branched off the one above it; per-PR
-dependencies are called out in the _Status_ column and in the [Notes](#notes).
-**PR 22 is a fixed exception to "application order"**: it must be the very last
-commit on `v2`, applied immediately before merging `v2` into `main`, regardless
-of where it is raised in the stack — see its entry for why.
+All 22 PRs plus one optional tweak, with a one-line summary each; full detail is
+in the correspondingly named section below, and the outstanding ones are grouped
+into stacks in [Outstanding work](#outstanding-work--proposed-stacks). The
+_Status_ column names each outstanding PR's stack and its in-stack dependency.
+**PR 22 is a fixed exception**: it must be the very last commit on `v2`, applied
+immediately before merging `v2` into `main` — see its entry for why.
 
 | PR             | What it is about                                                                                                                                                                                                                                                                          | Status                                                                                |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | **PR 1**       | ADR template: require NHS Tech Radar alignment and replace star ratings with a weighted-scoring model (weights + totals).                                                                                                                                                                 | ✅ Merged ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)) |
-| **PR 2**       | Make `check-shell-lint` a real gate — fail on any finding — with a fast single native run and a pinned per-file Docker fallback.                                                                                                                                                          | Recommended                                                                           |
-| **PR 3**       | Add a discoverable `lint-shell` target and wire it into `make lint`.                                                                                                                                                                                                                      | Recommended · needs PR 2                                                              |
-| **PR 4**       | Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI.                                                                                                                                                                                      | New · needs PR 2–3                                                                    |
-| **PR 5**       | Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts.                                                                                                                                                                  | Recommended                                                                           |
-| **PR 6**       | Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation.                                                                                                                                                                                                   | Recommended · pattern of PR 5                                                         |
+| **PR 2**       | Make `check-shell-lint` a real gate — fail on any finding — with a fast single native run and a pinned per-file Docker fallback.                                                                                                                                                          | Stack 1 · base                                                                        |
+| **PR 3**       | Add a discoverable `lint-shell` target and wire it into `make lint`.                                                                                                                                                                                                                      | Stack 1 · needs PR 2                                                                  |
+| **PR 4**       | Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI.                                                                                                                                                                                      | Stack 1 · needs PR 2–3                                                                |
+| **PR 5**       | Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts.                                                                                                                                                                  | Stack 2 · base                                                                        |
+| **PR 6**       | Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation.                                                                                                                                                                                                   | Stack 2 · needs PR 5                                                                  |
 | **PR 7**       | Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`.                                                                                                                                                                    | ✅ Merged ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)) |
 | **PR 8**       | `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing. | ✅ Merged ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)) |
-| **Optional C** | Document shell linting and `FORCE_USE_DOCKER` in the README.                                                                                                                                                                                                                              | Optional                                                                              |
+| **Optional C** | Document shell linting and `FORCE_USE_DOCKER` in the README.                                                                                                                                                                                                                              | Stack 1 · top (docs)                                                                  |
 | **PR 9**       | Enforce a blank line after YAML frontmatter (markdownlint rule + fixes).                                                                                                                                                                                                                  | ✅ Merged ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)) |
 | **PR 10**      | Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config.                                                                                                                                                                               | ✅ Merged ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)) |
 | **PR 11**      | Skip deleted files in the markdown link check (branch mode).                                                                                                                                                                                                                              | ✅ Merged ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)) |
 | **PR 12**      | Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist).                                                                                                                                                                               | ✅ Merged ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)) |
-| **PR 13**      | Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging).                                                                                                                                                                          | Optional · needs jq + Preview hooks                                                   |
+| **PR 13**      | Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging).                                                                                                                                                                          | Standalone · opt-in (Preview)                                                         |
 | **PR 14**      | Enrich the pull-request template with description/context guidance and a "How to test it" section.                                                                                                                                                                                        | ✅ Merged ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)) |
-| **PR 15**      | Native/Docker tool parity: pin every natively-used CLI in `.tool-versions` to match its Docker image and fix version drift (editorconfig-checker, hadolint, jq, yq). Stays on asdf; foundation for PR 20.                                                                                 | New · foundation for PR 20                                                            |
-| **PR 16**      | Harmonise the "unrecognised check mode" exit code across the quality-script suite so a usage error is distinct from a check failure.                                                                                                                                                      | New · touches PR 7/8 files + PR 19                                                    |
-| **PR 17**      | Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly.                                                                                                                                                | New · touches PR 7/10 files                                                           |
-| **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                      | New · touches PR 7/8 files + PR 19                                                    |
-| **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.          | New · expected · touches PR 7/8/16/18 files                                           |
-| **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                          | New · analysis-only, ADR-gated                                                        |
+| **PR 15**      | Native/Docker tool parity: add native `.tool-versions` pins for the CLIs still missing one (shellcheck, hadolint, lychee, jq) so native runs match the Docker images. Stays on asdf; foundation for PR 20.                                                                                | Stack 4 · base                                                                        |
+| **PR 16**      | Harmonise the "unrecognised check mode" exit code across the quality-script suite so a usage error is distinct from a check failure.                                                                                                                                                      | Stack 3 · needs PR 19                                                                 |
+| **PR 17**      | Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly.                                                                                                                                                | Stack 3 · needs PR 16                                                                 |
+| **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                      | Stack 3 · top · needs PR 17                                                           |
+| **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.          | Stack 3 · base                                                                        |
+| **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                          | Stack 4 · top · needs PR 15, ADR-gated                                                |
 | **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                        | ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)) |
-| **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                           | New · must land last                                                                  |
+| **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                           | Standalone · must land last                                                           |
 
 ## Notes
 
-- **Shell PRs (5–8) are grouped by file, not by concern.** Splitting by concern
-  would fragment single files across multiple PRs and create merge conflicts;
-  grouping by file yields disjoint, independently mergeable changes.
-- **PRs 5–8 have no inter-dependencies** and may be raised in parallel or as a
-  single "shell quality" PR. The only hard sequence is the lint-gate chain
-  **PR 2 → PR 3 → PR 4**.
-- **PR 4 is the one genuinely new addition**: without it the
-  new `lint-shell` gate never runs in CI.
-- Before merging PR 2/3/4, run `make check-shell-lint` on `v2` to confirm the
-  existing scripts already pass, so enabling the gate does not immediately break
-  the build.
-- **PR 9–13 are additive**: PR 2 already includes the fast-path optimisation;
-  PRs 9 and 11 build on PR 7 (same files); PR 10 (`make format`) is scoped to
-  markdown tables; PR 12 is an independent config tweak.
-- **PR 10** and **PR 13** carry external dependencies: PR 10 needs Node/`npx` (or
-  the pinned `node` Docker image); PR 13 needs `jq` and relies on the Copilot Agent
-  hooks **Preview** feature, so both are opt-in.
+- **Grouping principle: by file/layer, not scattered concern.** Where several
+  changes touch the same script, they are stacked as successive layers rather than
+  raised as conflicting parallel PRs — see
+  [Outstanding work](#outstanding-work--proposed-stacks) for the full stack map.
+- **Before merging Stack 1 (PR 2/3/4)**, run `make check-shell-lint` on `v2` to
+  confirm the existing scripts already pass, so enabling the gate does not
+  immediately break the build. `PR 4` is the genuinely new piece: without it the
+  `lint-shell` gate never runs in CI.
 - **PR 13 (Copilot hooks)** enforces `make lint`/`make test` when the agent tries
   to finish, using a minimal snapshot-only guard so no user prompt text is
-  recorded.
-- **Diffs are dropped once a PR is implemented.** Each PR's diff (or new-file
-  content) below is illustrative only, to support review before implementation.
-  As soon as a PR is merged or built locally, its diff block is removed from this
-  plan — the real change lives in the merged commit or the local branch — and
-  replaced with a one-line pointer to where it can be found. Apply the same
-  treatment to any remaining PR once it is next implemented.
-- **PR 15 (native/Docker parity)** is a low-risk foundation: it pins every
-  natively-used CLI in `.tool-versions` to match its Docker image and fixes version
-  drift, without changing the tool manager, so it needs no ADR and can land on its
-  own.
+  recorded. It needs `jq` and relies on the Copilot Agent hooks **Preview**
+  feature, so it is opt-in.
+- **PR 15 (native/Docker parity)** is a low-risk foundation: it adds native pins
+  for the CLIs still missing one (`shellcheck`, `hadolint`, `lychee`, `jq`) so the
+  native and Docker paths agree, without changing the tool manager — so it needs no
+  ADR and can land on its own. (`editorconfig-checker`, `gitleaks` and `nodejs`
+  are already at native/Docker parity.)
 - **PR 20 (asdf → mise)** builds on PR 15 and is analysis-only and ADR-gated: it
   changes a documented, org-wide prerequisite, so land it behind maintainer
   agreement rather than as a routine stacked PR.
-- **PR 16–18 are consistency follow-ups** surfaced by the PR 7 review. All re-touch
-  files already hardened in PRs 7/8/10 (and PR 19), so raise them as new layers
-  above the existing scan-secret + markdown-linting stack, or fold each into the
-  matching per-file PR. They are independent of each other (different concern,
-  different lines) and carry no external dependencies. **PR 18 supersedes the former
-  Optional A**: rather than forcing `make lint` to check all markdown links repo-wide,
-  it fixes `check=branch` base resolution so branch-scoped link checking is correct
-  and consistent with the other `lint-*` targets. Optional A and its branch
-  `pr/A-lint-all-links` have been removed from this plan and the local stack.
+- **PR 18 supersedes the former Optional A**: rather than forcing `make lint` to
+  check all markdown links repo-wide, it fixes `check=branch` base resolution so
+  branch-scoped link checking is correct and consistent with the other `lint-*`
+  targets. Optional A and its branch `pr/A-lint-all-links` have been removed from
+  this plan.
+- **Diffs are dropped once a PR is implemented.** Each PR's diff (or new-file
+  content) below is illustrative only, to support review before implementation.
+  As soon as a PR is merged, its diff block is removed from this plan and replaced
+  with a one-line pointer to the merged PR.
 - **Progress**: nine PRs are merged into `v2` — PR 1
   ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)),
   PR 14 ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)),
@@ -100,7 +88,66 @@ of where it is raised in the stack — see its entry for why.
   PR 11 ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)),
   PR 10 ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)),
   plus PR 21 ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)).
-  All other PRs in the index remain outstanding.
+  All other PRs remain outstanding — see
+  [Outstanding work](#outstanding-work--proposed-stacks).
+
+---
+
+## Outstanding work — proposed stacks
+
+The outstanding items are organised into four independent stacks plus two
+standalone PRs. Stacks are independent of each other and may be raised in
+parallel; within a stack, branch each PR off the one below it and land them
+bottom-up. The one fixed rule across everything is that **PR 22 lands last**.
+
+| Stack | Theme                      | Order (bottom → top)            | Notes                                                                    |
+| ----- | -------------------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| 1     | Shell-lint gate            | PR 2 → PR 3 → PR 4 → Optional C | Genuine dependency chain; the only hard sequence in the plan             |
+| 2     | Shell hygiene              | PR 5 → PR 6                     | Behaviour-preserving; disjoint files from Stack 1                        |
+| 3     | Quality-script consistency | PR 19 → PR 16 → PR 17 → PR 18   | Regrouped; all re-touch the same `scripts/quality/*` files               |
+| 4     | Toolchain modernisation    | PR 15 → PR 20                   | PR 20 is ADR-gated                                                       |
+| —     | Standalone                 | PR 13; PR 22                    | PR 13 opt-in any time; PR 22 must be the final commit before `v2`→`main` |
+
+**Stack 1 — Shell-lint gate.** `PR 2` (real gate in `init.mk`) → `PR 3`
+(`lint-shell` target) → `PR 4` (CI action + job) → `Optional C` (README note). A
+true linear chain: each step is inert until the one below it lands.
+
+**Stack 2 — Shell hygiene.** `PR 5` (`docker.lib.sh`, `dockerfile-linter.sh`,
+`check-shell-lint.sh`) → `PR 6` (`docker.test.sh`). Behaviour-preserving `local` /
+`return 0` / docs. Touches different files from Stack 1, so the two can run in
+parallel.
+
+**Stack 3 — Quality-script consistency (regrouped).** `PR 19` (modernise
+`check-file-format.sh` + adopt `.editorconfigignore`) → `PR 16` (harmonise the
+`*)` unrecognised-mode exit code to `126`) → `PR 17` (bash arrays instead of
+`$files` word-splitting) → `PR 18` (dynamic `check=branch` base via a shared
+`quality.lib.sh`). Originally these were meant to fold into the per-file PRs
+7/8/10, but those are now merged and closed, so they are raised as one ordered
+stack instead. Because 16/17/18 each re-touch the same markdown/format scripts,
+stacking them turns unavoidable overlap into clean successive layers: baseline
+hygiene first, then a one-line exit-code change, then the array refactor, then the
+larger base-resolution change on top.
+
+**Stack 4 — Toolchain modernisation.** `PR 15` (add the missing native
+`.tool-versions` pins — `shellcheck`, `hadolint`, `lychee`, `jq` — so native runs
+match the Docker images) → `PR 20` (asdf → mise, ADR-gated). Clean dependency:
+PR 15 settles _what_ to pin, PR 20 changes _how_ it is provisioned.
+
+**Standalone.**
+
+- **PR 13** (Copilot Stop-hook) — opt-in, depends on a Preview feature; land any
+  time as a single PR.
+- **PR 22** (push-trigger fix) — **must be the last commit on `v2`**, immediately
+  before merging to `main`. Never branch anything on top of it.
+
+**Cross-stack notes.**
+
+- Stacks 1–4 are mutually independent (disjoint files) and can be raised
+  concurrently; only the order _within_ each stack is fixed.
+- Stack 1's `PR 4` and Stack 4's `PR 15` both edit `.github/workflows/*`, but add
+  different jobs/steps — trivial to reconcile.
+- Final landing order into `v2`: any of Stacks 1–4 and PR 13 in any order, then
+  **PR 22 last**.
 
 ---
 
@@ -1433,17 +1480,18 @@ pinning mechanism (unchanged).
 **Risk**: Low
 **Type**: consistency (small judgement-call on which code to standardise on)
 **Files**: `scripts/quality/check-markdown-format.sh`,
-`scripts/quality/check-markdown-links.sh`, `scripts/quality/check-file-format.sh`,
-`scripts/quality/check-shell-lint.sh` (aligning with `scripts/quality/scan-secrets.sh`)
+`scripts/quality/check-markdown-links.sh`, `scripts/quality/check-file-format.sh`
+(aligning with `scripts/quality/scan-secrets.sh`)
 
 **Context**: The quality scripts disagree on how an unrecognised `check` mode is
 reported. `scan-secrets.sh` (PR 8) uses `return 126` and documents it in an
 `Exit codes` block, deliberately distinguishing a usage error from a real finding
 (`1`). `check-markdown-format.sh`, `check-markdown-links.sh` and
 `check-file-format.sh` instead `echo … >&2 && exit 1`, conflating "you passed a
-bad mode" with "the check failed". `check-shell-lint.sh` has no dispatch guard at
-all. This divergence means a caller cannot rely on the exit code to tell a
-misconfiguration apart from a genuine lint/format/secret failure.
+bad mode" with "the check failed". (`check-shell-lint.sh` is out of scope — it is
+file-based and has no `check`-mode dispatch to guard.) This divergence means a
+caller cannot rely on the exit code to tell a misconfiguration apart from a
+genuine lint/format/secret failure.
 
 **Proposed change**: Standardise on `scan-secrets.sh`'s convention — `126` for an
 unrecognised check mode — across every quality script, and add/extend the header
@@ -1463,15 +1511,14 @@ alternative is to standardise `scan-secrets.sh` down to `1`; either way the suit
 should agree. Recommendation: keep `126`, because a distinct usage code is more
 useful to CI and callers.
 
-**Placement**: This re-touches files already hardened in PR 7 (markdown checks)
-and PR 8 (`scan-secrets.sh`), so slot it as a new layer **above** the existing
-scan-secret + markdown-linting stack, or fold it into PR 7 / PR 8 / PR 19 if
-the maintainer wants a single pass per file. No hard dependency beyond the scripts
-existing.
+**Placement**: Third layer of **Stack 3** (`PR 19` → `PR 16` → `PR 17` → `PR 18`),
+branched off PR 19. It touches `check-file-format.sh` (modernised by PR 19) plus
+the two markdown check scripts, so keeping it in the stack lets the exit-code
+change sit on the PR 19 baseline without conflicting with PR 17/18 above it.
 
 **Verification**: For each script, `check=nonsense ./scripts/quality/<script>.sh`
 exits `126` and prints `Unrecognised check mode: nonsense`; a real failure still
-exits `1`; `shellcheck` passes on all five scripts; `make lint` and `make test`
+exits `1`; `shellcheck` passes on all four scripts; `make lint` and `make test`
 are green.
 
 ---
@@ -1514,11 +1561,11 @@ array survives without re-splitting. The empty-list guard (`if [ -n "$files" ]`)
 becomes `if [ "${#files[@]}" -gt 0 ]`. The same treatment applies to the prettier
 wrapper added in PR 10.
 
-**Placement**: Re-touches PR 7 (markdown checks) and PR 10 (`format-markdown-tables.sh`),
-so slot it as a new layer **above** the existing stack, or fold it into PR 7 / PR 10.
-Keep it separate from PR 16 (different concern, different lines) unless doing a single
-per-file pass. `check-file-format.sh`'s `$($filter)` splat can be included here or in
-PR 19.
+**Placement**: Third-from-top layer of **Stack 3**, branched off PR 16. It
+re-touches the two markdown check scripts (and the PR 10 prettier wrapper) plus,
+optionally, `check-file-format.sh`'s `$($filter)` splat — all already sitting on
+the PR 19/PR 16 baseline below it. Kept separate from PR 16 (different concern,
+different lines) so each layer stays reviewable on its own.
 
 **Verification**: Add a temporary tracked Markdown file with a space in its name and
 confirm both checks lint it (native and `FORCE_USE_DOCKER=true`); confirm the empty
@@ -1532,6 +1579,7 @@ linting the whole repo; `shellcheck` passes with the `SC2086` disables removed;
 
 **Status**: New — surfaced during the PR 7 review and the `check=branch` scoping
 investigation. Recorded only (not yet built). **Supersedes the removed Optional A.**
+**Top of Stack 3** (`PR 19` → `PR 16` → `PR 17` → `PR 18`), branched off PR 17.
 
 **Scope**: Shell script correctness / developer experience
 **Risk**: Low–Medium (base-resolution and diff-semantics changes need verification)
@@ -1648,9 +1696,10 @@ Lychee is left as is: its exclusions belong in `lychee.toml`, and a
 `scripts/config/.lycheeignore` would be inert (lychee only auto-reads
 `.lycheeignore` from the working directory, not from `scripts/config/`).
 
-**Relationship**: touches the same file as PR 16 (exit-code harmonisation) and PR 18
-(base resolution); if those land together, apply all three in one pass over
-`check-file-format.sh`. No hard dependency.
+**Placement**: **Base of Stack 3** (`PR 19` → `PR 16` → `PR 17` → `PR 18`). It
+modernises `check-file-format.sh` to the shared conventions so the exit-code
+(PR 16), array (PR 17), and base-resolution (PR 18) layers above it sit on a
+consistent baseline rather than editing an un-modernised script.
 
 **Verification**: `make check-file-format check=all` passes; an entry added to
 `scripts/config/.editorconfigignore` excludes the matching path (native and
