@@ -48,12 +48,15 @@ function main() {
 #   files=[newline-separated list of markdown files to format]
 function run-prettier-natively() {
 
-  # shellcheck disable=SC2086
+  local IFS=$'\n'
+  # shellcheck disable=SC2206
+  local -a file_list=($files)
+
   npx --yes prettier@3 \
     --config "$PWD/scripts/config/prettierrc.yaml" \
     --ignore-path "$PWD/scripts/config/.prettierignore" \
     --write \
-    $files
+    "${file_list[@]}"
 
   return 0
 }
@@ -68,7 +71,11 @@ function run-prettier-in-docker() {
 
   # shellcheck disable=SC2155
   local image=$(name=node docker-get-image-version-and-pull)
-  # shellcheck disable=SC2086
+
+  local IFS=$'\n'
+  # shellcheck disable=SC2206
+  local -a file_list=($files)
+
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
@@ -77,7 +84,7 @@ function run-prettier-in-docker() {
       --config /workdir/scripts/config/prettierrc.yaml \
       --ignore-path /workdir/scripts/config/.prettierignore \
       --write \
-      $files
+      "${file_list[@]}"
 
   return 0
 }
