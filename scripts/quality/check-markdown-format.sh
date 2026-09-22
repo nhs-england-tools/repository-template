@@ -56,7 +56,7 @@ function main() {
       ;;
   esac
 
-  if [ -n "$files" ]; then
+  if [[ -n "$files" ]]; then
     if command -v markdownlint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
       files="$files" run-markdownlint-natively
     else
