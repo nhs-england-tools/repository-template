@@ -1855,13 +1855,19 @@ manager that provisions it. Also complements **PR 2**/**PR 4** (reproducible nat
 
 **Context**: With PR 15 the native path is fully inventoried and with PR 24 it is
 refreshed to current versions, but it is still provisioned by
-[asdf](https://asdf-vm.com/), which carries two remaining costs this PR removes:
+[asdf](https://asdf-vm.com/), which carries three remaining costs this PR removes:
 
 - **Per-tool plugin management.** Every tool needs an `asdf plugin add` against a
   third-party plugin repository before it can be installed. Plugins are arbitrary
   shell, are unversioned, and are a supply-chain surface.
 - **Shim indirection.** asdf routes every invocation through shims, which is slower
   and a frequent source of "wrong version on PATH" confusion.
+- **Parity gaps asdf cannot close.** PR 15 had to leave `hadolint`, `lychee` and
+  `markdownlint-cli` Docker-only. The `asdf-hadolint` plugin requests release asset
+  names that no longer exist, `lychee` has no maintained plugin, and
+  `markdownlint-cli` has none. asdf also builds Python from source, which fails on
+  macOS with the Xcode 26.5 SDK. mise closes all four with `aqua:hadolint/hadolint`,
+  `aqua:lycheeverse/lychee`, `npm:markdownlint-cli` and prebuilt Python.
 
 [mise](https://mise.jdx.dev/) (mise-en-place) is a drop-in replacement that reads the
 same `.tool-versions` file, so migration is incremental, and it closes both gaps:
