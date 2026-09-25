@@ -9,43 +9,48 @@ Stacks are independent of each other and can be raised in parallel; within a
 stack, branch each PR off the one below it. Every outstanding PR is self-contained
 and carries the context needed to raise it.
 
+**Immediate priority change**: NHSE Engineering has now moved `asdf` to
+**Contain** and `mise` to **Mainstream** on the Tech Radar. Reflect that change
+in this template first. The toolchain stack should therefore be picked up ahead
+of the other remaining stacks: land parity and dependency inventory first,
+refresh pinned versions next, then complete the `asdf` → `mise` migration.
+
 ---
 
 ## PR index — what each PR is about
 
-All 22 PRs plus one optional tweak, with a one-line summary each; full detail is
+All 24 PRs plus one optional tweak, with a one-line summary each; full detail is
 in the correspondingly named section below, and the outstanding ones are grouped
 into stacks in [Outstanding work](#outstanding-work--proposed-stacks). The
 _Status_ column names each outstanding PR's stack and its in-stack dependency.
 **PR 22 is a fixed exception**: it must be the very last commit on `v2`, applied
 immediately before merging `v2` into `main` — see its entry for why.
 
-| PR             | What it is about                                                                                                                                                                                                                                                                                                                                                                                     | Status                                                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **PR 1**       | ADR template: require NHS Tech Radar alignment and replace star ratings with a weighted-scoring model (weights + totals).                                                                                                                                                                                                                                                                            | ✅ Merged ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)) |
-| **PR 2**       | Make `check-shell-lint` a real gate — fail on any finding — with a fast single native run and a pinned per-file Docker fallback.                                                                                                                                                                                                                                                                     | Stack 1 · base                                                                        |
-| **PR 3**       | Add a discoverable `lint-shell` target and wire it into `make lint`.                                                                                                                                                                                                                                                                                                                                 | Stack 1 · needs PR 2                                                                  |
-| **PR 4**       | Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI.                                                                                                                                                                                                                                                                                                 | Stack 1 · needs PR 2–3                                                                |
-| **PR 5**       | Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts.                                                                                                                                                                                                                                                                             | Stack 2 · base                                                                        |
-| **PR 6**       | Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation.                                                                                                                                                                                                                                                                                                              | Stack 2 · needs PR 5                                                                  |
-| **PR 7**       | Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`.                                                                                                                                                                                                                                                                               | ✅ Merged ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)) |
-| **PR 8**       | `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing.                                                                                                            | ✅ Merged ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)) |
-| **Optional C** | Document shell linting and `FORCE_USE_DOCKER` in the README.                                                                                                                                                                                                                                                                                                                                         | Stack 1 · top (docs)                                                                  |
-| **PR 9**       | Enforce a blank line after YAML frontmatter (markdownlint rule + fixes).                                                                                                                                                                                                                                                                                                                             | ✅ Merged ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)) |
-| **PR 10**      | Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config.                                                                                                                                                                                                                                                                                          | ✅ Merged ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)) |
-| **PR 11**      | Skip deleted files in the markdown link check (branch mode).                                                                                                                                                                                                                                                                                                                                         | ✅ Merged ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)) |
-| **PR 12**      | Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist).                                                                                                                                                                                                                                                                                          | ✅ Merged ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)) |
-| **PR 13**      | Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging).                                                                                                                                                                                                                                                                                     | Standalone · opt-in (Preview)                                                         |
-| **PR 14**      | Enrich the pull-request template with description/context guidance and a "How to test it" section.                                                                                                                                                                                                                                                                                                   | ✅ Merged ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)) |
-| **PR 15**      | Native/Docker tool parity: add native `.tool-versions` pins for the CLIs still missing one (shellcheck, hadolint, lychee, jq) so native runs match the Docker images. Stays on asdf; foundation for PR 20.                                                                                                                                                                                           | Stack 4 · base                                                                        |
-| **PR 16**      | Harmonise the "unrecognised check mode" exit code across the quality-script suite so a usage error is distinct from a check failure.                                                                                                                                                                                                                                                                 | Stack 3 · needs PR 19                                                                 |
-| **PR 17**      | Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly.                                                                                                                                                                                                                                                           | Stack 3 · needs PR 16                                                                 |
-| **PR 18**      | Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A.                                                                                                                                                                                 | Stack 3 · top · needs PR 17                                                           |
-| **PR 19**      | Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders.                                                                                                                     | Stack 3 · base                                                                        |
-| **PR 20**      | Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`). Depends on PR 15.                                                                                                                                                                                                                                     | Stack 4 · top · needs PR 15, ADR-gated                                                |
-| **PR 21**      | Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled.                                                                                                                                                                                                   | ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)) |
-| **PR 22**      | Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`.                                                                                                                                                                      | Standalone · must land last                                                           |
-| **PR 23**      | Repo-wide word-splitting/quoting/globbing audit: harden the remaining unquoted `$filter`/`$cmd`/`$args` command-string splats and `for x in $(find …)` loops in `check-file-format.sh`, `scan-secrets.sh`, `docker.lib.sh`, `init.mk`, and `docker.mk` — the same anti-pattern PR 17 fixes, but for the scripts and Makefiles it doesn't touch. Confirms there are no tracked Python files affected. | Stack 3 · top · needs PR 18                                                           |
+1. **PR 1**: ADR template: require NHS Tech Radar alignment and replace star ratings with a weighted-scoring model (weights + totals). Status: ✅ Merged ([#226](https://github.com/nhs-england-tools/repository-template/pull/226)).
+2. **PR 2**: Make `check-shell-lint` a real gate — fail on any finding — with a fast single native run and a pinned per-file Docker fallback. Status: Stack 1 · base.
+3. **PR 3**: Add a discoverable `lint-shell` target and wire it into `make lint`. Status: Stack 1 · needs PR 2.
+4. **PR 4**: Add a `check-shell-lint` composite action and commit-stage CI job so the shell-lint gate runs in CI. Status: Stack 1 · needs PR 2–3.
+5. **PR 5**: Behaviour-preserving shell best practices (`local` / `return 0` / quoting / docs) in the lib and simple quality scripts. Status: Stack 2 · base.
+6. **PR 6**: Harden the Docker test suite (`docker.test.sh`) with best practices and test isolation. Status: Stack 2 · needs PR 5.
+7. **PR 7**: Markdown check scripts: best practices + check-mode guard in `check-markdown-format.sh` and `check-markdown-links.sh`. Status: ✅ Merged ([#231](https://github.com/nhs-england-tools/repository-template/pull/231)).
+8. **PR 8**: `scan-secrets.sh`: best practices + check-mode guard + a six-mode `check` vocabulary aligned with the other quality scripts (`all`, `staged-changes`, `working-tree-changes`, `branch`, `whole-history`, `last-commit`), plus native/Docker-parity fixes, all proven by scenario testing. Status: ✅ Merged ([#230](https://github.com/nhs-england-tools/repository-template/pull/230)).
+9. **Optional C**: Document shell linting and `FORCE_USE_DOCKER` in the README. Status: Stack 1 · top (docs).
+10. **PR 9**: Enforce a blank line after YAML frontmatter (markdownlint rule + fixes). Status: ✅ Merged ([#232](https://github.com/nhs-england-tools/repository-template/pull/232)).
+11. **PR 10**: Add `make format` to auto-format markdown tables with Prettier (native `npx` or Docker) plus scoped config. Status: ✅ Merged ([#234](https://github.com/nhs-england-tools/repository-template/pull/234)).
+12. **PR 11**: Skip deleted files in the markdown link check (branch mode). Status: ✅ Merged ([#233](https://github.com/nhs-england-tools/repository-template/pull/233)).
+13. **PR 12**: Reduce gitleaks false positives (link-local IPs + comprehensive Python/JS-TS/Terraform lockfile allowlist). Status: ✅ Merged ([#229](https://github.com/nhs-england-tools/repository-template/pull/229)).
+14. **PR 13**: Copilot agent Stop hook that runs `make lint` + `make test` before finishing (snapshot-only, no prompt logging). Status: Standalone · opt-in (Preview).
+15. **PR 14**: Enrich the pull-request template with description/context guidance and a "How to test it" section. Status: ✅ Merged ([#225](https://github.com/nhs-england-tools/repository-template/pull/225)).
+16. **PR 15**: Native/Docker tool parity and dependency inventory: add missing native pins, add the missing `python` runtime pin already consumed by CI metadata, and document the remaining parity gaps before migration. Status: Stack 4 · base.
+17. **PR 24**: Toolchain version refresh: upgrade pinned CLI, runtime, Docker-image, and GitHub Actions dependencies once the inventory is complete, including any action that needs replacement rather than a simple bump. Status: Stack 4 · needs PR 15.
+18. **PR 16**: Harmonise the "unrecognised check mode" exit code across the quality-script suite so a usage error is distinct from a check failure. Status: Stack 3 · needs PR 19.
+19. **PR 17**: Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly. Status: Stack 3 · needs PR 16.
+20. **PR 18**: Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A. Status: Stack 3 · top · needs PR 17.
+21. **PR 19**: Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders. Status: Stack 3 · base.
+22. **PR 20**: Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`) now that `mise` is Mainstream on the Tech Radar. Depends on PR 15 and PR 24. Status: Stack 4 · top · needs PR 15, PR 24.
+23. **PR 21**: Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled. Status: ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)).
+24. **PR 22**: Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`. Status: Standalone · must land last.
+25. **PR 23**: Repo-wide word-splitting/quoting/globbing audit: harden the remaining unquoted `$filter`/`$cmd`/`$args` command-string splats and `for x in $(find …)` loops in `check-file-format.sh`, `scan-secrets.sh`, `docker.lib.sh`, `init.mk`, and `docker.mk` — the same anti-pattern PR 17 fixes, but for the scripts and Makefiles it doesn't touch. Confirms there are no tracked Python files affected. Status: Stack 3 · top · needs PR 18.
 
 ## Notes
 
@@ -61,14 +66,21 @@ immediately before merging `v2` into `main` — see its entry for why.
   to finish, using a minimal snapshot-only guard so no user prompt text is
   recorded. It needs `jq` and relies on the Copilot Agent hooks **Preview**
   feature, so it is opt-in.
-- **PR 15 (native/Docker parity)** is a low-risk foundation: it adds native pins
-  for the CLIs still missing one (`shellcheck`, `hadolint`, `lychee`, `jq`) so the
-  native and Docker paths agree, without changing the tool manager — so it needs no
-  ADR and can land on its own. (`editorconfig-checker`, `gitleaks` and `nodejs`
-  are already at native/Docker parity.)
-- **PR 20 (asdf → mise)** builds on PR 15 and is analysis-only and ADR-gated: it
-  changes a documented, org-wide prerequisite, so land it behind maintainer
-  agreement rather than as a routine stacked PR.
+- **Stack 4 is now the immediate priority.** NHSE Engineering has moved `asdf`
+  to **Contain** and `mise` to **Mainstream** on the Tech Radar, so the
+  repository template should reflect that change before the other outstanding
+  stacks.
+- **PR 15 (parity + inventory)** remains the low-risk foundation: it closes the
+  missing native pin and runtime inventory gaps without changing the tool
+  manager, so it needs no ADR and can land on its own.
+- **PR 24 (version refresh)** is the new middle layer in Stack 4. After PR 15
+  settles the dependency inventory, PR 24 updates the pinned versions across the
+  toolchain, Docker image comments, and workflow action SHAs or versions,
+  including any action that now needs replacement rather than a simple bump.
+- **PR 20 (asdf → mise)** now follows immediately after PR 24 and remains
+  ADR-gated because it changes a documented, org-wide prerequisite. It should be
+  treated as the preferred post-refresh end state, not as a speculative future
+  improvement.
 - **PR 18 supersedes the former Optional A**: rather than forcing `make lint` to
   check all markdown links repo-wide, it fixes `check=branch` base resolution so
   branch-scoped link checking is correct and consistent with the other `lint-*`
@@ -100,14 +112,28 @@ The outstanding items are organised into four independent stacks plus two
 standalone PRs. Stacks are independent of each other and may be raised in
 parallel; within a stack, branch each PR off the one below it and land them
 bottom-up. The one fixed rule across everything is that **PR 22 lands last**.
+Because of the Tech Radar change, Stack 4 is listed first and should be picked
+up first.
 
-| Stack | Theme                      | Order (bottom → top)                  | Notes                                                                                                                 |
-| ----- | -------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1     | Shell-lint gate            | PR 2 → PR 3 → PR 4 → Optional C       | Genuine dependency chain; the only hard sequence in the plan                                                          |
-| 2     | Shell hygiene              | PR 5 → PR 6                           | Behaviour-preserving; disjoint files from Stack 1                                                                     |
-| 3     | Quality-script consistency | PR 19 → PR 16 → PR 17 → PR 18 → PR 23 | Regrouped; all re-touch the same `scripts/quality/*` files; PR 23 also reaches into `docker.lib.sh` and the Makefiles |
-| 4     | Toolchain modernisation    | PR 15 → PR 20                         | PR 20 is ADR-gated                                                                                                    |
-| —     | Standalone                 | PR 13; PR 22                          | PR 13 opt-in any time; PR 22 must be the final commit before `v2`→`main`                                              |
+1. **Stack 4 — Toolchain modernisation**: `PR 15 → PR 24 → PR 20`.
+   Immediate priority after the NHSE Tech Radar change. PR 20 remains ADR-gated.
+2. **Stack 1 — Shell-lint gate**: `PR 2 → PR 3 → PR 4 → Optional C`.
+   Genuine dependency chain.
+3. **Stack 2 — Shell hygiene**: `PR 5 → PR 6`.
+   Behaviour-preserving and disjoint from Stack 1.
+4. **Stack 3 — Quality-script consistency**: `PR 19 → PR 16 → PR 17 → PR 18 → PR 23`.
+   Regrouped around repeated `scripts/quality/*` overlap, with PR 23 extending into `docker.lib.sh` and the Makefiles.
+5. **Standalone**: `PR 13`; `PR 22`.
+   PR 13 is opt-in. PR 22 must be the final commit before `v2`→`main`.
+
+**Stack 4 — Toolchain modernisation.** `PR 15` (close parity and dependency
+inventory gaps while still on asdf) → `PR 24` (refresh the pinned versions
+across CLIs, runtimes, Docker pins, and GitHub Actions) → `PR 20` (`asdf` →
+`mise`, ADR-gated). This stack is now the **first pickup** item because NHSE
+Engineering has moved `asdf` to **Contain** and `mise` to **Mainstream** on the
+Tech Radar. The dependency chain is now explicit: PR 15 settles _what exists and
+what is missing_, PR 24 refreshes _which versions and SHAs are current_, and
+PR 20 changes _how the toolchain is provisioned_.
 
 **Stack 1 — Shell-lint gate.** `PR 2` (real gate in `init.mk`) → `PR 3`
 (`lint-shell` target) → `PR 4` (CI action + job) → `Optional C` (README note). A
@@ -135,11 +161,6 @@ the equivalent `docker.lib.sh` / Makefile `for … in $(find …)` loops — so 
 place the repo builds a dynamic argument or file list from an unquoted string is
 treated consistently.
 
-**Stack 4 — Toolchain modernisation.** `PR 15` (add the missing native
-`.tool-versions` pins — `shellcheck`, `hadolint`, `lychee`, `jq` — so native runs
-match the Docker images) → `PR 20` (asdf → mise, ADR-gated). Clean dependency:
-PR 15 settles _what_ to pin, PR 20 changes _how_ it is provisioned.
-
 **Standalone.**
 
 - **PR 13** (Copilot Stop-hook) — opt-in, depends on a Preview feature; land any
@@ -150,9 +171,15 @@ PR 15 settles _what_ to pin, PR 20 changes _how_ it is provisioned.
 **Cross-stack notes.**
 
 - Stacks 1–4 are mutually independent (disjoint files) and can be raised
-  concurrently; only the order _within_ each stack is fixed.
+  concurrently; only the order _within_ each stack is fixed. The exception in
+  practice is priority: Stack 4 should be taken first.
 - Stack 1's `PR 4` and Stack 4's `PR 15` both edit `.github/workflows/*`, but add
   different jobs/steps — trivial to reconcile.
+- Stack 4's `PR 24` also reviews workflow action dependencies, not just CLI
+  tooling. Current workflow-managed dependencies include `actions/checkout`,
+  `SonarSource/sonarqube-scan-action`,
+  `nhs-england-tools/notify-msteams-action`, and the archived
+  `actions/create-release` pin in publish.
 - Stack 3's `PR 23` also touches `scripts/docker/docker.lib.sh` (Stack 2's file)
   and `scripts/init.mk` / `scripts/docker/docker.mk` (untouched by any other
   stack) to close out the remaining word-splitting instances outside the
@@ -1390,8 +1417,9 @@ tool manager, so it needs no ADR; the behaviour of every quality gate is preserv
 **Depends on**: nothing hard. It complements **PR 2**/**PR 4** (pinning `shellcheck`
 natively makes the shell-lint fast path reproducible) and **PR 10** (which already
 adds a native `nodejs` pin version-matched to its `node` Docker image). It is the
-**foundation for PR 20** (asdf → mise): this PR decides _what_ to pin and reaches
-native/Docker parity; PR 20 changes _how_ those pins are provisioned.
+**foundation for PR 24** (version refresh) and **PR 20** (`asdf` → `mise`): this PR
+decides _what_ to pin and which gaps must be closed first; PR 24 then updates the
+versions, and PR 20 changes _how_ those pins are provisioned.
 **Files**: `.tool-versions`, `scripts/init.mk`, `.github/workflows/*.yaml`
 
 > **Note**: net-new work (this repository does not pin these natively today). No
@@ -1404,12 +1432,13 @@ native/Docker parity; PR 20 changes _how_ those pins are provisioned.
 real native pins (top section) and Docker-image pins (the `# docker/...` comment
 block, parsed by `docker.lib.sh`). The problem this PR fixes is an **under-pinned
 native path**: only a handful of tools are pinned for native execution (`gitleaks`,
-`pre-commit`, `editorconfig-checker`, and — once PR 10 lands — `nodejs`). Everything
-else the scripts shell out to natively — `shellcheck`, `hadolint`, `lychee`,
-`markdownlint`, and the `jq` the README lists as a prerequisite — runs at **whatever
-version the developer's machine happens to have**, while the pinned versions only
-take effect in Docker mode. Native and Docker runs are therefore not guaranteed to
-agree.
+`pre-commit`, `editorconfig-checker`, and `nodejs`). Everything else the scripts
+shell out to natively — `shellcheck`, `hadolint`, `lychee`, `markdownlint`, and the
+`jq` the README lists as a prerequisite — runs at **whatever version the developer's
+machine happens to have**, while the pinned versions only take effect in Docker mode.
+Native and Docker runs are therefore not guaranteed to agree. There is also a
+separate runtime inventory gap: the CI/CD workflows already read `python_version`
+from `.tool-versions`, but the file has no `python` entry today.
 
 **Analysis 1 — how the native path is wired today**:
 
@@ -1427,60 +1456,118 @@ agree.
 the "is everything in `.tool-versions`, e.g. `jq`?" question). "Native pin today" is
 the `.tool-versions` top section; "Docker pin today" is the `# docker/...` block:
 
-| Tool                               | Used natively by                                    | Native pin today      | Docker pin today         | Parity action                                                        |
-| ---------------------------------- | --------------------------------------------------- | --------------------- | ------------------------ | -------------------------------------------------------------------- |
-| `shellcheck`                       | `check-shell-lint.sh`, `check-shell-lint` fast path | ✗ (uses host version) | ✓ `v0.11.0`              | Pin `aqua:koalaman/shellcheck` to match the image                    |
-| `hadolint`                         | `dockerfile-linter.sh`                              | ✗                     | ✓ `2.14.0`               | Pin `aqua:hadolint/hadolint` to match the image                      |
-| `lychee`                           | `check-markdown-links.sh`                           | ✗                     | ✓ `0.22.0`               | Pin `aqua:lycheeverse/lychee`                                        |
-| `markdownlint(-cli)`               | `check-markdown-format.sh`                          | ✗                     | ✓ `v0.47.0`              | Pin `node` + `markdownlint-cli2` (npm), or keep Docker-only          |
-| `editorconfig-checker`             | `check-file-format.sh`                              | ✓ `3.11.1`            | ✓ `v3.11.1`              | Keep — already at parity                                             |
-| `node` / `npx`                     | `format-markdown-tables.sh` (Prettier, PR 10)       | ✓ `22.23.2` (PR 10)   | ✓ `22.23.2-slim` (PR 10) | Keep — already at parity once PR 10 lands                            |
-| `jq`                               | README lists it as a prerequisite                   | ✗                     | —                        | **Pin `aqua:jqlang/jq`** — currently unpinned despite being required |
-| `gitleaks`                         | `scan-secrets.sh`                                   | ✓ `8.30.0`            | ✓ `v8.30.0`              | Keep — already at parity                                             |
-| `pre-commit`                       | `githooks-config`                                   | ✓ `4.5.1`             | —                        | Keep (native-only is fine)                                           |
-| `git`,`make`,`docker`,`gh`,`rsync` | various                                             | n/a (system)          | n/a                      | Out of scope — host/system tools, not version-managed here           |
+| Tool                               | Used natively by                          | Native pin today      | Docker pin today         | Inventory or parity action       |
+| ---------------------------------- | ----------------------------------------- | --------------------- | ------------------------ | -------------------------------- |
+| `python`                           | CI/CD metadata workflows                  | ✗                     | —                        | Add native runtime pin           |
+| `shellcheck`                       | shell lint wrapper and fast path          | ✗ (uses host version) | ✓ `v0.11.0`              | Add native pin                   |
+| `hadolint`                         | Dockerfile linter wrapper                 | ✗                     | ✓ `2.14.0`               | Add native pin                   |
+| `lychee`                           | markdown link checker                     | ✗                     | ✓ `0.22.0`               | Add native pin                   |
+| `markdownlint(-cli)`               | markdown format checker                   | ✗                     | ✓ `v0.47.0`              | Decide native pin vs Docker-only |
+| `editorconfig-checker`             | file format checker                       | ✓ `3.11.1`            | ✓ `v3.11.1`              | Keep                             |
+| `node` / `npx`                     | Prettier runtime from PR 10               | ✓ `22.23.2` (PR 10)   | ✓ `22.23.2-slim` (PR 10) | Keep                             |
+| `jq`                               | README prerequisite, hooks, shell helpers | ✗                     | n/a                      | Native-only: add native pin      |
+| `gitleaks`                         | secret scanner wrapper                    | ✓ `8.30.1`            | ✓ `v8.30.1`              | Keep                             |
+| `pre-commit`                       | git hooks install                         | ✓ `4.5.1`             | n/a                      | Native-only: keep                |
+| Workflow action dependencies       | GitHub Actions workflows                  | mixed                 | n/a                      | Record for PR 24                 |
+| `git`,`make`,`docker`,`gh`,`rsync` | various                                   | n/a (system)          | n/a                      | Out of scope                     |
 
-The gap is stark: only 3–4 tools are pinned for native use, but 4 others are
-Docker-only and one (`jq`) is unpinned entirely. Pinning **every** CLI the scripts
-call makes `make lint`/`make test` produce identical results native or
-`FORCE_USE_DOCKER=true` — full native/Docker parity. (`node` is already handled by
-PR 10: native `nodejs 22.23.2` plus the narrowed `docker/node 22.23.2-slim` pin.
-The registry shorthands, e.g. `aqua:jqlang/jq`, are the **mise** form used by
-PR 20; under asdf this PR adds the equivalent plugin + pinned version.)
+The gap is now explicit: several tools are Docker-only on paper but native on real
+developer machines, `jq` is required but unpinned, and `python` is already consumed
+by workflows without any corresponding `.tool-versions` entry. Pinning **every** CLI
+and runtime the repository actively depends on makes `make lint`/`make test` and the
+workflow metadata path deterministic before any version upgrades or manager swap.
 
-**Analysis 3 — version currency** ("are these the latest versions?"). Current
-pins are `gitleaks 8.30.0`, `pre-commit 4.5.1`, `editorconfig-checker 3.11.1`,
-plus the Docker-only pins `shellcheck v0.11.0`, `lychee 0.22.0`,
-`markdownlint-cli v0.47.0`, `hadolint 2.14.0`. Rather than hard-code "latest"
-numbers that go stale, this PR flags the one confirmed gap: `jq` is
-**unpinned** despite being listed as a prerequisite in the README. Everything
-else should be confirmed against upstream at implementation time — not guessed
-here. (PR 20 adds a repeatable `mise outdated`/`upgrade` workflow for this.)
+**Analysis 3 — version currency** ("are these the latest versions?"). This PR is
+not the bulk version-bump layer. It identifies the currently missing inventory items
+and leaves the coordinated refresh of tool versions, Docker image comments, and
+workflow action SHAs to **PR 24** so parity and version movement do not get tangled
+together in one review.
 
 **Proposed changes** (prose, no diff):
 
-- **`.tool-versions`** — promote all natively-used CLIs into the pinned top section
-  (`jq`, `shellcheck`, `hadolint`, `lychee`, `editorconfig-checker`, plus the
-  existing `gitleaks`, `pre-commit`, and PR 10's `nodejs`). Converge each native pin
-  with its `# docker/...` counterpart so the two paths match. Leave
-  the `# docker/...` comments exactly as they are.
+- **`.tool-versions`** — promote all natively-used CLIs and runtimes into the pinned
+  top section (`python`, `jq`, `shellcheck`, `hadolint`, `lychee`,
+  `editorconfig-checker`, plus the existing `gitleaks`, `pre-commit`, and PR 10's
+  `nodejs`). Converge each native pin with its `# docker/...` counterpart only where
+  parity is intended. `jq` and `pre-commit` are native-only dependencies, so they do
+  not need Docker pin counterparts. Leave the `# docker/...` comments exactly as they
+  are in this PR.
 - **`scripts/init.mk`** — no mechanism change: the existing `_install-dependencies`
   loop already installs every non-comment line, so the added pins are picked up (each
   new tool gets its `asdf plugin add` via `_install-dependency`).
-- **CI** — ensure the commit-stage provisions the pinned native tools (`asdf install`)
-  so the checks run the pinned versions rather than the runner's preinstalled ones;
-  the Docker fallback remains for images without a native equivalent.
+- **CI** — ensure the workflows can rely on the now-complete `.tool-versions`
+  inventory, especially the existing `python_version` and `nodejs_version` metadata
+  extraction; the Docker fallback remains for images without a native equivalent.
 
 **Verification**:
 
-- `make config` installs every pinned tool; each `<tool> --version` natively matches
-  the `.tool-versions` pin **and** the corresponding `# docker/...` pin for
-  `shellcheck`, `jq`, `hadolint`, `lychee`, `editorconfig-checker`, `nodejs`.
+- `make config` installs every pinned tool and runtime; each `<tool> --version`
+  natively matches the `.tool-versions` pin **and** the corresponding `# docker/...`
+  pin where one exists for `shellcheck`, `hadolint`, `lychee`,
+  `editorconfig-checker`, and `nodejs`.
+- The CI/CD metadata workflows can read both `nodejs_version` and `python_version`
+  from `.tool-versions` without falling back to an empty value.
 - `make lint` and `make test` pass natively and with `FORCE_USE_DOCKER=true` with
   identical results (parity).
 
-**Out of scope**: the tool-manager migration (that is **PR 20**); the Docker-image
-pinning mechanism (unchanged).
+**Out of scope**: the bulk version refresh (that is **PR 24**); the tool-manager
+migration (that is **PR 20**); the Docker-image pinning mechanism (unchanged).
+
+---
+
+## PR 24: Refresh pinned tool, runtime, Docker, and workflow dependency versions
+
+**Scope**: Build system / CI / dependency maintenance
+**Risk**: Medium — updates many versioned dependencies at once, but only after PR 15
+has settled the inventory and parity baseline.
+**Depends on**: **PR 15**. PR 15 closes the missing inventory gaps; this PR then
+refreshes the versions and SHAs across those now-complete dependency surfaces.
+**Files**: `.tool-versions`, `.github/workflows/*.yaml`, and any version-carrying
+comments or docs that must remain in sync with them
+
+**Context**: The repository already pins a mix of native tools, Docker image
+versions, and workflow action SHAs, but there is no dedicated PR that treats
+version maintenance itself as a first-class change. With `mise` now moving to
+Mainstream on the Tech Radar, the template should not migrate tooling managers on top
+of stale pins. Land a dedicated refresh layer first.
+
+**Dependency surfaces to review in this PR**:
+
+- **Native runtimes and CLIs** in `.tool-versions`, including `python`, `nodejs`,
+  `gitleaks`, `pre-commit`, `editorconfig-checker`, `jq`, `shellcheck`, `hadolint`,
+  and `lychee`.
+- **Docker image comment pins** in `.tool-versions`, keeping them aligned with the
+  native pins where parity is intended.
+- **GitHub Actions dependencies** in workflow files. Current pinned or versioned
+  action dependencies include `actions/checkout`,
+  `SonarSource/sonarqube-scan-action`,
+  `nhs-england-tools/notify-msteams-action`, and the archived
+  `actions/create-release` pin in publish. If a dependency is archived or otherwise
+  unsuitable for a routine version bump, replace it in this PR rather than carrying a
+  known-stale pin forward.
+
+**Proposed changes** (prose, no diff):
+
+- **Refresh `.tool-versions`** to the agreed current versions for every runtime and
+  CLI in scope after PR 15.
+- **Refresh the `# docker/...` image comments** so native and Docker execution stay
+  aligned where intended.
+- **Review and update workflow action SHAs or versions** across `.github/workflows/*`.
+  Keep SHA pinning where the repository already uses it. Replace archived actions if
+  there is no credible supported upgrade path.
+- **Update any nearby comments or documentation** that state a tool or action version
+  explicitly, so the plan does not leave stale documentation behind.
+
+**Verification**:
+
+- `make config`, `make lint`, and `make test` still pass after the refresh.
+- Native and `FORCE_USE_DOCKER=true` runs still agree for the parity-managed tools.
+- All workflows remain pinned and internally consistent after the action refresh.
+- Any action replacement needed because of archival or abandonment is called out
+  explicitly in the PR description and verification notes.
+
+**Out of scope**: changing the tool manager itself (that is **PR 20**). This PR is
+about **refreshing** the dependency set, not changing **how** it is installed.
 
 ---
 
@@ -1752,12 +1839,12 @@ consistent baseline rather than editing an un-modernised script.
 contract, and touches CI. The behaviour of every quality gate is preserved; only
 _how the tools are provisioned_ changes (the _what-to-pin_ is already settled by
 PR 15).
-**Depends on**: **PR 15** (the native/Docker parity + dependency inventory). PR 15
-establishes the pinned tool set; this PR swaps the manager that provisions it. Also
-complements **PR 2**/**PR 4** (reproducible native `shellcheck`) and **PR 10**
-(native `node`).
+**Depends on**: **PR 15** and **PR 24**. PR 15 establishes the complete pinned tool
+set, PR 24 refreshes that set to current versions, and this PR then swaps the
+manager that provisions it. Also complements **PR 2**/**PR 4** (reproducible native
+`shellcheck`) and **PR 10** (native `node`).
 **Files**: `.tool-versions`, `scripts/init.mk`, `.github/workflows/*.yaml`
-(+ a mise setup step), `README.md`, `docs/onboarding.md`, a new ADR under
+(+ a mise setup step), `README.md`, relevant docs under `docs/`, a new ADR under
 `docs/adr/`, and the `docker`/`makefile` instruction files that reference asdf.
 
 > **Note**: This is a net-new improvement to this repository (it currently uses
@@ -1766,8 +1853,9 @@ complements **PR 2**/**PR 4** (reproducible native `shellcheck`) and **PR 10**
 > already has an ADR process under `docs/adr/`). No diff is included at this
 > stage — this entry is the design and analysis only.
 
-**Context**: With PR 15 the native path is fully pinned, but it is still provisioned
-by [asdf](https://asdf-vm.com/), which carries two remaining costs this PR removes:
+**Context**: With PR 15 the native path is fully inventoried and with PR 24 it is
+refreshed to current versions, but it is still provisioned by
+[asdf](https://asdf-vm.com/), which carries two remaining costs this PR removes:
 
 - **Per-tool plugin management.** Every tool needs an `asdf plugin add` against a
   third-party plugin repository before it can be installed. Plugins are arbitrary
@@ -1819,7 +1907,8 @@ https://mise.run | sh` + `mise install`. `MISE_SAFE=1` disables any code executi
   mapping to `mise use ${name}@${version}` so downstream `config::` overrides still
   work. `config::` continues to call `$(MAKE) _install-dependencies`.
 - **`.tool-versions`** — keep it as the single source of truth (mise reads the pinned
-  set that PR 15 completed, and `docker.lib.sh` keeps parsing the comment block).
+  set that PRs 15 and 24 completed, and `docker.lib.sh` keeps parsing the comment
+  block).
   Optionally rewrite the native pins with mise registry shorthands. Leave the
   `# docker/...` comments exactly as they are.
 - **CI** — add a mise setup step (`jdx/mise-action@v3`, `install: true`,
@@ -1828,8 +1917,8 @@ https://mise.run | sh` + `mise install`. `MISE_SAFE=1` disables any code executi
   Configure `GITHUB_TOKEN` for mise to avoid API rate limits. (The workflows already
   use `astral-sh/setup-uv`; `uv` can later move under mise too, but that is out of
   scope here.)
-- **Docs** — swap the asdf prerequisite for mise in `README.md` and
-  `docs/onboarding.md` (install via `curl https://mise.run | sh`, then `make config`);
+- **Docs** — swap the asdf prerequisite for mise in `README.md` and the relevant
+  supporting docs (install via `curl https://mise.run | sh`, then `make config`);
   update the `docker`/`makefile` instruction file references, including the "Tool
   Version Management (asdf)" heading.
 - **New `deps-outdated` / `deps-upgrade` targets** — wrap `mise outdated` and
@@ -1877,8 +1966,8 @@ the `# docker/...` block, and account for the `mise.toml` trust prompt in CI
   in place.
 
 **Out of scope**: the Docker-image pinning mechanism (unchanged); the _what-to-pin_
-decisions (owned by PR 15); forcing a `mise.toml`/tasks model (optional follow-up);
-migrating `uv` under mise.
+decisions (owned by PR 15); the bulk version-refresh decisions (owned by PR 24);
+forcing a `mise.toml`/tasks model (optional follow-up); migrating `uv` under mise.
 
 ---
 
