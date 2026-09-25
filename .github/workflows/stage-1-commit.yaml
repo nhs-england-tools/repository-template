@@ -34,7 +34,7 @@ permissions:
 jobs:
   scan-secrets:
     name: "Scan secrets"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
@@ -45,7 +45,7 @@ jobs:
         uses: ./.github/actions/scan-secrets
   check-file-format:
     name: "Check file format"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
@@ -56,7 +56,7 @@ jobs:
         uses: ./.github/actions/check-file-format
   check-markdown-format:
     name: "Check Markdown format"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
@@ -67,7 +67,7 @@ jobs:
         uses: ./.github/actions/check-markdown-format
   check-markdown-links:
     name: "Check Markdown links"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: "Checkout code"

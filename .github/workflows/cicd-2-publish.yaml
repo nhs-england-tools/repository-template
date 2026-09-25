@@ -9,7 +9,7 @@ on:
 jobs:
   metadata:
     name: "Set CI/CD metadata"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     if: github.event.pull_request.merged == true
@@ -46,7 +46,7 @@ jobs:
           make list-variables
   publish:
     name: "Publish packages"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     needs: [metadata]
@@ -60,29 +60,22 @@ jobs:
           echo "Getting the artefacts created by the build stage ..."
           # TODO: Use either action/cache or action/upload-artifact
       - name: "Create release"
-        id: create_release
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4 FIXME: This action is public archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.metadata.outputs.version }}
-          release_name: Release ${{ needs.metadata.outputs.version }}
-          body: |
-            Release of ${{ needs.metadata.outputs.version }}
-          draft: false
-          prerelease: false
+          VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          gh release create "$VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "Release $VERSION" \
+            --notes "Release of $VERSION"
       # - name: "Upload release asset"
-      #   uses: actions/upload-release-asset@v1
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: "${{ steps.create_release.outputs.upload_url }}"
-      #     asset_path: ./*
-      #     asset_name: repository-template-${{ needs.metadata.outputs.version }}.tar.gz
-      #     asset_content_type: "application/gzip"
+      #     VERSION: ${{ needs.metadata.outputs.version }}
+      #   run: gh release upload "$VERSION" "./repository-template-$VERSION.tar.gz"
   success:
     name: "Success notification"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     needs: [publish]
@@ -92,7 +85,7 @@ jobs:
         run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
       - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
-        uses: nhs-england-tools/notify-msteams-action@3d354c122e09513108d34d93c729874da45d26a2 # v1.0.7
+        uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}

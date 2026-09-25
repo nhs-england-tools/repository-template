@@ -34,7 +34,7 @@ permissions:
 jobs:
   environment-set-up:
     name: "Environment set up"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
@@ -50,7 +50,7 @@ jobs:
           echo "Deploying application..."
   test-contract:
     name: "Contract test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -64,7 +64,7 @@ jobs:
           echo "Nothing to save"
   test-security:
     name: "Security test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -78,7 +78,7 @@ jobs:
           echo "Nothing to save"
   test-ui:
     name: "UI test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -92,7 +92,7 @@ jobs:
           echo "Nothing to save"
   test-ui-performance:
     name: "UI performance test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -106,7 +106,7 @@ jobs:
           echo "Nothing to save"
   test-integration:
     name: "Integration test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -120,7 +120,7 @@ jobs:
           echo "Nothing to save"
   test-accessibility:
     name: "Accessibility test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -134,7 +134,7 @@ jobs:
           echo "Nothing to save"
   test-load:
     name: "Load test"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: environment-set-up
     timeout-minutes: 10
     steps:
@@ -148,7 +148,7 @@ jobs:
           echo "Nothing to save"
   environment-tear-down:
     name: "Environment tear down"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       [
         test-accessibility,

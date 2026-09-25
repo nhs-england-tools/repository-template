@@ -11,7 +11,7 @@ on:
 jobs:
   metadata:
     name: "Set CI/CD metadata"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     timeout-minutes: 1
@@ -50,7 +50,7 @@ jobs:
           make list-variables
   deploy:
     name: "Deploy to an environment"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     needs: [metadata]
@@ -61,7 +61,7 @@ jobs:
   # TODO: More jobs or/and steps here
   # success:
   #   name: "Success notification"
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-26.04
   #   needs: [deploy]
   #   steps:
   #     - name: "Check prerequisites for notification"
@@ -69,7 +69,7 @@ jobs:
   #       run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
   #     - name: "Notify on deployment to an environment"
   #       if: steps.check.outputs.secret_exist == 'true'
-  #       uses: nhs-england-tools/notify-msteams-action@v0.0.4
+  #       uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
   #       with:
   #         github-token: ${{ secrets.GITHUB_TOKEN }}
   #         teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
