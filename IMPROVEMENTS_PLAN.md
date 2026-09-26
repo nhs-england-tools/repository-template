@@ -47,7 +47,7 @@ immediately before merging `v2` into `main` — see its entry for why.
 19. **PR 17**: Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly. Status: Stack 3 · needs PR 16.
 20. **PR 18**: Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A. Status: Stack 3 · top · needs PR 17.
 21. **PR 19**: Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders. Status: Stack 3 · base.
-22. **PR 20**: Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, ADR, `deps-outdated`/`upgrade`) now that `mise` is Mainstream on the Tech Radar. Depends on PR 15 and PR 24. Status: Stack 4 · top · needs PR 15, PR 24.
+22. **PR 20**: Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, `deps-outdated`/`upgrade`) now that `mise` is Mainstream on the Tech Radar. Approved by the NHSE Engineering Board, so no ADR is required. Depends on PR 15 and PR 24. Status: Stack 4 · top · needs PR 15, PR 24.
 23. **PR 21**: Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled. Status: ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)).
 24. **PR 22**: Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`. Status: Standalone · must land last.
 25. **PR 23**: Repo-wide word-splitting/quoting/globbing audit: harden the remaining unquoted `$filter`/`$cmd`/`$args` command-string splats and `for x in $(find …)` loops in `check-file-format.sh`, `scan-secrets.sh`, `docker.lib.sh`, `init.mk`, and `docker.mk` — the same anti-pattern PR 17 fixes, but for the scripts and Makefiles it doesn't touch. Confirms there are no tracked Python files affected. Status: Stack 3 · top · needs PR 18.
@@ -77,10 +77,11 @@ immediately before merging `v2` into `main` — see its entry for why.
   settles the dependency inventory, PR 24 updates the pinned versions across the
   toolchain, Docker image comments, and workflow action SHAs or versions,
   including any action that now needs replacement rather than a simple bump.
-- **PR 20 (asdf → mise)** now follows immediately after PR 24 and remains
-  ADR-gated because it changes a documented, org-wide prerequisite. It should be
-  treated as the preferred post-refresh end state, not as a speculative future
-  improvement.
+- **PR 20 (asdf → mise)** now follows immediately after PR 24. It changes a
+  documented, org-wide prerequisite, but the NHSE Engineering Board has already
+  approved the asdf → mise migration, so this PR does not need a repository ADR.
+  It should be treated as the preferred post-refresh end state, not as a
+  speculative future improvement.
 - **PR 18 supersedes the former Optional A**: rather than forcing `make lint` to
   check all markdown links repo-wide, it fixes `check=branch` base resolution so
   branch-scoped link checking is correct and consistent with the other `lint-*`
@@ -116,7 +117,8 @@ Because of the Tech Radar change, Stack 4 is listed first and should be picked
 up first.
 
 1. **Stack 4 — Toolchain modernisation**: `PR 15 → PR 24 → PR 20`.
-   Immediate priority after the NHSE Tech Radar change. PR 20 remains ADR-gated.
+   Immediate priority after the NHSE Tech Radar change. PR 20 is approved by the
+   NHSE Engineering Board, so it needs no ADR.
 2. **Stack 1 — Shell-lint gate**: `PR 2 → PR 3 → PR 4 → Optional C`.
    Genuine dependency chain.
 3. **Stack 2 — Shell hygiene**: `PR 5 → PR 6`.
@@ -129,11 +131,12 @@ up first.
 **Stack 4 — Toolchain modernisation.** `PR 15` (close parity and dependency
 inventory gaps while still on asdf) → `PR 24` (refresh the pinned versions
 across CLIs, runtimes, Docker pins, and GitHub Actions) → `PR 20` (`asdf` →
-`mise`, ADR-gated). This stack is now the **first pickup** item because NHSE
-Engineering has moved `asdf` to **Contain** and `mise` to **Mainstream** on the
-Tech Radar. The dependency chain is now explicit: PR 15 settles _what exists and
-what is missing_, PR 24 refreshes _which versions and SHAs are current_, and
-PR 20 changes _how the toolchain is provisioned_.
+`mise`, Engineering-Board-approved, no ADR required). This stack is now the
+**first pickup** item because NHSE Engineering has moved `asdf` to **Contain**
+and `mise` to **Mainstream** on the Tech Radar. The dependency chain is now
+explicit: PR 15 settles _what exists and what is missing_, PR 24 refreshes
+_which versions and SHAs are current_, and PR 20 changes _how the toolchain is
+provisioned_.
 
 **Stack 1 — Shell-lint gate.** `PR 2` (real gate in `init.mk`) → `PR 3`
 (`lint-shell` target) → `PR 4` (CI action + job) → `Optional C` (README note). A
@@ -1844,13 +1847,13 @@ set, PR 24 refreshes that set to current versions, and this PR then swaps the
 manager that provisions it. Also complements **PR 2**/**PR 4** (reproducible native
 `shellcheck`) and **PR 10** (native `node`).
 **Files**: `.tool-versions`, `scripts/init.mk`, `.github/workflows/*.yaml`
-(+ a mise setup step), `README.md`, relevant docs under `docs/`, a new ADR under
-`docs/adr/`, and the `docker`/`makefile` instruction files that reference asdf.
+(+ a mise setup step), `README.md`, relevant docs under `docs/`, and the
+`docker`/`makefile` instruction files that reference asdf.
 
 > **Note**: This is a net-new improvement to this repository (it currently uses
-> asdf throughout). Because it changes an org-wide, documented prerequisite,
-> it should be gated behind maintainer agreement and recorded as an ADR (the repo
-> already has an ADR process under `docs/adr/`). No diff is included at this
+> asdf throughout). It changes an org-wide, documented prerequisite, but the
+> asdf → mise migration has already been approved by the NHSE Engineering Board,
+> so this PR does not need a repository ADR. No diff is included at this
 > stage — this entry is the design and analysis only.
 
 **Context**: With PR 15 the native path is fully inventoried and with PR 24 it is
@@ -1930,8 +1933,10 @@ https://mise.run | sh` + `mise install`. `MISE_SAFE=1` disables any code executi
 - **New `deps-outdated` / `deps-upgrade` targets** — wrap `mise outdated` and
   `mise upgrade` so keeping pins current is a first-class, repeatable workflow (the
   durable answer to the "latest versions" question raised in PR 15).
-- **ADR** — add `docs/adr/ADR-005_Tool_Version_Manager.md` (or next number) recording
-  asdf → mise, with the Tech Radar alignment note the PR 1 template now requires.
+
+No ADR is required for this PR: the asdf → mise migration is a decision already
+made and approved by the NHSE Engineering Board, not a choice this repository is
+making independently.
 
 **Optional idiomatic evolution** (follow-up, not required for this PR): move the
 native pins into a `mise.toml` `[tools]` table and optionally add `[tasks]` that wrap
@@ -1952,7 +1957,8 @@ the `# docker/...` block, and account for the `mise.toml` trust prompt in CI
 
 **Risks & mitigations**:
 
-- _Prerequisite change_ → gate behind an ADR and a short contributor note.
+- _Prerequisite change_ → covered by the NHSE Engineering Board's approval of the
+  asdf → mise migration; a short contributor note in `README.md` is still needed.
 - _CI fetches tools from the network_ → `jdx/mise-action` caching + `GITHUB_TOKEN`.
 - _Trust prompts / code execution_ → keep `.tool-versions` (no code) for this PR; use
   `MISE_SAFE=1` if a `mise.toml` with tasks is introduced later.
