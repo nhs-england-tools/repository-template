@@ -39,7 +39,7 @@ The following software packages, or their equivalents, are expected to be instal
 - [GNU coreutils](https://www.gnu.org/software/coreutils/) may be required to build dependencies like Python, which may need to be compiled during installation. `mise` installs a prebuilt Python where available, so this compilation step is now the fallback case rather than the default.
 
 > [!NOTE]<br>
-> On macOS, run `make toolchain-install-gnu-macos` to install these via Homebrew, then add the `PATH` line it prints to your shell profile (it can also offer to append it for you). Run `make toolchain-verify-gnu`, on any OS, to confirm `sed`, `grep`, `awk`, `find`, `diff` and `date` resolve to their GNU implementations. If you use [dotfiles](https://github.com/nhs-england-tools/dotfiles), this may already be handled. See its [base packages script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
+> On macOS, run `make toolchain-install-gnu-macos` to install these via Homebrew, then add the `PATH` line it prints to your shell profile (it can also offer to append it for you). Run `make toolchain-verify-gnu`, on any OS, to confirm `sed`, `grep`, `awk`, `find`, `diff` and `date` resolve to their GNU implementations, and that `make` is 3.82 or later and a `docker`/`podman` container runtime is on `PATH`. It only reports missing or outdated tools, it never installs `make` or a container runtime for you. If you use [dotfiles](https://github.com/nhs-england-tools/dotfiles), this may already be handled. See its [base packages script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
 
 ### Set up
 

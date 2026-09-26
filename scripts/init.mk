@@ -66,7 +66,7 @@ toolchain-outdated: _toolchain-check # List newer upstream versions of the toolc
 toolchain-install-gnu-macos: # Install this repository's required GNU userland tools via Homebrew (macOS only, no-op on Linux) @Configuration
 	./scripts/toolchain/install-gnu-macos.sh
 
-toolchain-verify-gnu: # Verify sed, grep, awk, find, diff and date resolve to their GNU implementations (any OS) @Configuration
+toolchain-verify-gnu: # Verify sed, grep, awk, find, diff and date resolve to their GNU implementations, and report make/Docker/Podman versions (any OS) @Configuration
 	./scripts/toolchain/verify-gnu.sh
 
 clean:: # Remove all generated and temporary files (common) @Operations
