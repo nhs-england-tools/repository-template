@@ -1,3 +1,6 @@
+# Minimum mise CLI version for developers; CI/CD pins the exact same version, SEE: .github/workflows/cicd-1-pull-request.yaml
+min_version = "2026.9.14"
+
 [tools]
 editorconfig-checker = "3.11.3"
 gitleaks = "8.30.1"

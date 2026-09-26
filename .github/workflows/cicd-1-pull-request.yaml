@@ -24,6 +24,7 @@ jobs:
       build_epoch: ${{ steps.variables.outputs.build_epoch }}
       nodejs_version: ${{ steps.variables.outputs.nodejs_version }}
       python_version: ${{ steps.variables.outputs.python_version }}
+      mise_version: ${{ steps.variables.outputs.mise_version }}
       version: ${{ steps.variables.outputs.version }}
       does_pull_request_exist: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
     steps:
@@ -40,6 +41,7 @@ jobs:
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
           echo "nodejs_version=$(sed -n 's/^node[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)" >> $GITHUB_OUTPUT
           echo "python_version=$(sed -n 's/^python[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)" >> $GITHUB_OUTPUT
+          echo "mise_version=$(sed -n 's/^min_version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)" >> $GITHUB_OUTPUT
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
       - name: "Check if pull request exists for this branch"
         id: pr_exists
@@ -63,6 +65,7 @@ jobs:
           export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
           export NODEJS_VERSION="${{ steps.variables.outputs.nodejs_version }}"
           export PYTHON_VERSION="${{ steps.variables.outputs.python_version }}"
+          export MISE_VERSION="${{ steps.variables.outputs.mise_version }}"
           export VERSION="${{ steps.variables.outputs.version }}"
           export DOES_PULL_REQUEST_EXIST="${{ steps.pr_exists.outputs.does_pull_request_exist }}"
           make list-variables
@@ -78,6 +81,7 @@ jobs:
       build_epoch: "${{ needs.metadata.outputs.build_epoch }}"
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
+      mise_version: "${{ needs.metadata.outputs.mise_version }}"
       version: "${{ needs.metadata.outputs.version }}"
   test-stage: # Recommended maximum execution time is 5 minutes
     name: "Test stage"
