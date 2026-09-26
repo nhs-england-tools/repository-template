@@ -52,7 +52,7 @@ docker-shellscript-lint: # Lint all Docker module shell scripts @Quality
 # Module tests and examples - please DO NOT edit this section!
 
 docker-test-suite-run: # Run Docker test suite @ExamplesAndTests
-	scripts/docker/tests/docker.test.sh
+	dir=scripts/docker ./scripts/tests/run-test-suites.sh
 
 # ==============================================================================
 

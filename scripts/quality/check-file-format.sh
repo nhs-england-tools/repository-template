@@ -67,6 +67,11 @@ function main() {
       ;;
   esac
 
+  # The runners swallow a failing filter, so run it once here to fail under errexit
+  $filter > /dev/null
+
+  # Both runners append /dev/null as a backstop. If the filter comes back
+  # empty, it prevents `ec` from treating "no files" as "all the files".
   if command -v ec > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     filter="$filter" dry_run_opt="${dry_run_opt:-}" run-editorconfig-natively
   else
@@ -83,7 +88,7 @@ function run-editorconfig-natively() {
   # shellcheck disable=SC2046,SC2086
   ec \
     -config "$PWD/scripts/config/editorconfig-checker.json" \
-    --exclude '.git/' $dry_run_opt $($filter)
+    --exclude '.git/' $dry_run_opt $($filter) /dev/null
 }
 
 # Run editorconfig in a Docker container.
@@ -97,9 +102,6 @@ function run-editorconfig-in-docker() {
 
   # shellcheck disable=SC2155
   local image=$(name=mstruebing/editorconfig-checker docker-get-image-version-and-pull)
-  # We use /dev/null here as a backstop in case there are no files in the state
-  # we choose. If the filter comes back empty, adding `/dev/null` onto it has
-  # the effect of preventing `ec` from treating "no files" as "all the files".
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/check \
     "$image" \

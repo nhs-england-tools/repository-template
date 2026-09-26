@@ -43,7 +43,10 @@ function main() {
       files="$(git diff --diff-filter=ACMRT --name-only "*.md")"
       ;;
     "branch")
-      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --name-only "*.md") | sort | uniq )"
+      if ! git rev-parse --verify --quiet "${BRANCH_NAME:-origin/main}^{commit}" > /dev/null; then
+        echo "Branch to compare with not found: ${BRANCH_NAME:-origin/main}" >&2 && exit 1
+      fi
+      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --diff-filter=ACMRT --name-only "*.md") | sort | uniq )"
       ;;
     *)
       echo "Unrecognised check mode: $check" >&2 && exit 1
@@ -66,12 +69,15 @@ function main() {
 #   files=[files to check]
 function run-lychee-natively() {
 
-  # shellcheck disable=SC2086
+  local IFS=$'\n'
+  # shellcheck disable=SC2206
+  local -a file_list=($files)
+
   lychee \
     --config "$PWD/scripts/config/lychee.toml" \
     --no-progress \
     --quiet \
-    $files
+    "${file_list[@]}"
 
   return 0
 }
@@ -86,7 +92,11 @@ function run-lychee-in-docker() {
 
   # shellcheck disable=SC2155
   local image=$(name=lycheeverse/lychee docker-get-image-version-and-pull)
-  # shellcheck disable=SC2086
+
+  local IFS=$'\n'
+  # shellcheck disable=SC2206
+  local -a file_list=($files)
+
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
@@ -94,7 +104,7 @@ function run-lychee-in-docker() {
       --config /workdir/scripts/config/lychee.toml \
       --no-progress \
       --quiet \
-      $files
+      "${file_list[@]}"
 
   return 0
 }

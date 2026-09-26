@@ -131,9 +131,9 @@ function docker-clean() {
     docker rmi "${DOCKER_IMAGE}:${version}" > /dev/null 2>&1 ||:
   done
   rm -f \
-    .version \
-    Dockerfile.effective \
-    Dockerfile.effective.dockerignore
+    "$dir/.version" \
+    "$dir/Dockerfile.effective" \
+    "$dir/Dockerfile.effective.dockerignore"
 }
 
 # Create effective version from the VERSION file.
@@ -172,7 +172,7 @@ function version-create-effective-file() {
 # Arguments (provided as environment variables):
 #   name=[full name of the Docker image]
 #   match_version=[regexp to match the version, for example if the same image is used with multiple tags, default is '.*']
-# shellcheck disable=SC2001
+# shellcheck disable=SC2001,SC2154
 function docker-get-image-version-and-pull() {
 
   # E.g. for the given entry '"ghcr.io/org/image" = "1.2.3@sha256:hash"' under
