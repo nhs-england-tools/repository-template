@@ -1,3 +1,5 @@
-# `*:latest` will be replaced with a corresponding version stored in the 'mise.toml' file
-# hadolint ignore=DL3007
-FROM python:latest
+# The 'ARG PYTHON_VERSION' default is a real, valid, non-'latest' version so this Dockerfile
+# builds on its own; the build tooling keeps it in sync with the 'python' pin in 'mise.toml'
+ARG PYTHON_VERSION=3.11.0
+FROM python:${PYTHON_VERSION}
+USER nobody
