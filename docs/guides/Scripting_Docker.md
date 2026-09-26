@@ -169,11 +169,13 @@ Here is a step-by-step guide for an image which packages a third-party tool. It 
 1. Create `infrastructure/images/cypress/Dockerfile`
 
    ```Dockerfile
-   # hadolint ignore=DL3007
-   FROM cypress/browsers:latest
+   ARG CYPRESS_BROWSERS_VERSION=node-20.5.0-chrome-114.0.5735.133-1-ff-114.0.2-edge-114.0.1823.51-1
+   FROM cypress/browsers:${CYPRESS_BROWSERS_VERSION}
    ```
 
-2. Add the following entry to the `mise.toml` file's `[_.docker]` table. This will be used to replace the `latest` version placeholder in the `Dockerfile`.
+   The `ARG` default must be a real, valid version, not the word `latest`, so the Dockerfile still builds correctly even before the next step's pin has been added.
+
+2. Add the following entry to the `mise.toml` file's `[_.docker]` table. This will be used to keep the `ARG` default in the `Dockerfile` in sync.
 
    ```toml
    [_.docker]
@@ -264,7 +266,7 @@ Base image versions are maintained in the [mise.toml](../../mise.toml) file's `[
 
 Each entry must be a single-line `"image/name" = "version"` pair. Entries in any other form, for example multi-line strings, arrays or inline tables, are ignored. `docker-get-image-version-and-pull` matches the image name exactly, so a lookup for `node` never returns the pin for `cimg/node`.
 
-This method facilitates dependency management through a single file. The `docker-build` function will replace any instance of `FROM image/name:latest` with `FROM image/name:1.0.0@sha256:1234567890...abcdef`. Additionally, the [Dockerfile.metadata](../../scripts/docker/Dockerfile.metadata) file will be appended to the end of the `Dockerfile.effective` created by the process.
+This method facilitates dependency management through a single file. The `docker-build` function rewrites the matching `ARG ..._VERSION=...` default in `Dockerfile.effective`, for example turning `ARG PYTHON_VERSION=3.11.0` into `ARG PYTHON_VERSION=1.0.0@sha256:1234567890...abcdef` for a `FROM python:${PYTHON_VERSION}` instruction. Additionally, the [Dockerfile.metadata](../../scripts/docker/Dockerfile.metadata) file will be appended to the end of the `Dockerfile.effective` created by the process.
 
 The reason we do this is so that the deployment version is source-controlled, but the tooling does not interfere with using a more recent Docker image during local development before the new version can be added to the `mise.toml` file. It also serves as a clean way of templating Docker image definition. The `[_.docker]` table lives under the `[_]` key, which mise never uses for toolchain resolution. Its presence does mean mise asks for `mise.toml` to be trusted once per clone. `make config` does this, because `mise install` trusts the configuration it installs from.
 

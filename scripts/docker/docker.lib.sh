@@ -104,7 +104,7 @@ function docker-run() {
   docker run --rm --platform linux/amd64 \
     ${args:-} \
     "${tag}" \
-    ${DOCKER_CMD:-}
+    ${cmd:-}
 }
 
 # Push Docker image.
@@ -365,30 +365,68 @@ function _create-effective-dockerfile() {
     cp "${dir}/Dockerfile.dockerignore" "${dir}/Dockerfile.effective.dockerignore"
   fi
   cp "${dir}/Dockerfile" "${dir}/Dockerfile.effective"
-  _replace-image-latest-by-specific-version
+  _pin-dockerfile-arg-versions
   _append-metadata
 }
 
-# Replace image:latest by a specific version.
+# Pin the 'ARG <NAME>_VERSION=...' defaults that parameterise 'FROM image:${<NAME>_VERSION}'
+# instructions to the versions in the 'mise.toml' file. Dockerfiles never contain a literal
+# 'image:latest', which is what security scanners flag, so no ARG default is ever 'latest'
+# either: it must be a real, valid version so the Dockerfile still builds without this
+# substitution having run.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
-function _replace-image-latest-by-specific-version() {
+function _pin-dockerfile-arg-versions() {
 
   local dir=${dir:-$PWD}
   local config_file="${MISE_TOML:=$(git rev-parse --show-toplevel)/mise.toml}"
   local dockerfile="${dir}/Dockerfile.effective"
   local build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}
 
-  if [[ -f "$config_file" ]]; then
+  if [[ -f "$config_file" && -f "$dockerfile" ]]; then
     # First, list the '[_.docker]' entries to take precedence, then the '[tools]' entries as a fallback
-    local content
-    content=$(_toml-table-entries "_.docker" "$config_file"; _toml-table-entries "tools" "$config_file")
-    echo "$content" | while IFS= read -r line; do
-      [[ -z "$line" ]] && continue
-      name=$(echo "$line" | awk '{print $1}')
-      version=$(echo "$line" | awk '{print $2}')
-      sed -i "s;\(FROM .*\)${name}:latest;\1${name}:${version};g" "$dockerfile"
-    done
+    local entries
+    entries=$(_toml-table-entries "_.docker" "$config_file"; _toml-table-entries "tools" "$config_file")
+    awk '
+      # First file (the mise.toml entries): record the first (highest-precedence) version seen per image name
+      NR == FNR {
+        if (NF == 2 && !($1 in pin)) pin[$1] = $2
+        next
+      }
+      # Second file (the Dockerfile): find which ARG variable parameterises each FROM image name,
+      # and which line declares that ARG, so its default can be rewritten in a single pass
+      {
+        lines[FNR] = $0
+        line = $0
+        if (line ~ /^FROM[[:space:]]/) {
+          rest = line
+          sub(/^FROM[[:space:]]+/, "", rest)
+          sub(/^--platform=[^[:space:]]+[[:space:]]+/, "", rest)
+          colon = index(rest, ":")
+          if (colon > 0) {
+            name = substr(rest, 1, colon - 1)
+            tail = substr(rest, colon + 1)
+            if (substr(tail, 1, 2) == "${") {
+              brace = index(tail, "}")
+              if (brace > 0) arg_for_name[name] = substr(tail, 3, brace - 3)
+            }
+          }
+        } else if (line ~ /^ARG[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=/) {
+          rest = line
+          sub(/^ARG[[:space:]]+/, "", rest)
+          arg_line[substr(rest, 1, index(rest, "=") - 1)] = FNR
+        }
+      }
+      END {
+        for (name in pin) {
+          var = arg_for_name[name]
+          if (var == "" || !(var in arg_line)) continue
+          lines[arg_line[var]] = "ARG " var "=" pin[name]
+        }
+        for (i = 1; i <= FNR; i++) print lines[i]
+      }
+    ' <(printf '%s\n' "$entries") "$dockerfile" > "$dockerfile.tmp"
+    mv "$dockerfile.tmp" "$dockerfile"
   fi
 
   if [[ -f "$dockerfile" ]]; then
