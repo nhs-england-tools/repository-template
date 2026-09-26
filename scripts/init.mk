@@ -63,6 +63,12 @@ _toolchain-check: # Fail with an actionable message when mise is not installed
 toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in mise.toml (Docker image pins are not checked) @Configuration
 	mise outdated --bump
 
+toolchain-install-gnu-macos: # Install this repository's required GNU userland tools via Homebrew (macOS only, no-op on Linux) @Configuration
+	./scripts/toolchain/install-gnu-macos.sh
+
+toolchain-verify-gnu: # Verify sed, grep, awk, find, diff and date resolve to their GNU implementations (any OS) @Configuration
+	./scripts/toolchain/verify-gnu.sh
+
 clean:: # Remove all generated and temporary files (common) @Operations
 	rm -rf \
 		*report*.json \
@@ -170,5 +176,7 @@ ${VERBOSE}.SILENT: \
 	help \
 	list-variables \
 	scan-secrets \
+	toolchain-install-gnu-macos \
 	toolchain-outdated \
+	toolchain-verify-gnu \
 	version-create-effective-file \
