@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2034,SC2317,SC2329
 
 set -euo pipefail
@@ -236,7 +236,7 @@ function write-fixture() {
 
   local file="$TEST_TMP/tree/$1"
   mkdir -p "$(dirname "$file")"
-  printf '#!/bin/bash\n%s\n' "$2" > "$file"
+  printf '#!/usr/bin/env bash\n%s\n' "$2" > "$file"
   chmod +x "$file"
 
   return 0

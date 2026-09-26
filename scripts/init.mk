@@ -24,6 +24,9 @@ check-markdown-links: check ?= all
 check-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
+format-markdown-tables: # Format markdown tables @Quality
+	./scripts/quality/format-markdown-tables.sh
+
 check-shell-lint: # Lint all shell scripts in this project, do not fail on error, just print the error messages @Quality
 	output=$$(for file in $$(find . -type f -name "*.sh"); do
 		file=$${file} scripts/quality/check-shell-lint.sh ||:;
@@ -66,7 +69,7 @@ toolchain-outdated: _toolchain-check # List newer upstream versions of the toolc
 toolchain-install-gnu-macos: # Install this repository's required GNU userland tools via Homebrew (macOS only, no-op on Linux) @Configuration
 	./scripts/toolchain/install-gnu-macos.sh
 
-toolchain-verify-gnu: # Verify sed, grep, awk, find, diff and date resolve to their GNU implementations, and report make/Docker/Podman versions (any OS) @Configuration
+toolchain-verify-gnu: # Verify GNU tools, GNU Make 3.82+ and Bash 5.2+ on PATH; report Docker/Podman versions (any OS) @Configuration
 	./scripts/toolchain/verify-gnu.sh
 
 clean:: # Remove all generated and temporary files (common) @Operations
@@ -103,7 +106,7 @@ list-variables: # List all the variables available to make @Others
 .ONESHELL:
 .PHONY: * # Please do not change this line! The alternative usage of it introduces unnecessary complexity and is considered an anti-pattern.
 MAKEFLAGS := --no-print-director
-SHELL := /bin/bash
+SHELL := $(shell command -v bash)
 ifeq (true, $(shell [[ "${VERBOSE}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]] && echo true))
 	.SHELLFLAGS := -cex
 else
@@ -171,6 +174,7 @@ ${VERBOSE}.SILENT: \
 	check-shell-lint \
 	clean \
 	config \
+	format-markdown-tables \
 	githooks-config \
 	githooks-run \
 	help \

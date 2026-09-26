@@ -23,23 +23,24 @@ It bundles a minimal project layout, a Makefile with quality targets, scripts fo
 The following software packages, or their equivalents, are expected to be installed and configured:
 
 - [GNU make](https://www.gnu.org/software/make/) 3.82 or later
+- GNU Bash 5.2 or later, with `bash` on `PATH` before older system versions
 - [Docker](https://www.docker.com/) container runtime or a compatible tool, for example [Podman](https://podman.io/)
 - [mise](https://mise.jdx.dev/) toolchain manager, installed with `curl https://mise.run | sh` and activated in your shell profile, for example `echo 'eval "$(mise activate zsh)"' >> ~/.zshrc`. `make config` uses it to install every pinned native tool, including [Python](https://www.python.org/) (needed to run Git hooks) and [`jq`](https://jqlang.github.io/jq/). The `make` targets find the pinned toolchain tools without activation, but running them directly needs it.
 
 > [!NOTE]<br>
-> The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [Homebrew](https://brew.sh/) installed, then to install `make`, like so:
+> The GNU Make and Bash versions supplied by macOS are too old. Install [Homebrew](https://brew.sh/), then install both tools:
 >
 > ```shell
-> brew install make
+> brew install make bash
 > ```
 >
-> You will then see instructions to fix your [`$PATH`](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl) variable to make the newly installed version available. If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
+> Put Homebrew's `bin` and GNU Make's `libexec/gnubin` before system directories on [`PATH`](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl). Make and directly executed scripts then use Homebrew Bash. If you use [dotfiles](https://github.com/nhs-england-tools/dotfiles), this may already be configured.
 
 - [GNU sed](https://www.gnu.org/software/sed/), [GNU grep](https://www.gnu.org/software/grep/), [GNU awk](https://www.gnu.org/software/gawk/), [GNU findutils](https://www.gnu.org/software/findutils/) and [GNU diffutils](https://www.gnu.org/software/diffutils/) are required: some of this repository's own scripts use GNU-only flags (for example bare `sed -i` in-place edits, `date --date=`), which behave differently or do not exist on macOS's built-in BSD tools.
 - [GNU coreutils](https://www.gnu.org/software/coreutils/) may be required to build dependencies like Python, which may need to be compiled during installation. `mise` installs a prebuilt Python where available, so this compilation step is now the fallback case rather than the default.
 
 > [!NOTE]<br>
-> On macOS, run `make toolchain-install-gnu-macos` to install these via Homebrew, then add the `PATH` line it prints to your shell profile (it can also offer to append it for you). Run `make toolchain-verify-gnu`, on any OS, to confirm `sed`, `grep`, `awk`, `find`, `diff` and `date` resolve to their GNU implementations, and that `make` is 3.82 or later and a `docker`/`podman` container runtime is on `PATH`. It only reports missing or outdated tools, it never installs `make` or a container runtime for you. If you use [dotfiles](https://github.com/nhs-england-tools/dotfiles), this may already be handled. See its [base packages script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
+> On macOS, run `make toolchain-install-gnu-macos` to install Bash and the other GNU tools via Homebrew, then add the `PATH` line it prints to your shell profile (it can also offer to append it for you). Run `make toolchain-verify-gnu` on any OS to check GNU Make 3.82+, Bash 5.2+, the other GNU tools and a Docker or Podman runtime. The verifier reports missing tools without installing them. See the [base packages script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) if you use dotfiles.
 
 ### Set up
 

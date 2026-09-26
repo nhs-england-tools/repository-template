@@ -25,6 +25,7 @@ There are two ways to sign commits in GitHub, using a GPG or an SSH signature. D
 ### Generate GPG key
 
 <!-- markdownlint-disable-next-line no-inline-html -->
+
 If you do not have it already generate a new pair of GPG keys. Please change the passphrase (<span style="color:red">pleaseChooseYourKeyPassphrase</span>) below and save it in your password manager.
 
 ```shell
@@ -93,9 +94,9 @@ gpg --delete-keys $ID
 
 Use the [following commands](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-gpg-key) to set your default signing key in Git to the ID of the GPG key you generated. Replace `$ID` with your actual GPG key ID from the script above.
 
-  ```shell
-  git config --global user.signingkey $ID
-  ```
+```shell
+git config --global user.signingkey $ID
+```
 
 Then enable automatic signing of Git commits by running:
 
