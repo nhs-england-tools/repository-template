@@ -49,18 +49,18 @@ githooks-run: # Run git hooks configured in this repository @Operations
 		--config scripts/config/pre-commit.yaml \
 		--all-files
 
-_toolchain-install-one: _toolchain-check # Install one toolchain tool via mise - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
+_toolchain-install-one: _toolchain-check # Install one toolchain tool via mise - mandatory: name=[listed in the 'mise.toml' file]; optional: version=[if not listed]
 	[[ -n "${name}" ]] || { echo "name is required, for example: make _toolchain-install-one name=jq" >&2; exit 1; }
 	echo ${name}
 	mise install $(if ${version},${name}@${version},${name})
 
-_toolchain-install: _toolchain-check # Install every toolchain tool listed in .tool-versions via mise
+_toolchain-install: _toolchain-check # Install every toolchain tool listed in mise.toml via mise
 	mise install
 
 _toolchain-check: # Fail with an actionable message when mise is not installed
 	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
 
-toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in .tool-versions (Docker image pins are not checked) @Configuration
+toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in mise.toml (Docker image pins are not checked) @Configuration
 	mise outdated --bump
 
 clean:: # Remove all generated and temporary files (common) @Operations

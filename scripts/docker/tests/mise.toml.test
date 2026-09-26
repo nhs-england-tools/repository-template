@@ -1,0 +1,47 @@
+[tools]
+python = "3.14.7"
+node = ["24.21.0", "22"]
+jq = { version = "1.8.2" }
+
+[vars]
+escaped = """
+a \""" is still inside the string
+[_.docker]
+"from/escaped-delimiter" = "must-not-print"
+"""
+note = """
+[_.docker]
+"from/other-table" = "must-not-print"
+"""
+
+[_.docker] # the header may carry a comment
+  # an indented comment must not turn into an entry
+"python" = "3.11.4-alpine3.18@sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86" # SEE: https://hub.docker.com/_/python/tags
+"multi/line-string" = '''
+"inside/string" = "must-not-print"
+'''
+"nested/array" = [
+  ["n"],
+  "must-not-print",
+]
+"inline/table" = {
+  inner = "must-not-print",
+}
+"escaped/quote" = "ab\" # "
+"array/escaped-bracket" = [
+  "a\"[",
+]
+"array/mixed-quotes" = [ 'a"b', "c]",
+  ["y"],
+]
+"key=with-equals" = [
+  ["x"],
+]
+"array/quote-run" = [ """y"""", "z" ]
+'value/backreference' = 'v\1'
+"value/sed-delimiter" = "v;w"
+"cimg/python" = "3.12.0@sha256:1111111111111111111111111111111111111111111111111111111111111111"
+'ghcr.io/org/single-quoted' = '1.0.0@sha256:2222222222222222222222222222222222222222222222222222222222222222'
+
+  [env]
+DOCKER_ONLY = "must-not-leak"
