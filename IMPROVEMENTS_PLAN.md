@@ -47,7 +47,7 @@ immediately before merging `v2` into `main` — see its entry for why.
 19. **PR 17**: Replace unquoted `$files` word-splitting with bash arrays in the markdown check/format scripts so paths with spaces are handled correctly. Status: Stack 3 · needs PR 16.
 20. **PR 18**: Resolve the `check=branch` base dynamically (explicit / CI / default-branch) and diff from the merge-base, so `lint-*` targets scope correctly for any branch merged to any base. Supersedes the removed Optional A. Status: Stack 3 · top · needs PR 17.
 21. **PR 19**: Promote the former Optional B (now expected): modernise `check-file-format.sh` and adopt a `.editorconfigignore` so editorconfig exclusions use the same dedicated ignore-file pattern as the other linters; add self-documenting headers to the empty ignore-file placeholders. Status: Stack 3 · base.
-22. **PR 20**: Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, `deps-outdated`/`upgrade`) now that `mise` is Mainstream on the Tech Radar. Approved by the NHSE Engineering Board, so no ADR is required. Depends on PR 15 and PR 24. Status: Stack 4 · top · needs PR 15, PR 24.
+22. **PR 20**: Migrate the toolchain manager from `asdf` to `mise` (registry backends, no per-tool plugins, CI action, docs, `deps-outdated`) now that `mise` is Mainstream on the Tech Radar. Approved by the NHSE Engineering Board, so no ADR is required. Depends on PR 15 and PR 24. Status: Stack 4 · top · needs PR 15, PR 24.
 23. **PR 21**: Add a `perform-static-analysis` CI job, using the official `SonarSource/sonarqube-scan-action`, so SonarQube Cloud analysis runs on PRs and `main` pushes now that automatic analysis is disabled. Status: ✅ Merged ([#242](https://github.com/nhs-england-tools/repository-template/pull/242)).
 24. **PR 22**: Port the `main` push-trigger fix (`branches: ["**"]` -> `branches: [main]`) onto `v2`, stopping the double-run on every PR-branch commit. Must be the last commit on `v2`, applied immediately before merging `v2` into `main`. Status: Standalone · must land last.
 25. **PR 23**: Repo-wide word-splitting/quoting/globbing audit: harden the remaining unquoted `$filter`/`$cmd`/`$args` command-string splats and `for x in $(find …)` loops in `check-file-format.sh`, `scan-secrets.sh`, `docker.lib.sh`, `init.mk`, and `docker.mk` — the same anti-pattern PR 17 fixes, but for the scripts and Makefiles it doesn't touch. Confirms there are no tracked Python files affected. Status: Stack 3 · top · needs PR 18.
@@ -1882,11 +1882,12 @@ same `.tool-versions` file, so migration is incremental, and it closes both gaps
   (`aqua:jqlang/jq`), `shellcheck` (`aqua:koalaman/shellcheck`), `hadolint`
   (`aqua:hadolint/hadolint`), `lychee` (`aqua:lycheeverse/lychee`), `gitleaks`
   (`aqua:gitleaks/gitleaks`), `editorconfig-checker`, `pre-commit`, `node`
-  (`core:node`), `prettier` (`npm:prettier`), `markdownlint-cli2` (`npm`).
+  (`core:node`), `prettier` (`npm:prettier`), `markdownlint-cli` (`npm:markdownlint-cli`;
+  the registry shorthand `markdownlint-cli2` is a different tool).
 - It installs everything in one shot (`mise install`), runs pinned tools with
   `mise exec`/shims/`mise activate`, ships an official GitHub Action
-  (`jdx/mise-action@v3`) with caching, and answers "are we on the latest versions?"
-  directly with `mise outdated` / `mise upgrade`.
+  (`jdx/mise-action@v4`) with caching, and answers "are we on the latest versions?"
+  directly with `mise outdated --bump`.
 
 Crucially, the repository's extended `# docker/...` pins in `.tool-versions` are
 **comments**, which mise ignores exactly as asdf does, so
@@ -1901,7 +1902,7 @@ unchanged. Migration does not touch the Docker-image pinning mechanism.
 tool@ver` adds+installs+writes config.
 - Activation choice: `mise activate` for interactive shells vs **shims** for
   CI/IDEs/scripts (better fit here). `make` can also just call `mise exec --`.
-- CI: `jdx/mise-action@v3` (install + cache), or bootstrap with `curl
+- CI: `jdx/mise-action@v4` (install + cache), or bootstrap with `curl
 https://mise.run | sh` + `mise install`. `MISE_SAFE=1` disables any code execution
   for untrusted config; `mise.toml` with tasks/env/hooks triggers a one-time trust
   prompt (`.tool-versions` alone does not).
@@ -1912,27 +1913,38 @@ https://mise.run | sh` + `mise install`. `MISE_SAFE=1` disables any code executi
 
 - **`scripts/init.mk`** — replace the asdf targets with mise: `_install-dependencies`
   becomes a thin wrapper around `mise install`; drop `asdf plugin add`/`asdf install`.
-  Keep the `_install-dependency name=…` entry point as an optional convenience
-  mapping to `mise use ${name}@${version}` so downstream `config::` overrides still
-  work. `config::` continues to call `$(MAKE) _install-dependencies`.
+  Keep the `_install-dependency name=…` entry point, mapping to
+  `mise install ${name}@${version}`, so downstream `config::` overrides still work.
+  `config::` continues to call `$(MAKE) _install-dependencies`. `mise install` does
+  not put tools on `PATH`, and `mise activate` inside a recipe only affects that one
+  recipe, so prepend the mise shims directory (from `mise activate bash --shims`) to
+  make's `PATH`. Without it, `make config` fails at `pre-commit install` in any shell
+  that has not activated mise. Fail early with an actionable message when `mise` is
+  not installed ([MK-LCL-008]).
 - **`.tool-versions`** — keep it as the single source of truth (mise reads the pinned
   set that PRs 15 and 24 completed, and `docker.lib.sh` keeps parsing the comment
   block).
   Optionally rewrite the native pins with mise registry shorthands. Leave the
   `# docker/...` comments exactly as they are.
-- **CI** — add a mise setup step (`jdx/mise-action@v3`, `install: true`,
+- **CI** — add a mise setup step (`jdx/mise-action@v4`, `install: true`,
   `cache: true`) to the commit-stage workflow so the checks run the **pinned** native
   tools; the Docker fallback remains for images without a native equivalent.
   Configure `GITHUB_TOKEN` for mise to avoid API rate limits. (The workflows already
   use `astral-sh/setup-uv`; `uv` can later move under mise too, but that is out of
   scope here.)
 - **Docs** — swap the asdf prerequisite for mise in `README.md` and the relevant
-  supporting docs (install via `curl https://mise.run | sh`, then `make config`);
-  update the `docker`/`makefile` instruction file references, including the "Tool
-  Version Management (asdf)" heading.
-- **New `deps-outdated` / `deps-upgrade` targets** — wrap `mise outdated` and
-  `mise upgrade` so keeping pins current is a first-class, repeatable workflow (the
-  durable answer to the "latest versions" question raised in PR 15).
+  supporting docs (install via `curl https://mise.run | sh`, activate it in the shell
+  profile for direct tool use, then `make config`); update the `docker`/`makefile`
+  instruction file references, including the "Tool Version Management (asdf)" heading.
+- **New `deps-outdated` target** — wrap `mise outdated --bump` so checking for newer
+  upstream versions is a first-class, repeatable workflow (the durable answer to the
+  "latest versions" question raised in PR 15). It covers native pins only, not the
+  `# docker/...` image pins. Do not add a `deps-upgrade` target: with exact pins,
+  plain `mise upgrade` is a no-op, and `mise upgrade --bump` rewrites `.tool-versions`
+  with column padding, would move `editorconfig-checker` to 4.x (which removes the
+  `ec` binary) and `node` to a non-LTS release, and leaves the Docker pins behind.
+  Make the CI version extraction tolerant of that padding
+  (`awk '$1 == "python" { print $2 }'` instead of `grep | cut -d' '`).
 
 No ADR is required for this PR: the asdf → mise migration is a decision already
 made and approved by the NHSE Engineering Board, not a choice this repository is
