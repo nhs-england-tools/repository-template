@@ -30,7 +30,7 @@ typecheck: # Run type checker @Quality
 	# TODO: Implement type checking required for this repository
 
 test: # Run all tests @Quality
-	# TODO: Implement tests required for this repository
+	./scripts/tests/run-test-suites.sh
 
 build: # Build the project artefact @Build
 	# TODO: Implement the artefact build step

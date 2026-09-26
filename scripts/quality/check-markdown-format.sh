@@ -49,7 +49,10 @@ function main() {
       files="$(git diff --diff-filter=ACMRT --name-only "*.md")"
       ;;
     "branch")
-      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --name-only "*.md") | sort | uniq )"
+      if ! git rev-parse --verify --quiet "${BRANCH_NAME:-origin/main}^{commit}" > /dev/null; then
+        echo "Branch to compare with not found: ${BRANCH_NAME:-origin/main}" >&2 && exit 1
+      fi
+      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --diff-filter=ACMRT --name-only "*.md") | sort | uniq )"
       ;;
     *)
       echo "Unrecognised check mode: $check" >&2 && exit 1

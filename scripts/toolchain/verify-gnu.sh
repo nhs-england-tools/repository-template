@@ -196,6 +196,9 @@ function is-arg-true() {
 
 # ==============================================================================
 
+# Let the test suite source the functions without running main
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
+
 is-arg-true "${VERBOSE:-false}" && set -x
 
 main "$@"
