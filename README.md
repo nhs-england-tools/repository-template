@@ -35,11 +35,11 @@ The following software packages, or their equivalents, are expected to be instal
 >
 > You will then see instructions to fix your [`$PATH`](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl) variable to make the newly installed version available. If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
 
-- [GNU sed](https://www.gnu.org/software/sed/) and [GNU grep](https://www.gnu.org/software/grep/) are required for scripted command-line output processing
-- [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation. `mise` installs a prebuilt Python where available, so this compilation step is now the fallback case rather than the default.
+- [GNU sed](https://www.gnu.org/software/sed/), [GNU grep](https://www.gnu.org/software/grep/), [GNU awk](https://www.gnu.org/software/gawk/), [GNU findutils](https://www.gnu.org/software/findutils/) and [GNU diffutils](https://www.gnu.org/software/diffutils/) are required: some of this repository's own scripts use GNU-only flags (for example bare `sed -i` in-place edits, `date --date=`), which behave differently or do not exist on macOS's built-in BSD tools.
+- [GNU coreutils](https://www.gnu.org/software/coreutils/) may be required to build dependencies like Python, which may need to be compiled during installation. `mise` installs a prebuilt Python where available, so this compilation step is now the fallback case rather than the default.
 
 > [!NOTE]<br>
-> For macOS users, installation of the GNU toolchain has been scripted and automated as part of the `dotfiles` project. Please see this [script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
+> On macOS, run `make toolchain-install-gnu-macos` to install these via Homebrew, then add the `PATH` line it prints to your shell profile (it can also offer to append it for you). Run `make toolchain-verify-gnu`, on any OS, to confirm `sed`, `grep`, `awk`, `find`, `diff` and `date` resolve to their GNU implementations. If you use [dotfiles](https://github.com/nhs-england-tools/dotfiles), this may already be handled. See its [base packages script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
 
 ### Set up
 
