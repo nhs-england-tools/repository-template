@@ -1,5 +1,11 @@
 include scripts/docker/docker.mk
 
+# Shims give every recipe the pinned tools without requiring `mise activate` in the shell
+MISE_SHIMS := $(shell mise activate bash --shims 2> /dev/null | sed -n 's/^export PATH="\([^:]*\):.*/\1/p')
+ifneq ($(MISE_SHIMS),)
+export PATH := $(MISE_SHIMS):$(PATH)
+endif
+
 # ==============================================================================
 
 scan-secrets: check ?= whole-history
@@ -33,7 +39,7 @@ version-create-effective-file: # Create effective version file - optional: dir=[
 	version-create-effective-file
 
 githooks-config: # Trigger Git hooks on commit that are defined in this repository @Configuration
-	$(MAKE) _install-dependency name="pre-commit"
+	$(MAKE) _toolchain-install-one name="pre-commit"
 	pre-commit install \
 		--config scripts/config/pre-commit.yaml \
 		--install-hooks
@@ -43,15 +49,19 @@ githooks-run: # Run git hooks configured in this repository @Operations
 		--config scripts/config/pre-commit.yaml \
 		--all-files
 
-_install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
+_toolchain-install-one: _toolchain-check # Install one toolchain tool via mise - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
+	[[ -n "${name}" ]] || { echo "name is required, for example: make _toolchain-install-one name=jq" >&2; exit 1; }
 	echo ${name}
-	asdf plugin add ${name} ||:
-	asdf install ${name} $(or ${version},)
+	mise install $(if ${version},${name}@${version},${name})
 
-_install-dependencies: # Install all the dependencies listed in .tool-versions
-	for plugin in $$(grep ^[a-z] .tool-versions | sed 's/[[:space:]].*//'); do
-		$(MAKE) _install-dependency name="$${plugin}"
-	done
+_toolchain-install: _toolchain-check # Install every toolchain tool listed in .tool-versions via mise
+	mise install
+
+_toolchain-check: # Fail with an actionable message when mise is not installed
+	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
+
+toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in .tool-versions (Docker image pins are not checked) @Configuration
+	mise outdated --bump
 
 clean:: # Remove all generated and temporary files (common) @Operations
 	rm -rf \
@@ -146,8 +156,9 @@ HELP_SCRIPT = \
 # ==============================================================================
 
 ${VERBOSE}.SILENT: \
-	_install-dependencies \
-	_install-dependency \
+	_toolchain-check \
+	_toolchain-install \
+	_toolchain-install-one \
 	check-file-format \
 	check-markdown-format \
 	check-markdown-links \
@@ -159,4 +170,5 @@ ${VERBOSE}.SILENT: \
 	help \
 	list-variables \
 	scan-secrets \
+	toolchain-outdated \
 	version-create-effective-file \

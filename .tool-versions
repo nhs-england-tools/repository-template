@@ -1,20 +1,22 @@
 editorconfig-checker 3.11.3
 gitleaks 8.30.1
+hadolint 2.15.1
 jq 1.8.2
+lychee 0.24.2
 nodejs 24.21.0
+npm:markdownlint-cli 0.49.1
 pre-commit 4.6.2
+python 3.14.7
 shellcheck 0.11.0
+yq 4.53.6
 
 # ==============================================================================
 # The section below is reserved for Docker image versions.
 
 # docker/ghcr.io/gitleaks/gitleaks v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f # SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks
-# NOTE: Docker-only, asdf has no markdownlint-cli plugin (only markdownlint-cli2, a different tool).
 # docker/ghcr.io/igorshubovych/markdownlint-cli v0.49.1@sha256:905baf9f6bd11da2ede8c394882c616509385f24b8b8d54fff6e111be88f39de # SEE: https://github.com/igorshubovych/markdownlint-cli/pkgs/container/markdownlint-cli
-# NOTE: Docker-only, the asdf-hadolint plugin requests release asset names that no longer exist.
 # docker/hadolint/hadolint v2.15.1-alpine@sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552 # SEE: https://hub.docker.com/r/hadolint/hadolint/tags
 # docker/koalaman/shellcheck v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d # SEE: https://hub.docker.com/r/koalaman/shellcheck/tags
-# NOTE: Docker-only, no maintained asdf plugin exists for lychee.
 # docker/lycheeverse/lychee 0.24.2@sha256:e2d19e57cf6ab037026f20b8e449a1f30d9d7f81eef4194763aab2eab20bd28d # SEE: https://hub.docker.com/r/lycheeverse/lychee
 # NOTE: editorconfig-checker 4.x drops the `ec` binary that check-file-format.sh calls, so stay on 3.x.
 # docker/mstruebing/editorconfig-checker v3.11.3@sha256:b3128d82e0518b81df28d245200d86de4bf361f065668be1d1626aacd47b785e # SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags keep in sync with the editorconfig-checker version above
