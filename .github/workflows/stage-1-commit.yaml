@@ -23,6 +23,10 @@ on:
         description: "Python version, set by the CI/CD pipeline workflow"
         required: true
         type: string
+      mise_version:
+        description: "mise CLI version, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
       version:
         description: "Version of the software, set by the CI/CD pipeline workflow"
         required: true
@@ -30,10 +34,6 @@ on:
 
 permissions:
   contents: read
-
-env:
-  # Without a version, jdx/mise-action downloads the latest mise CLI release on every run
-  TOOLCHAIN_MISE_VERSION: "2026.9.14"
 
 jobs:
   scan-secrets:
@@ -48,7 +48,7 @@ jobs:
       - name: "Set up mise"
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          version: ${{ env.TOOLCHAIN_MISE_VERSION }}
+          version: ${{ inputs.mise_version }}
           install: true
           install_args: "gitleaks"
           cache: true
@@ -67,7 +67,7 @@ jobs:
       - name: "Set up mise"
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          version: ${{ env.TOOLCHAIN_MISE_VERSION }}
+          version: ${{ inputs.mise_version }}
           install: true
           install_args: "editorconfig-checker"
           cache: true
@@ -86,7 +86,7 @@ jobs:
       - name: "Set up mise"
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          version: ${{ env.TOOLCHAIN_MISE_VERSION }}
+          version: ${{ inputs.mise_version }}
           install: true
           install_args: "node npm:markdownlint-cli"
           cache: true
@@ -105,7 +105,7 @@ jobs:
       - name: "Set up mise"
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          version: ${{ env.TOOLCHAIN_MISE_VERSION }}
+          version: ${{ inputs.mise_version }}
           install: true
           install_args: "lychee"
           cache: true
