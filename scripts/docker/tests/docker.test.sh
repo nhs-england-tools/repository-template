@@ -31,13 +31,15 @@ function main() {
     test-docker-run \
     test-docker-clean \
     test-docker-get-image-version-and-pull \
+    test-docker-toml-table-entries \
+    test-docker-get-image-version \
   )
   local status=0
   for test in "${tests[@]}"; do
     {
       echo -n "$test"
       # shellcheck disable=SC2015
-      $test && echo " PASS" || { echo " FAIL"; ((status++)); }
+      $test && echo " PASS" || { echo " FAIL"; status=$((status + 1)); }
     }
   done
   echo "Total: ${#tests[@]}, Passed: $(( ${#tests[@]} - status )), Failed: $status"
@@ -72,7 +74,7 @@ function test-docker-build() {
 function test-docker-image-from-signature() {
 
   # Arrange
-  TOOL_VERSIONS="$(git rev-parse --show-toplevel)/scripts/docker/tests/.tool-versions.test"
+  MISE_TOML="$(git rev-parse --show-toplevel)/scripts/docker/tests/mise.toml.test"
   cp Dockerfile Dockerfile.effective
   # Act
   _replace-image-latest-by-specific-version
@@ -138,6 +140,46 @@ function test-docker-get-image-version-and-pull() {
     --filter=reference="$name" \
     --format "{{.Tag}}" \
   | grep -vq "<none>"
+}
+
+function test-docker-toml-table-entries() {
+
+  # Arrange
+  local config_file expected_docker expected_tools
+  config_file="$(git rev-parse --show-toplevel)/scripts/docker/tests/mise.toml.test"
+  expected_docker="$(printf '%s\n' \
+    "python 3.11.4-alpine3.18@sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86" \
+    "cimg/python 3.12.0@sha256:1111111111111111111111111111111111111111111111111111111111111111" \
+    "ghcr.io/org/single-quoted 1.0.0@sha256:2222222222222222222222222222222222222222222222222222222222222222")"
+  expected_tools="python 3.14.7"
+  # Act
+  local actual_docker actual_tools
+  actual_docker="$(_toml-table-entries "_.docker" "$config_file")"
+  actual_tools="$(_toml-table-entries "tools" "$config_file")"
+  # Assert
+  [[ "$actual_docker" == "$expected_docker" && "$actual_tools" == "$expected_tools" ]] && return 0 || return 1
+}
+
+function test-docker-get-image-version() {
+
+  # Arrange
+  MISE_TOML="$(git rev-parse --show-toplevel)/scripts/docker/tests/mise.toml.test"
+  # Earlier tests leave match_version set globally
+  unset match_version
+  # Act
+  local exact suffix quoted missing filtered
+  exact="$(name=python _get-docker-image-version)"
+  suffix="$(name=cimg/python _get-docker-image-version)"
+  quoted="$(name=ghcr.io/org/single-quoted _get-docker-image-version)"
+  missing="$(name=org/not-pinned _get-docker-image-version)"
+  filtered="$(name=python match_version=".*-rt.*" _get-docker-image-version)"
+  # Assert
+  [[ "$exact" == "3.11.4-alpine3.18@sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86" ]] &&
+  [[ "$suffix" == "3.12.0@sha256:1111111111111111111111111111111111111111111111111111111111111111" ]] &&
+  [[ "$quoted" == "1.0.0@sha256:2222222222222222222222222222222222222222222222222222222222222222" ]] &&
+  [[ "$missing" == "latest" ]] &&
+  [[ "$filtered" == "latest" ]] &&
+  return 0 || return 1
 }
 
 # ==============================================================================
