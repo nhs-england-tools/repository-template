@@ -30,6 +30,10 @@ docker-run: # Run Docker image - optional: docker_dir|dir=[path to the image dir
 	$(MAKE) _docker cmd="run" \
 		dir=$(or ${docker_dir}, ${dir})
 
+docker-pull-pinned-images: # Pull Docker images pinned in mise.toml [_.docker] @Configuration
+	source scripts/docker/docker.lib.sh
+	docker-pull-pinned-images
+
 clean:: # Remove Docker resources (docker) - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Operations
 	$(MAKE) _docker cmd="clean" \
 		dir=$(or ${docker_dir}, ${dir})
@@ -62,6 +66,7 @@ ${VERBOSE}.SILENT: \
 	docker-bake-dockerfile \
 	docker-build \
 	docker-lint \
+	docker-pull-pinned-images \
 	docker-push \
 	docker-run \
 	docker-shellscript-lint \

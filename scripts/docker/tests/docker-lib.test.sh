@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1091,SC2034,SC2317,SC2329
+# shellcheck disable=SC1091,SC2016,SC2034,SC2317,SC2329
 
 set -euo pipefail
 
@@ -54,8 +54,12 @@ function main() {
     test-get-git-branch-name-prefers-github-variables \
     test-docker-get-image-version-and-pull-pulls-by-digest-and-tags \
     test-docker-get-image-version-and-pull-skips-pull-when-tag-exists \
+    test-docker-get-image-version-and-pull-fails-when-pull-fails \
     test-docker-get-image-version-and-pull-pulls-latest-without-pin \
     test-docker-get-image-version-and-pull-selects-by-match-version \
+    test-docker-pull-pinned-images-pulls-every-docker-pin \
+    test-docker-pull-pinned-images-skips-when-docker-is-missing \
+    test-docker-pull-pinned-images-skips-when-docker-is-unreachable \
     test-docker-build-passes-metadata-and-tags-every-version \
     test-docker-bake-dockerfile-creates-effective-files \
     test-docker-run-passes-args-command-and-tag \
@@ -428,7 +432,7 @@ function test-docker-get-image-version-and-pull-pulls-by-digest-and-tags() {
   write-image-pin
   unset match_version
   test-isolate-path
-  test-stub docker
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
   # Act
   name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
   # Assert
@@ -449,7 +453,7 @@ function test-docker-get-image-version-and-pull-skips-pull-when-tag-exists() {
   unset match_version
   test-isolate-path
   # shellcheck disable=SC2016
-  test-stub docker 'if [[ "${1:-} ${2:-}" == "image ls" ]]; then echo ghcr.io/org/image:1.2.3; fi'
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" && "${3:-}" == "ghcr.io/org/image:1.2.3" ]]; then exit 0; fi; exit 1'
   # Act
   name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
   # Assert
@@ -460,13 +464,32 @@ function test-docker-get-image-version-and-pull-skips-pull-when-tag-exists() {
   return 0
 }
 
+function test-docker-get-image-version-and-pull-fails-when-pull-fails() {
+
+  # Arrange
+  write-image-pin
+  unset match_version
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == "pull" ]]; then echo "pull failed" >&2; exit 23; fi'
+  # Act
+  name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
+  # Assert
+  assert-equal 23 "$TEST_STATUS" "exit status"
+  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-contains "$TEST_STDERR" "pull failed"
+  assert-equal "pull --platform linux/amd64 ghcr.io/org/image@$DIGEST_A" \
+    "$(docker-pull-and-tag-calls)" "pull calls"
+
+  return 0
+}
+
 function test-docker-get-image-version-and-pull-pulls-latest-without-pin() {
 
   # Arrange
   write-image-pin
   unset match_version
   test-isolate-path
-  test-stub docker
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
   # Act
   name=ghcr.io/org/unpinned test-capture docker-get-image-version-and-pull
   # Assert
@@ -490,7 +513,7 @@ function test-docker-get-image-version-and-pull-selects-by-match-version() {
 "ghcr.io/org/image" = "1.2.3@$DIGEST_A"
 EOF
   test-isolate-path
-  test-stub docker
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
   # Act
   name=ghcr.io/org/rt match_version='.*-rt.*' test-capture docker-get-image-version-and-pull
   rt_stdout="$TEST_STDOUT"
@@ -506,6 +529,71 @@ EOF
   assert-equal "ghcr.io/org/image:latest" "$TEST_STDOUT" "stdout for the filtered-out pin"
   assert-equal "pull --platform linux/amd64 ghcr.io/org/image:latest" \
     "$(docker-pull-and-tag-calls)" "pull and tag calls for the filtered-out pin"
+
+  return 0
+}
+
+function test-docker-pull-pinned-images-pulls-every-docker-pin() {
+
+  # Arrange
+  MISE_TOML="$TEST_TMP/mise.toml"
+  cat > "$MISE_TOML" << EOF
+[tools]
+python = "3.14.7"
+
+[_.docker]
+"ghcr.io/org/image" = "1.2.3@$DIGEST_A"
+"ghcr.io/org/other" = "4.5.6@$DIGEST_B"
+EOF
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == "info" ]]; then exit 0; fi; if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
+  # Act
+  test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal "$(printf '%s\n' \
+    "Pulling ghcr.io/org/image" \
+    "OK ghcr.io/org/image:1.2.3@$DIGEST_A" \
+    "Pulling ghcr.io/org/other" \
+    "OK ghcr.io/org/other:4.5.6@$DIGEST_B")" "$TEST_STDOUT" "stdout"
+  assert-equal "$(printf '%s\n' \
+    "pull --platform linux/amd64 ghcr.io/org/image@$DIGEST_A" \
+    "tag ghcr.io/org/image@$DIGEST_A ghcr.io/org/image:1.2.3" \
+    "pull --platform linux/amd64 ghcr.io/org/other@$DIGEST_B" \
+    "tag ghcr.io/org/other@$DIGEST_B ghcr.io/org/other:4.5.6")" \
+    "$(docker-pull-and-tag-calls)" "pull and tag calls"
+
+  return 0
+}
+
+function test-docker-pull-pinned-images-skips-when-docker-is-missing() {
+
+  # Arrange
+  write-image-pin
+  test-isolate-path
+  # Act
+  test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "WARN Docker image pull skipped: docker is not installed" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-docker-pull-pinned-images-skips-when-docker-is-unreachable() {
+
+  # Arrange
+  write-image-pin
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == "info" ]]; then echo "Cannot connect" >&2; exit 1; fi'
+  # Act
+  test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "WARN Docker image pull skipped: docker is not running or is not reachable" "$TEST_STDERR" "stderr"
+  assert-stub-called docker info
 
   return 0
 }

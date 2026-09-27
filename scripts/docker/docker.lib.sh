@@ -163,6 +163,33 @@ function version-create-effective-file() {
 # ==============================================================================
 # Functions to be used with external images.
 
+# Pull every image pinned in the 'mise.toml' file's '[_.docker]' table.
+function docker-pull-pinned-images() {
+
+  local config_file="${MISE_TOML:=$(git rev-parse --show-toplevel)/mise.toml}"
+  local image
+
+  [[ -f "$config_file" ]] || return 0
+
+  if ! command -v docker > /dev/null 2>&1; then
+    echo "WARN Docker image pull skipped: docker is not installed" >&2
+    return 0
+  fi
+
+  if ! docker info > /dev/null 2>&1; then
+    echo "WARN Docker image pull skipped: docker is not running or is not reachable" >&2
+    return 0
+  fi
+
+  while read -r image _; do
+    [[ -n "$image" ]] || continue
+    echo "Pulling ${image}"
+    echo "OK $(name="$image" docker-get-image-version-and-pull)"
+  done < <(_toml-table-entries "_.docker" "$config_file")
+
+  return 0
+}
+
 # Retrieve the Docker image version from the 'mise.toml' file and pull the
 # image if required. This function is to be used in conjunction with the
 # external images and it prevents Docker from downloading an image each time it
@@ -191,21 +218,21 @@ function docker-get-image-version-and-pull() {
   local tag="$(echo "$version" | sed 's/@.*$//')"
   local digest="$(echo "$version" | sed 's/^.*@//')"
 
-  # Check if the image exists locally already
-  if ! docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -q "^${name}:${tag}$"; then
+  # Check if the image exists locally already.
+  if ! docker image inspect "${name}:${tag}" > /dev/null 2>&1; then
     if [[ "$digest" != "latest" ]]; then
-      # Pull image by the digest sha256 and tag it
+      # Pull image by the digest sha256 and tag it.
       docker pull \
         --platform linux/amd64 \
         "${name}@${digest}" \
-      > /dev/null 2>&1 || true
+      >&2
       docker tag "${name}@${digest}" "${name}:${tag}"
     else
-      # Pull the latest image
+      # Pull the latest image.
       docker pull \
         --platform linux/amd64 \
         "${name}:latest" \
-      > /dev/null 2>&1 || true
+      >&2
     fi
   fi
 

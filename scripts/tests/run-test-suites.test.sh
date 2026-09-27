@@ -70,6 +70,8 @@ function test-runner-fails-when-any-suite-fails-and-still-runs-the-rest() {
   assert-contains "$TEST_STDOUT" "a-ran"
   assert-contains "$TEST_STDOUT" "b-ran"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 1, Failed: 1"
+  assert-contains "$TEST_STDOUT" "Failed suites:"
+  assert-contains "$TEST_STDOUT" "$TEST_TMP/tree/a.test.sh: exit code 1"
 
   return 0
 }
@@ -190,6 +192,7 @@ function test-runner-fails-a-suite-that-is-not-executable() {
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "FAILED: $TEST_TMP/tree/a.test.sh (exit code 126)"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 1, Failed: 1"
+  assert-contains "$TEST_STDOUT" "$TEST_TMP/tree/a.test.sh: exit code 126"
 
   return 0
 }
@@ -221,6 +224,7 @@ function test-runner-ends-suite-output-with-a-newline() {
   # Assert
   assert-contains "$TEST_STDOUT" $'a-no-newline\nFAILED: ' "failed result on its own line"
   assert-contains "$TEST_STDOUT" $'b-no-newline\nSuites: 2' "summary on its own line"
+  assert-contains "$TEST_STDOUT" $'Failed suites:\n  - ' "failed suite summary on its own line"
 
   return 0
 }
