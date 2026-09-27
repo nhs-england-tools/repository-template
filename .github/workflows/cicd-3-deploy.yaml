@@ -33,8 +33,11 @@ jobs:
           echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
           echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
-          echo "nodejs_version=$(sed -n 's/^node[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)" >> $GITHUB_OUTPUT
-          echo "python_version=$(sed -n 's/^python[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)" >> $GITHUB_OUTPUT
+          source scripts/docker/docker.lib.sh
+          nodejs_version="$(_toml-table-entry tools node mise.toml)"
+          python_version="$(_toml-table-entry tools python mise.toml)"
+          echo "nodejs_version=${nodejs_version}" >> "$GITHUB_OUTPUT"
+          echo "python_version=${python_version}" >> "$GITHUB_OUTPUT"
           # TODO: Get the version, but it may not be the .version file as this should come from the CI/CD Pull Request Workflow
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
           echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT

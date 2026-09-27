@@ -40,6 +40,7 @@ function main() {
     test-pin-dockerfile-arg-versions-handles-registry-port \
     test-pin-dockerfile-arg-versions-pins-every-arg-for-image \
     test-docker-toml-table-entries \
+    test-docker-toml-table-entry-extracts-one-tools-value \
     test-docker-get-image-version \
     test-pin-dockerfile-arg-versions-falls-back-to-tools-table \
     test-pin-dockerfile-arg-versions-handles-platform-flag-and-stage-alias \
@@ -174,6 +175,46 @@ function test-docker-toml-table-entries() {
   # Assert
   assert-equal "$expected_docker" "$actual_docker" "[_.docker] entries"
   assert-equal "$expected_tools" "$actual_tools" "[tools] entries"
+
+  return 0
+}
+
+function test-docker-toml-table-entry-extracts-one-tools-value() {
+
+  # Arrange
+  local mise node python missing duplicate_status
+  MISE_TOML="$TEST_TMP/mise.toml"
+  cat > "$MISE_TOML" << 'EOF'
+min_version = "2026.9.14"
+
+[tools]
+"node" = "24.21.0"
+python = "3.14.7"
+
+[_.docker]
+min_version = "must-not-leak"
+node = "24.21.0-slim"
+python = "3.14.7-slim"
+EOF
+  cat > "$TEST_TMP/duplicate.mise.toml" << 'EOF'
+[tools]
+python = "3.14.7"
+python = "3.13.0"
+EOF
+  # Act
+  mise="$(_toml-table-entry "" min_version "$MISE_TOML")"
+  node="$(_toml-table-entry tools node "$MISE_TOML")"
+  python="$(_toml-table-entry tools python "$MISE_TOML")"
+  test-capture _toml-table-entry tools ruby "$MISE_TOML"
+  missing=$TEST_STATUS
+  test-capture _toml-table-entry tools python "$TEST_TMP/duplicate.mise.toml"
+  duplicate_status=$TEST_STATUS
+  # Assert
+  assert-equal "2026.9.14" "$mise" "root min_version"
+  assert-equal "24.21.0" "$node" "quoted node key in [tools]"
+  assert-equal "3.14.7" "$python" "python key in [tools]"
+  assert-equal 1 "$missing" "missing key status"
+  assert-equal 1 "$duplicate_status" "duplicate key status"
 
   return 0
 }
