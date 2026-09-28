@@ -38,7 +38,7 @@ permissions:
 jobs:
   test-unit:
     name: "Unit tests"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
@@ -58,7 +58,7 @@ jobs:
   perform-static-analysis:
     name: "Perform static analysis"
     needs: [test-unit]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     timeout-minutes: 5
