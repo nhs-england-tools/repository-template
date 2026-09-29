@@ -9,8 +9,9 @@ set -euo pipefail
 # directory isn't on PATH" gap, since Homebrew installs GNU formulae under a
 # 'g'-prefixed name (gsed, ggrep, ...) unless gnubin is added to PATH. See
 # scripts/toolchain/install-gnu-macos.sh to fix a failing check on macOS.
-# It also reports, but never installs, GNU make 3.82 or later and a Docker or
-# Podman container runtime on PATH, since scripts/docker/docker.mk needs both.
+# It also reports, but never installs, GNU make 3.82 or later and the CLI
+# version of a Docker or Podman container runtime on PATH, since
+# scripts/docker/docker.mk needs both prerequisites.
 #
 # Usage:
 #   $ ./verify-gnu.sh
@@ -20,7 +21,7 @@ set -euo pipefail
 #
 # Exit codes:
 #   0 - Every checked tool resolves to its GNU implementation, make is 3.82 or
-#       later, and a container runtime is on PATH
+#       later, and a container runtime reports its version
 #   1 - At least one tool is missing, too old, or resolves to a non-GNU
 #       implementation
 
@@ -123,22 +124,28 @@ function check-make() {
   fi
 }
 
-# Check that a container runtime, Docker or Podman, is on PATH.
+# Check that Docker or Podman is on PATH and report its CLI version.
 function check-container-runtime() {
 
-  local path
+  local runtime path version
 
-  path="$(command -v docker 2> /dev/null || true)"
-  if [[ -n "${path}" ]]; then
-    echo "OK       docker: ${path}"
-    return 0
-  fi
+  for runtime in docker podman; do
+    path="$(command -v "${runtime}" 2> /dev/null || true)"
+    [[ -n "${path}" ]] || continue
 
-  path="$(command -v podman 2> /dev/null || true)"
-  if [[ -n "${path}" ]]; then
-    echo "OK       podman: ${path}"
+    if ! version="$("${runtime}" --version 2>&1)"; then
+      echo "UNAVAILABLE ${runtime}: failed to report version (${path})"
+      return 1
+    fi
+    version="${version%%$'\n'*}"
+    if [[ -z "${version//[[:space:]]/}" ]]; then
+      echo "UNAVAILABLE ${runtime}: no version reported (${path})"
+      return 1
+    fi
+
+    echo "OK       ${runtime}: ${version} (${path})"
     return 0
-  fi
+  done
 
   echo "MISSING  docker/podman: neither found on PATH"
   return 1
