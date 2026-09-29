@@ -1,0 +1,11 @@
+[tool_config]
+locked = true
+
+[settings]
+disable_backends = ["asdf"]
+
+[tools]
+terraform = "1.7.0"
+pre-commit = "3.6.0"
+vale = "3.6.0"
+gitleaks = "8.30.1"

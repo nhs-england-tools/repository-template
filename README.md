@@ -69,13 +69,13 @@ The following software packages, or their equivalents, are expected to be instal
 
 ### Configuration
 
-Installation and configuration of the toolchain dependencies
-
-Mise reads the versions in [`.tool-versions`](.tool-versions) directly; no plugin setup is needed. After installing and activating mise, run:
+The project tools and their versions are defined in [`mise.toml`](mise.toml) and locked in [`mise.lock`](mise.lock). [`.tool-versions`](.tool-versions) contains Docker image versions for the repository's scripts and CI; it does not list mise-managed tools. After installing and activating mise, run:
 
 ```shell
 make config
 ```
+
+When changing tool versions, update `mise.toml` and regenerate `mise.lock` with `mise lock --platform linux-x64,linux-arm64,macos-arm64,macos-x64`. Review and commit both files together. Mise uses the lockfile to verify project tool downloads on these platforms.
 
 ## Usage
 
