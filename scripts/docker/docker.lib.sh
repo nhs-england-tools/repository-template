@@ -9,9 +9,9 @@ set -euo pipefail
 #   $ source ./docker.lib.sh
 #
 # Arguments (provided as environment variables):
-#   DOCKER_IMAGE=ghcr.io/org/repo             # Docker image name
-#   DOCKER_TITLE="My Docker image"            # Docker image title
-#   TOOL_VERSIONS=$project_dir/.tool-versions # Path to the tool versions file
+#   DOCKER_IMAGE=ghcr.io/org/repo      # Docker image name
+#   DOCKER_TITLE="My Docker image"     # Docker image title
+#   MISE_TOML=$project_dir/mise.toml   # Path to the mise config file
 
 # ==============================================================================
 # Functions to be used with custom images.
@@ -163,7 +163,7 @@ function version-create-effective-file() {
 # ==============================================================================
 # Functions to be used with external images.
 
-# Retrieve the Docker image version from the '.tool-versions' file and pull the
+# Retrieve the Docker image version from the 'mise.toml' file and pull the
 # image if required. This function is to be used in conjunction with the
 # external images and it prevents Docker from downloading an image each time it
 # is used, since the digest is not stored locally for compressed images. To
@@ -175,21 +175,17 @@ function version-create-effective-file() {
 # shellcheck disable=SC2001
 function docker-get-image-version-and-pull() {
 
-  # E.g. for the given entry "# docker/ghcr.io/org/image 1.2.3@sha256:hash" in
-  # the '.tool-versions' file, the following variables will be set to:
+  # E.g. for the given entry '"ghcr.io/org/image" = "1.2.3@sha256:hash"' under
+  # the '[_.docker]' table in the 'mise.toml' file, the following variables
+  # will be set to:
   #   name="ghcr.io/org/image"
   #   version="1.2.3@sha256:hash"
   #   tag="1.2.3"
   #   digest="sha256:hash"
 
-  # Get the image full version from the '.tool-versions' file,
+  # Get the image full version from the 'mise.toml' file's '[_.docker]' table,
   # match it by name and version regex, if given.
-  local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
-  local version="latest"
-  if [[ -f "$versions_file" ]]; then
-    line=$(grep "docker/${name} " "$versions_file" | sed "s/^#\s*//; s/\s*#.*$//" | grep "${match_version:-".*"}" || true)
-    [[ -n "$line" ]] && version=$(echo "$line" | awk '{print $2}')
-  fi
+  local version="$(_get-docker-image-version)"
 
   # Split the image version into two, tag name and digest sha256.
   local tag="$(echo "$version" | sed 's/@.*$//')"
@@ -219,6 +215,141 @@ function docker-get-image-version-and-pull() {
 # ==============================================================================
 # "Private" functions.
 
+# Print the version pinned for an image in the 'mise.toml' file's '[_.docker]'
+# table, or 'latest' when there is no pin for exactly that image name.
+# Arguments (provided as environment variables):
+#   name=[full name of the Docker image]
+#   match_version=[regexp to match the version, default is '.*']
+function _get-docker-image-version() {
+
+  local config_file="${MISE_TOML:=$(git rev-parse --show-toplevel)/mise.toml}"
+  local version=""
+  if [[ -f "$config_file" ]]; then
+    version=$(_toml-table-entries "_.docker" "$config_file" \
+      | awk -v name="$name" '$1 == name { print $2 }' \
+      | grep "${match_version:-".*"}" \
+      | head -n 1 || true)
+  fi
+  echo "${version:-latest}"
+
+  return 0
+}
+
+# Print "key value" pairs for every single-line string entry of the given TOML
+# table. Multi-line strings, arrays, inline tables, escaped strings, other
+# value types and values with characters outside [A-Za-z0-9._:@/+~-] are
+# skipped, never printed, so each output line is always safe to use as a sed
+# substitution pair.
+# Arguments:
+#   $1=[dotted table header, e.g. 'tools' or '_.docker']
+#   $2=[path to the TOML file]
+function _toml-table-entries() {
+
+  local table="[$1]"
+  local file="$2"
+  local rc=0
+
+  awk -v table="$table" -v dq='"' -v sq="'" '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    # Set value and after from a plain quoted string at the start of s, or return 0 if s does not start with one
+    function quoted(s,  q, rest, end) {
+      q = substr(s, 1, 1)
+      if (q != dq && q != sq) return 0
+      rest = substr(s, 2)
+      end = index(rest, q)
+      if (end == 0) return 0
+      value = substr(rest, 1, end - 1)
+      after = trim(substr(rest, end + 1))
+      if (q == dq && index(value, "\\")) return 0
+      return 1
+    }
+    # Return the index just past the string that opens at position i of s, honouring basic string escapes
+    function skip_string(s, i,  q, n) {
+      q = substr(s, i, 1)
+      n = length(s)
+      for (i++; i <= n; i++) {
+        if (q == dq && substr(s, i, 1) == "\\") { i++; continue }
+        if (substr(s, i, 1) == q) return i + 1
+      }
+      return n + 1
+    }
+    # Return the position of the first "=" outside quotes, or 0
+    function eq_index(s,  i, c, n) {
+      n = length(s)
+      for (i = 1; i <= n;) {
+        c = substr(s, i, 1)
+        if (c == dq || c == sq) { i = skip_string(s, i); continue }
+        if (c == "=") return i
+        if (c == "#") return 0
+        i++
+      }
+      return 0
+    }
+    # Track open multi-line strings (open_string) and bracket depth (depth) across s
+    function scan(s,  i, c, n) {
+      n = length(s)
+      for (i = 1; i <= n;) {
+        if (open_string != "") {
+          if (open_string == dq dq dq && substr(s, i, 1) == "\\") { i += 2; continue }
+          if (substr(s, i, 3) == open_string) {
+            # TOML allows up to two extra quotes before the closing delimiter
+            for (i += 3; i <= n && substr(s, i, 1) == substr(open_string, 1, 1); i++);
+            open_string = ""
+            continue
+          }
+          i++
+          continue
+        }
+        c = substr(s, i, 1)
+        if (substr(s, i, 3) == dq dq dq || substr(s, i, 3) == sq sq sq) { open_string = substr(s, i, 3); i += 3; continue }
+        if (c == dq || c == sq) { i = skip_string(s, i); continue }
+        if (c == "#") break
+        if (c == "[" || c == "{") depth++
+        if (c == "]" || c == "}") depth--
+        i++
+      }
+      if (depth < 0) depth = 0
+    }
+    {
+      line = $0
+      sub(/\r$/, "", line)
+      if (open_string != "" || depth > 0) {
+        scan(line)
+        next
+      }
+      line = trim(line)
+      if (line == "" || substr(line, 1, 1) == "#") next
+      if (substr(line, 1, 1) == "[") {
+        header = line
+        sub(/#.*$/, "", header)
+        gsub(/[[:space:]]/, "", header)
+        in_table = (header == table)
+        next
+      }
+      eq = eq_index(line)
+      if (eq == 0) next
+      key = trim(substr(line, 1, eq - 1))
+      rhs = trim(substr(line, eq + 1))
+      # Multi-line strings, arrays and inline tables are never entries, even on one line
+      scan(rhs)
+      if (open_string != "" || depth > 0 || rhs ~ /^[[{]/ || substr(rhs, 1, 3) == dq dq dq || substr(rhs, 1, 3) == sq sq sq) next
+      if (!in_table) next
+      if (quoted(key)) {
+        if (after != "" || value == "") next
+        key = value
+      } else if (key !~ /^[A-Za-z0-9_-]+$/) {
+        next
+      }
+      if (!quoted(rhs) || value == "") next
+      if (after != "" && substr(after, 1, 1) != "#") next
+      if (key !~ /^[A-Za-z0-9._:@\/+~-]+$/ || value !~ /^[A-Za-z0-9._:@\/+~-]+$/) next
+      print key " " value
+    }
+  ' "$file" || rc=$?
+
+  return "$rc"
+}
+
 # Create effective Dockerfile.
 # Arguments (provided as environment variables):
 #   dir=[path to the image directory where the Dockerfile is located, default is '.']
@@ -244,16 +375,16 @@ function _create-effective-dockerfile() {
 function _replace-image-latest-by-specific-version() {
 
   local dir=${dir:-$PWD}
-  local versions_file="${TOOL_VERSIONS:=$(git rev-parse --show-toplevel)/.tool-versions}"
+  local config_file="${MISE_TOML:=$(git rev-parse --show-toplevel)/mise.toml}"
   local dockerfile="${dir}/Dockerfile.effective"
   local build_datetime=${BUILD_DATETIME:-$(date -u +'%Y-%m-%dT%H:%M:%S%z')}
 
-  if [[ -f "$versions_file" ]]; then
-    # First, list the entries specific for Docker to take precedence, then the rest but exclude comments
-    content=$(grep " docker/" "$versions_file"; grep -v " docker/" "$versions_file" ||: | grep -v "^#")
+  if [[ -f "$config_file" ]]; then
+    # First, list the '[_.docker]' entries to take precedence, then the '[tools]' entries as a fallback
+    local content
+    content=$(_toml-table-entries "_.docker" "$config_file"; _toml-table-entries "tools" "$config_file")
     echo "$content" | while IFS= read -r line; do
       [[ -z "$line" ]] && continue
-      line=$(echo "$line" | sed "s/^#\s*//; s/\s*#.*$//" | sed "s;docker/;;")
       name=$(echo "$line" | awk '{print $1}')
       version=$(echo "$line" | awk '{print $2}')
       sed -i "s;\(FROM .*\)${name}:latest;\1${name}:${version};g" "$dockerfile"
