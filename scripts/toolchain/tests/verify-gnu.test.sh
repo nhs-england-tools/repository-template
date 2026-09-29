@@ -29,6 +29,7 @@ function main() {
     test-verify-gnu-reports-missing-tool \
     test-verify-gnu-rejects-old-or-non-gnu-make \
     test-verify-gnu-accepts-podman-and-reports-no-runtime \
+    test-verify-gnu-rejects-unreportable-runtime-version \
     test-verify-gnu-prints-platform-specific-hint
 
   return 0
@@ -149,7 +150,7 @@ function test-verify-gnu-passes-when-every-tool-is-gnu() {
     "OK       grep: grep (GNU grep) 3.11 ($f/grep)" \
     "OK       sed: sed (GNU sed) 4.9 ($f/sed)" \
     "OK       make: GNU Make 4.4.1 ($f/make)" \
-    "OK       docker: $f/docker" \
+    "OK       docker: Docker version 27.3.1, build ce12230 ($f/docker)" \
     "All GNU tools verified.")"
   create-minbin
   create-gnu-fakes
@@ -231,8 +232,37 @@ function test-verify-gnu-accepts-podman-and-reports-no-runtime() {
   run-verify-gnu
   # Assert
   assert-equal "0 1" "$podman_status $TEST_STATUS" "exit status with podman, then with no runtime"
-  assert-contains "$podman_stdout" "OK       podman: $TEST_TMP/fakes/podman"
+  assert-contains "$podman_stdout" "OK       podman: podman version 5.2.0 ($TEST_TMP/fakes/podman)"
   assert-contains "$TEST_STDOUT" "MISSING  docker/podman: neither found on PATH"
+
+  return 0
+}
+
+function test-verify-gnu-rejects-unreportable-runtime-version() {
+
+  # Arrange
+  local runtime
+  create-minbin
+  create-gnu-fakes docker
+  for runtime in docker podman; do
+    create-fake-tool "$runtime" "" 1 "version unavailable"
+    # Act
+    run-verify-gnu
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$runtime version command failure"
+    assert-contains "$TEST_STDOUT" "UNAVAILABLE $runtime: failed to report version"
+    assert-not-contains "$TEST_STDOUT" "OK       $runtime:"
+
+    # Arrange an installed CLI that succeeds without returning a version.
+    create-fake-tool "$runtime" ""
+    # Act
+    run-verify-gnu
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$runtime empty version"
+    assert-contains "$TEST_STDOUT" "UNAVAILABLE $runtime: no version reported"
+    assert-not-contains "$TEST_STDOUT" "OK       $runtime:"
+    rm "$TEST_TMP/fakes/$runtime"
+  done
 
   return 0
 }
