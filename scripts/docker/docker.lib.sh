@@ -393,7 +393,7 @@ function _pin-dockerfile-arg-versions() {
         if (NF == 2 && !($1 in pin)) pin[$1] = $2
         next
       }
-      # Second file (the Dockerfile): find which ARG variable parameterises each FROM image name,
+      # Second file (the Dockerfile): find every ARG variable parameterising a pinned FROM image,
       # and which line declares that ARG, so its default can be rewritten in a single pass
       {
         lines[FNR] = $0
@@ -402,13 +402,18 @@ function _pin-dockerfile-arg-versions() {
           rest = line
           sub(/^FROM[[:space:]]+/, "", rest)
           sub(/^--platform=[^[:space:]]+[[:space:]]+/, "", rest)
-          colon = index(rest, ":")
+          sub(/[[:space:]].*$/, "", rest)
+          # Match the tag ARG separator, leaving any registry port in the image name
+          colon = index(rest, ":${")
           if (colon > 0) {
             name = substr(rest, 1, colon - 1)
             tail = substr(rest, colon + 1)
             if (substr(tail, 1, 2) == "${") {
               brace = index(tail, "}")
-              if (brace > 0) arg_for_name[name] = substr(tail, 3, brace - 3)
+              if (brace > 0 && name in pin) {
+                var = substr(tail, 3, brace - 3)
+                pin_for_arg[var] = pin[name]
+              }
             }
           }
         } else if (line ~ /^ARG[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=/) {
@@ -418,10 +423,9 @@ function _pin-dockerfile-arg-versions() {
         }
       }
       END {
-        for (name in pin) {
-          var = arg_for_name[name]
+        for (var in pin_for_arg) {
           if (var == "" || !(var in arg_line)) continue
-          lines[arg_line[var]] = "ARG " var "=" pin[name]
+          lines[arg_line[var]] = "ARG " var "=" pin_for_arg[var]
         }
         for (i = 1; i <= FNR; i++) print lines[i]
       }
