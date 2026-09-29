@@ -129,6 +129,7 @@ function test-version-ge-properties() {
       00) eq=$((eq + 1)) ;;
       01) gt=$((gt + 1)) ;;
       10) lt=$((lt + 1)) ;;
+      *) echo "Unexpected comparison statuses: $ab $ba ($where)" >&2; return 1 ;;
     esac
   done
   # A generator that rarely yields one of the outcomes would leave that case untested
@@ -302,18 +303,19 @@ function test-verify-gnu-prints-platform-specific-hint() {
 #   $4=[lines it then prints to stderr, default is none]
 function create-fake-tool() {
 
+  local name="$1" stdout="$2" status="${3:-0}" stderr="${4:-}"
   local dir="$TEST_TMP/fakes" line
   [[ -d "$dir" ]] || mkdir "$dir"
   {
-    printf '%s\n' "${3:-0}"
-    if [[ -n "$2" ]]; then
-      while IFS= read -r line; do printf '1 %s\n' "$line"; done <<< "$2"
+    printf '%s\n' "$status"
+    if [[ -n "$stdout" ]]; then
+      while IFS= read -r line; do printf '1 %s\n' "$line"; done <<< "$stdout"
     fi
-    if [[ -n "${4:-}" ]]; then
-      while IFS= read -r line; do printf '2 %s\n' "$line"; done <<< "$4"
+    if [[ -n "$stderr" ]]; then
+      while IFS= read -r line; do printf '2 %s\n' "$line"; done <<< "$stderr"
     fi
-  } > "$dir/.$1.fake"
-  ln -sf "$FAKE_TOOL" "$dir/$1"
+  } > "$dir/.$name.fake"
+  ln -sf "$FAKE_TOOL" "$dir/$name"
 
   return 0
 }
@@ -380,8 +382,9 @@ function source-verify-gnu() {
 #   $2=[minimum required version]
 function ge-status() {
 
+  local version="$1" minimum="$2"
   GE=0
-  version-ge "$1" "$2" || GE=1
+  version-ge "$version" "$minimum" || GE=1
 
   return 0
 }
@@ -457,6 +460,10 @@ function random-version-pair() {
       random-version $((RANDOM % (4 - keep) + 1))
       PAIR_RIGHT="$prefix$REPLY"
       ;;
+    *)
+      echo "Unexpected random version-pair selection" >&2
+      return 1
+      ;;
   esac
 
   return 0
@@ -466,7 +473,8 @@ function random-version-pair() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

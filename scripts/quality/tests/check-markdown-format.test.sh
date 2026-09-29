@@ -18,6 +18,9 @@ set -euo pipefail
 
 function main() {
 
+  local -r MARKDOWN_HEADING='# Heading'
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -58,7 +61,7 @@ function test-check-markdown-format-rejects-unknown-mode() {
   # Act
   test-capture env check=bogus ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Unrecognised check mode: bogus"
   assert-stub-not-called markdownlint
   assert-stub-not-called docker
@@ -77,7 +80,7 @@ function test-check-markdown-format-does-nothing-without-markdown-changes() {
   # Act
   test-capture ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called markdownlint
   assert-stub-not-called docker
 
@@ -96,7 +99,7 @@ function test-check-markdown-format-all-passes-each-existing-file() {
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "README.md docs/my\\ doc.md $options" "$(test-stub-calls markdownlint)" "the only markdownlint call"
 
   return 0
@@ -140,7 +143,7 @@ function test-check-markdown-format-branch-skips-deleted-files() {
   # Act
   test-capture env check=branch ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains " $(test-stub-calls markdownlint) " " README.md "
   assert-not-contains "$(test-stub-calls markdownlint)" "gone.md"
 
@@ -159,7 +162,7 @@ function test-check-markdown-format-fails-when-the-base-branch-is-missing() {
   # Act
   test-capture env check=branch ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Branch to compare with not found: origin/main"
   assert-stub-not-called markdownlint
 
@@ -176,7 +179,7 @@ function test-check-markdown-format-propagates-markdownlint-failure() {
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -192,7 +195,7 @@ function test-check-markdown-format-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called markdownlint
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $MARKDOWNLINT_IMAGE README.md --config /workdir/scripts/config/markdownlint.yaml --ignore-path /workdir/scripts/config/.markdownlintignore"
@@ -207,12 +210,12 @@ function test-check-markdown-format-flags-missing-blank-line-after-frontmatter()
   quality-create-fixture-repo README.md
   test-isolate-path python3
   test-stub markdownlint
-  printf '%s\n' '---' 'title: x' '---' '# Heading' > "$TEST_TMP/repo/README.md"
+  printf '%s\n' '---' 'title: x' '---' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/README.md"
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "README.md:4: missing blank line after YAML frontmatter"
 
   return 0
@@ -224,14 +227,14 @@ function test-check-markdown-format-accepts-valid-frontmatter-and-plain-files() 
   quality-create-fixture-repo valid.md plain.md unterminated.md
   test-isolate-path python3
   test-stub markdownlint
-  printf '%s\n' '---' 'title: x' '---' '' '# Heading' > "$TEST_TMP/repo/valid.md"
-  printf '%s\n' '# Heading' '' 'Text' > "$TEST_TMP/repo/plain.md"
-  printf '%s\n' '---' 'title: x' '# Heading' > "$TEST_TMP/repo/unterminated.md"
+  printf '%s\n' '---' 'title: x' '---' '' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/valid.md"
+  printf '%s\n' "$MARKDOWN_HEADING" '' 'Text' > "$TEST_TMP/repo/plain.md"
+  printf '%s\n' '---' 'title: x' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/unterminated.md"
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "" "$TEST_STDERR" "stderr"
 
   return 0
@@ -249,7 +252,7 @@ function test-check-markdown-format-warns-about-non-utf8-files() {
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "latin1.md: skipped, not valid UTF-8"
 
   return 0
@@ -259,7 +262,8 @@ function test-check-markdown-format-warns-about-non-utf8-files() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

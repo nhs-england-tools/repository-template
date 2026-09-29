@@ -17,6 +17,8 @@ set -euo pipefail
 
 function main() {
 
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -60,7 +62,7 @@ function test-scan-secrets-defaults-to-whole-history() {
   # Act
   test-capture ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "detect --source $r --verbose --redact $(gitleaks-tail)" "$(test-stub-calls gitleaks)" "the only gitleaks call"
 
   return 0
@@ -112,7 +114,7 @@ function test-scan-secrets-adds-baseline-and-omits-missing-ignore-file() {
   # Act
   test-capture ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "detect --source $r --verbose --redact $tail" "$(test-stub-calls gitleaks)" "the only gitleaks call"
 
   return 0
@@ -130,7 +132,7 @@ function test-scan-secrets-all-runs-three-checks-and-keeps-failure() {
   # Act
   test-capture env check=all ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$expected" "$(test-stub-calls gitleaks)" "gitleaks calls in order"
 
   return 0
@@ -148,7 +150,7 @@ function test-scan-secrets-all-keeps-the-status-of-a-failing-first-check() {
   # Act
   test-capture env check=all ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 3 "$TEST_STATUS" "exit status"
+  assert-equal 3 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$expected" "$(test-stub-calls gitleaks)" "gitleaks calls in order"
 
   return 0
@@ -166,7 +168,7 @@ function test-scan-secrets-all-keeps-the-status-of-a-failing-last-check() {
   # Act
   test-capture env check=all ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 5 "$TEST_STATUS" "exit status"
+  assert-equal 5 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$expected" "$(test-stub-calls gitleaks)" "gitleaks calls in order"
 
   return 0
@@ -183,7 +185,7 @@ function test-scan-secrets-rejects-unknown-mode() {
   # Act
   test-capture env check=bogus ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 126 "$TEST_STATUS" "exit status"
+  assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "Unrecognised check mode: bogus" "$TEST_STDERR" "stderr"
   assert-stub-not-called gitleaks
   assert-stub-not-called docker
@@ -201,7 +203,7 @@ function test-scan-secrets-propagates-leaks() {
   # Act
   test-capture ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -219,7 +221,7 @@ function test-scan-secrets-isolates-git-config-natively() {
   # A caller config, not the harness's /dev/null, shows that the script sets it
   test-capture env GIT_CONFIG_GLOBAL="$caller_config" GIT_CONFIG_SYSTEM="$caller_config" ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "/dev/null /dev/null" "$(cat "$STUB_DIR/gitleaks.env")" "GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM seen by gitleaks"
 
   return 0
@@ -237,7 +239,7 @@ function test-scan-secrets-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called gitleaks
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $GITLEAKS_IMAGE $options"
@@ -259,7 +261,7 @@ function test-scan-secrets-uses-docker-with-a-baseline-file() {
   # Act
   test-capture env FORCE_USE_DOCKER=true ./scripts/quality/scan-secrets.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called gitleaks
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $GITLEAKS_IMAGE $options"
@@ -306,7 +308,8 @@ function expected-gitleaks-calls() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

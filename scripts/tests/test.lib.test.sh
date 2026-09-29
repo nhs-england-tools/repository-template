@@ -17,6 +17,11 @@ set -euo pipefail
 
 function main() {
 
+  local -r FAILED_TEST_OUTPUT='t FAIL'
+  local -r STDOUT_LABEL='stdout'
+  local -r STDERR_LABEL='stderr'
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
 
@@ -77,8 +82,8 @@ function test-harness-fails-test-when-a-middle-command-fails() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -91,7 +96,7 @@ function t() { h; }' t
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-not-contains "$TEST_STDOUT" "after"
 
   return 0
@@ -104,7 +109,7 @@ function test-harness-fails-test-when-a-command-substitution-fails() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
 
   return 0
 }
@@ -120,7 +125,7 @@ function b() { return 0; }' a b
   assert-contains "$TEST_STDOUT" "a PASS"
   assert-contains "$TEST_STDOUT" "b PASS"
   assert-contains "$TEST_STDOUT" "Total: 2, Passed: 2, Failed: 0"
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -132,9 +137,9 @@ function test-harness-fails-a-suite-with-no-tests() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
-  assert-equal "ERROR: no tests to run" "$TEST_STDERR" "stderr"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "ERROR: no tests to run" "$TEST_STDERR" "$STDERR_LABEL"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -177,7 +182,7 @@ function test-harness-removes-each-test-scratch-directory() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$(cat "$TEST_TMP/tmp-path")" '^/.+' "recorded scratch directory"
   assert-file-not-exists "$(cat "$TEST_TMP/tmp-path")"
 
@@ -209,7 +214,7 @@ function t() { false; }' t
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-file-exists "$TEST_TMP/torn-down"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -224,7 +229,7 @@ function t() { return 0; }' t
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "exit status"
+  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "aborted"
   assert-file-exists "$TEST_TMP/torn-down"
   assert-not-contains "$TEST_STDOUT" "PASS"
@@ -274,7 +279,7 @@ function t() { return 0; }' t
     GIT_AUTHOR_NAME=Host GIT_DIR="$TEST_TMP/host/.git" GIT_INDEX_FILE="$TEST_TMP/host/.git/index" \
     "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal $'/dev/null\n1\nTest\nunset\nunset' "$(cat "$TEST_TMP/setup-env")" "git environment seen by setup"
 
   return 0
@@ -291,7 +296,7 @@ function test-harness-keeps-files-when-the-suite-scratch-directory-cannot-be-cre
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "exit status"
+  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
   assert-stub-called mktemp -d
   assert-file-exists "$TEST_TMP/sentinel"
   assert-file-exists "$TEST_TMP/sentinel/file"
@@ -314,8 +319,8 @@ function t() { return 0; }' t
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal -d "$(cat "$TEST_TMP/mktemp-calls")" "mktemp calls"
   assert-file-exists "$TEST_TMP/sentinel"
   assert-file-exists "$TEST_TMP/sentinel/file"
@@ -330,9 +335,9 @@ function test-harness-fails-a-test-that-leaves-errexit-off() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "ERROR: test 't' left errexit off"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -345,9 +350,9 @@ function test-harness-fails-a-test-that-calls-exit-0() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "ERROR: test 't' exited before returning"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$(cat "$TEST_TMP/tmp-path")" '^/.+' "recorded scratch directory"
   assert-file-not-exists "$(cat "$TEST_TMP/tmp-path")"
 
@@ -363,9 +368,9 @@ function test-harness-fails-a-test-that-reads-an-unset-variable() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-contains "$TEST_STDOUT" "t FAIL"
+  assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "NO_SUCH_VARIABLE_XYZ: unbound variable"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$(cat "$TEST_TMP/tmp-path")" '^/.+' "recorded scratch directory"
   assert-file-not-exists "$(cat "$TEST_TMP/tmp-path")"
 
@@ -381,7 +386,7 @@ function test-harness-keeps-the-status-of-a-test-that-exits-non-zero() {
   test-capture _test-run-one exits-3
   # Assert
   assert-equal 3 "$TEST_STATUS" "status of the test's subshell"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -394,7 +399,7 @@ function test-harness-pins-the-locale() {
   test-capture env LC_ALL=en_GB.UTF-8 "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-contains "$TEST_STDOUT" "t PASS"
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -419,7 +424,7 @@ function test-harness-exits-with-143-on-term() {
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
-  assert-equal 143 "$TEST_STATUS" "exit status"
+  assert-equal 143 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -434,7 +439,7 @@ function test-assert-equal-reports-expected-and-actual() {
   # Act
   test-capture assert-equal one two "$what"
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "the value"
   assert-contains "$TEST_STDERR" "expected: [one]"
   assert-contains "$TEST_STDERR" "actual:   [two]"
@@ -509,9 +514,9 @@ function test-capture-separates-stdout-stderr-and-status-with-errexit() {
   # Act
   test-capture f
   # Assert
-  assert-equal out "$TEST_STDOUT" "stdout"
-  assert-equal err "$TEST_STDERR" "stderr"
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal out "$TEST_STDOUT" "$STDOUT_LABEL"
+  assert-equal err "$TEST_STDERR" "$STDERR_LABEL"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -520,7 +525,7 @@ function test-capture-hides-xtrace-and-verbose-from-the-command() {
 
   # Arrange
   # Fixture that writes nothing to stderr.
-  function g() { local a="$1"; return 0; }
+  function g() { local value="$1"; : "$value"; return 0; }
   export VERBOSE=true
   # Act
   set -x
@@ -578,8 +583,8 @@ function test-stub-replaces-the-body-when-called-again() {
   # Act
   test-capture tool x
   # Assert
-  assert-equal second "$TEST_STDOUT" "stdout"
-  assert-equal 5 "$TEST_STATUS" "exit status"
+  assert-equal second "$TEST_STDOUT" "$STDOUT_LABEL"
+  assert-equal 5 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal x "$(test-stub-calls tool)" "recorded calls"
 
   return 0
@@ -595,9 +600,9 @@ function test-stub-works-with-only-the-stub-directory-on-path() {
   tool "a b" > "$TEST_TMP/out" 2> "$TEST_TMP/err" || rc=$?
   PATH="$saved_path"
   # Assert
-  assert-equal 4 "$rc" "exit status"
-  assert-equal "body 1" "$(cat "$TEST_TMP/out")" "stdout"
-  assert-equal "" "$(cat "$TEST_TMP/err")" "stderr"
+  assert-equal 4 "$rc" "$EXIT_STATUS_LABEL"
+  assert-equal "body 1" "$(cat "$TEST_TMP/out")" "$STDOUT_LABEL"
+  assert-equal "" "$(cat "$TEST_TMP/err")" "$STDERR_LABEL"
   assert-equal 'a\ b' "$(test-stub-calls tool)" "recorded calls"
 
   return 0
@@ -611,8 +616,8 @@ function test-stub-dispatcher-refuses-a-link-without-a-body() {
   # Act
   test-capture "$TEST_TMP/links/orphan" a
   # Assert
-  assert-equal 2 "$TEST_STATUS" "exit status"
-  assert-equal "stub.sh: no body for orphan, create stubs with test-stub" "$TEST_STDERR" "stderr"
+  assert-equal 2 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "stub.sh: no body for orphan, create stubs with test-stub" "$TEST_STDERR" "$STDERR_LABEL"
   assert-file-not-exists "$TEST_TMP/links/orphan.calls"
 
   return 0
@@ -722,7 +727,7 @@ function test-isolate-path-rejects-a-mise-shim-it-cannot-resolve() {
   # Act
   test-capture test-isolate-path fake-tool
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "test-isolate-path: cannot resolve the mise shim of 'fake-tool'"
 
   return 0
@@ -821,7 +826,8 @@ EOF
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

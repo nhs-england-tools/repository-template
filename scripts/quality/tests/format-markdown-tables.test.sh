@@ -17,6 +17,8 @@ set -euo pipefail
 
 function main() {
 
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -50,7 +52,7 @@ function test-format-markdown-tables-does-nothing-without-markdown() {
   # Act
   test-capture ./scripts/quality/format-markdown-tables.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called npx
   assert-stub-not-called docker
 
@@ -70,7 +72,7 @@ function test-format-markdown-tables-formats-existing-tracked-files() {
   # Act
   test-capture ./scripts/quality/format-markdown-tables.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal \
     "--yes prettier@3 --config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write README.md docs/my\\ doc.md" \
     "$(test-stub-calls npx)" "the only npx call"
@@ -92,7 +94,7 @@ function test-format-markdown-tables-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true ./scripts/quality/format-markdown-tables.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called npx
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $NODE_IMAGE npx --yes prettier@3 $options README.md docs/my\\ doc.md"
@@ -112,7 +114,7 @@ function test-format-markdown-tables-propagates-npx-failure() {
   # Act
   test-capture ./scripts/quality/format-markdown-tables.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called npx \
     "--yes prettier@3 --config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write README.md"
 
@@ -123,7 +125,8 @@ function test-format-markdown-tables-propagates-npx-failure() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

@@ -16,6 +16,9 @@ set -euo pipefail
 
 function main() {
 
+  local -r PASSING_SUITE_BODY='exit 0'
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
 
@@ -46,7 +49,7 @@ function test-runner-runs-every-suite-and-passes() {
   # Act
   run-runner
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "one-ran"
   assert-contains "$TEST_STDOUT" "two-ran"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 2, Failed: 0"
@@ -63,7 +66,7 @@ function test-runner-fails-when-any-suite-fails-and-still-runs-the-rest() {
   # Act
   run-runner
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "a-ran"
   assert-contains "$TEST_STDOUT" "b-ran"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 1, Failed: 1"
@@ -78,7 +81,7 @@ function test-runner-fails-when-no-suite-is-found() {
   # Act
   run-runner
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "No test suites found under"
 
   return 0
@@ -87,8 +90,8 @@ function test-runner-fails-when-no-suite-is-found() {
 function test-runner-fails-when-a-directory-cannot-be-searched() {
 
   # Arrange
-  write-fixture a.test.sh 'exit 0'
-  write-fixture locked/b.test.sh 'exit 0'
+  write-fixture a.test.sh "$PASSING_SUITE_BODY"
+  write-fixture locked/b.test.sh "$PASSING_SUITE_BODY"
   chmod 000 "$TEST_TMP/tree/locked"
   # Act
   run-runner
@@ -97,7 +100,7 @@ function test-runner-fails-when-a-directory-cannot-be-searched() {
   # Assert
   # Root can read any directory, so the fixture cannot fail discovery there
   if [[ $EUID -ne 0 ]]; then
-    assert-equal 1 "$TEST_STATUS" "exit status"
+    assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
     assert-contains "$TEST_STDERR" "ERROR: cannot search $TEST_TMP/tree for test suites"
     assert-not-contains "$TEST_STDOUT" "Suites:" "no suite runs after a failed discovery"
   fi
@@ -121,7 +124,7 @@ exit 1"
   # Act
   run-runner
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 2, Failed: 0"
 
   return 0
@@ -147,11 +150,11 @@ function test-runner-skips-git-ignored-suites() {
   git init -q "$TEST_TMP/tree"
   echo 'ignored/' > "$TEST_TMP/tree/.gitignore"
   write-fixture ignored/tests/bad.test.sh 'exit 1'
-  write-fixture kept.test.sh 'exit 0'
+  write-fixture kept.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "Suites: 1, Passed: 1, Failed: 0"
   assert-not-contains "$TEST_STDOUT" "bad.test.sh"
 
@@ -164,11 +167,11 @@ function test-runner-skips-git-ignored-suites-under-a-relative-dir() {
   git init -q "$TEST_TMP/tree"
   echo '/scripts/a/tests/bad.test.sh' > "$TEST_TMP/tree/.gitignore"
   write-fixture scripts/a/tests/bad.test.sh 'exit 1'
-  write-fixture scripts/b/tests/kept.test.sh 'exit 0'
+  write-fixture scripts/b/tests/kept.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner-in-tree
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "Suites: 1, Passed: 1, Failed: 0"
   assert-not-contains "$TEST_STDOUT" "bad.test.sh"
 
@@ -178,13 +181,13 @@ function test-runner-skips-git-ignored-suites-under-a-relative-dir() {
 function test-runner-fails-a-suite-that-is-not-executable() {
 
   # Arrange
-  write-fixture a.test.sh 'exit 0'
+  write-fixture a.test.sh "$PASSING_SUITE_BODY"
   chmod -x "$TEST_TMP/tree/a.test.sh"
-  write-fixture b.test.sh 'exit 0'
+  write-fixture b.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "FAILED: $TEST_TMP/tree/a.test.sh (exit code 126)"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 1, Failed: 1"
 
@@ -273,7 +276,8 @@ function _run-runner-from-tree() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

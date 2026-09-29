@@ -17,6 +17,9 @@ set -euo pipefail
 
 function main() {
 
+  local -r A_TXT_ARGUMENT=' a.txt '
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -61,7 +64,7 @@ function test-check-file-format-rejects-unknown-mode() {
   # Act
   test-capture env check=bogus ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Unrecognised check mode: bogus"
   assert-stub-not-called ec
   assert-stub-not-called docker
@@ -81,10 +84,10 @@ function test-check-file-format-all-checks-every-tracked-file() {
   test-capture env check=all ./scripts/quality/check-file-format.sh
   # Assert
   calls="$(test-stub-calls ec)"
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal 1 "$(awk 'END { print NR }' <<< "$calls")" "number of ec calls"
   assert-equal "$prefix" "${calls:0:${#prefix}}" "start of the ec call"
-  assert-contains "$calls " " a.txt "
+  assert-contains "$calls " "$A_TXT_ARGUMENT"
   assert-contains "$calls " " b.txt "
 
   return 0
@@ -101,8 +104,8 @@ function test-check-file-format-working-tree-changes-checks-modified-files-only(
   # Act
   test-capture env check=working-tree-changes ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
-  assert-contains "$(test-stub-calls ec) " " a.txt "
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(test-stub-calls ec) " "$A_TXT_ARGUMENT"
   assert-not-contains "$(test-stub-calls ec)" "b.txt"
 
   return 0
@@ -121,7 +124,7 @@ function test-check-file-format-staged-changes-checks-staged-files-only() {
   # Act
   test-capture env check=staged-changes ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls ec) " " b.txt "
   assert-not-contains "$(test-stub-calls ec)" "a.txt"
 
@@ -151,10 +154,10 @@ function test-check-file-format-branch-checks-changes-since-branch() {
   other_call="$(test-stub-calls ec | sed -n 2p)"
   # Assert
   assert-equal 0 "$default_status" "exit status with the default branch"
-  assert-contains "$default_call " " a.txt "
+  assert-contains "$default_call " "$A_TXT_ARGUMENT"
   assert-not-contains "$default_call" "b.txt"
   assert-equal 0 "$TEST_STATUS" "exit status with BRANCH_NAME"
-  assert-contains "$other_call " " a.txt "
+  assert-contains "$other_call " "$A_TXT_ARGUMENT"
   assert-not-contains "$other_call" "b.txt"
 
   return 0
@@ -171,7 +174,7 @@ function test-check-file-format-fails-when-the-base-branch-is-missing() {
   # Act
   test-capture env check=branch ./scripts/quality/check-file-format.sh
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "exit status"
+  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "fatal: ambiguous argument 'origin/main': unknown revision"
   assert-stub-not-called ec
 
@@ -188,7 +191,7 @@ function test-check-file-format-dry-run-passes-flag() {
   # Act
   test-capture env dry_run=true check=all ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls ec) " " --dry-run "
 
   return 0
@@ -204,7 +207,7 @@ function test-check-file-format-native-with-no-changes-checks-nothing() {
   # Act
   test-capture ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "-config $TEST_TMP/repo/scripts/config/editorconfig-checker.json --exclude .git/ /dev/null" \
     "$(test-stub-calls ec)" "the only ec call"
 
@@ -221,7 +224,7 @@ function test-check-file-format-propagates-ec-failure() {
   # Act
   test-capture env check=all ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -237,7 +240,7 @@ function test-check-file-format-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called ec
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/check $EC_IMAGE sh -c $EC_DOCKER_COMMAND"
@@ -256,7 +259,7 @@ function test-check-file-format-uses-docker-when-ec-is-missing() {
   # Act
   test-capture env check=all ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/check $EC_IMAGE sh -c $EC_DOCKER_COMMAND"
   quality-assert-one-docker-run
@@ -268,7 +271,8 @@ function test-check-file-format-uses-docker-when-ec-is-missing() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

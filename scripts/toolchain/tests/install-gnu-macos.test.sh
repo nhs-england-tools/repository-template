@@ -18,6 +18,8 @@ set -euo pipefail
 
 function main() {
 
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
 
@@ -44,7 +46,7 @@ function test-install-gnu-macos-is-a-no-op-off-macos() {
   # Act
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$TEST_STDOUT" '^Not macOS, nothing to do\.' "stdout"
   assert-stub-not-called brew
 
@@ -59,7 +61,7 @@ function test-install-gnu-macos-requires-homebrew() {
   # Act
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Homebrew is not installed"
 
   return 0
@@ -74,7 +76,7 @@ function test-install-gnu-macos-installs-formulae-and-recommends-path() {
   # Act
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called brew "install coreutils diffutils findutils gawk gnu-sed grep"
   assert-contains "$TEST_STDERR" "  $expected"
   assert-contains "$TEST_STDERR" "Add the line above to your shell profile manually."
@@ -92,7 +94,7 @@ function test-install-gnu-macos-prints-fish-syntax() {
   # Act
   run-install-gnu-macos SHELL=/usr/bin/fish HOME="$TEST_TMP/home"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "  $expected"
 
   return 0
@@ -109,7 +111,7 @@ function test-install-gnu-macos-reports-path-already-complete() {
   # Act
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "PATH already includes every installed GNU gnubin directory." "$TEST_STDOUT" "stdout"
   assert-equal "" "$TEST_STDERR" "stderr"
 
@@ -127,7 +129,7 @@ function test-install-gnu-macos-skips-when-rc-file-has-the-block() {
   # Act
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home" ZDOTDIR="$zdot"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "$zdot/.zshrc already has a block added by this script"
   assert-not-contains "$TEST_STDERR" "Add the line above to your shell profile manually."
   assert-files-identical "$TEST_TMP/zshrc.before" "$zdot/.zshrc"
@@ -169,9 +171,9 @@ function test-install-gnu-macos-uses-the-first-bash-login-file() {
 #   $1=[OS name uname prints, e.g. 'Darwin']
 function arrange-os-and-brew() {
 
-  local b="$TEST_TMP/brew"
+  local os="$1" b="$TEST_TMP/brew"
   test-isolate-path
-  test-stub uname "echo $1"
+  test-stub uname "echo $os"
   # The body expands TEST_TMP now, because 'env -i' keeps it from the stub
   test-stub brew "[[ \"\${1:-}\" != --prefix ]] || printf '%s\n' \"$b/\${2:-}\""
   mkdir -p "$b/coreutils/libexec/gnubin" "$b/diffutils" "$b/findutils/libexec/gnubin" \
@@ -194,7 +196,8 @@ function run-install-gnu-macos() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

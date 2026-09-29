@@ -17,6 +17,8 @@ set -euo pipefail
 
 function main() {
 
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -50,7 +52,7 @@ function test-check-shell-lint-defaults-to-itself() {
   # Act
   test-capture ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "WARNING: 'file' variable not set, defaulting to itself" "$TEST_STDOUT" "stdout"
   assert-equal "scripts/quality/check-shell-lint.sh" "$(test-stub-calls shellcheck)" "the only shellcheck call"
 
@@ -67,7 +69,7 @@ function test-check-shell-lint-makes-an-absolute-path-relative() {
   # Act
   test-capture env file="$TEST_TMP/repo/scripts/x.sh" ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "./scripts/x.sh" "$(test-stub-calls shellcheck)" "the only shellcheck call"
 
   return 0
@@ -83,7 +85,7 @@ function test-check-shell-lint-propagates-shellcheck-failure() {
   # Act
   test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -99,7 +101,7 @@ function test-check-shell-lint-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called shellcheck
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
@@ -118,7 +120,7 @@ function test-check-shell-lint-uses-docker-when-shellcheck-is-missing() {
   # Act
   test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
   quality-assert-one-docker-run
@@ -130,7 +132,8 @@ function test-check-shell-lint-uses-docker-when-shellcheck-is-missing() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

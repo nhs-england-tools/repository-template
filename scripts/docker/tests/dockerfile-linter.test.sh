@@ -17,6 +17,8 @@ set -euo pipefail
 
 function main() {
 
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -49,7 +51,7 @@ function test-dockerfile-linter-defaults-to-the-effective-dockerfile() {
   # Act
   test-capture ./scripts/docker/dockerfile-linter.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "--config scripts/config/hadolint.yaml ./Dockerfile.effective" \
     "$(test-stub-calls hadolint)" "the only hadolint call"
 
@@ -66,7 +68,7 @@ function test-dockerfile-linter-makes-an-absolute-path-relative() {
   # Act
   test-capture env file="$TEST_TMP/repo/images/app/Dockerfile" ./scripts/docker/dockerfile-linter.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "--config scripts/config/hadolint.yaml ./images/app/Dockerfile" \
     "$(test-stub-calls hadolint)" "the only hadolint call"
 
@@ -83,7 +85,7 @@ function test-dockerfile-linter-propagates-hadolint-failure() {
   # Act
   test-capture env file=images/app/Dockerfile ./scripts/docker/dockerfile-linter.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -100,7 +102,7 @@ function test-dockerfile-linter-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true file=images/app/Dockerfile ./scripts/docker/dockerfile-linter.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called hadolint
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $HADOLINT_IMAGE hadolint $options"
@@ -113,7 +115,8 @@ function test-dockerfile-linter-uses-docker-when-forced() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

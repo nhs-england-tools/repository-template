@@ -17,6 +17,10 @@ set -euo pipefail
 
 function main() {
 
+  local -r DOCKER_TABLE_HEADER='[_.docker]'
+  local -r FIXTURE_BUILD_DATETIME='2023-09-04T15:46:34+0000'
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/docker/docker.lib.sh
@@ -68,7 +72,7 @@ function test-pin-dockerfile-arg-versions-uses-docker-table-pin() {
 
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cp "$TEST_REPO_ROOT/scripts/docker/tests/Dockerfile" "$TEST_TMP/Dockerfile.effective"
   # Act
   dir="$TEST_TMP" _pin-dockerfile-arg-versions
@@ -83,7 +87,7 @@ function test-pin-dockerfile-arg-versions-matches-exact-image-name() {
 
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
 ARG PYTHON_VERSION=3.11.0
 FROM python:${PYTHON_VERSION}
@@ -106,8 +110,8 @@ function test-pin-dockerfile-arg-versions-handles-registry-port() {
 
   # Arrange
   MISE_TOML="$TEST_TMP/mise.toml"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
-  printf '%s\n' '[_.docker]' '"registry.example:5000/team/image" = "2.0.0"' > "$MISE_TOML"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
+  printf '%s\n' "$DOCKER_TABLE_HEADER" '"registry.example:5000/team/image" = "2.0.0"' > "$MISE_TOML"
   cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
 ARG IMAGE_VERSION=1.0.0
 FROM --platform=linux/amd64 registry.example:5000/team/image:${IMAGE_VERSION} AS base
@@ -132,8 +136,8 @@ function test-pin-dockerfile-arg-versions-pins-every-arg-for-image() {
 
   # Arrange
   MISE_TOML="$TEST_TMP/mise.toml"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
-  printf '%s\n' '[_.docker]' 'alpine = "3.20.0"' > "$MISE_TOML"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
+  printf '%s\n' "$DOCKER_TABLE_HEADER" 'alpine = "3.20.0"' > "$MISE_TOML"
   cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
 ARG BUILD_VERSION=3.18.0
 ARG RUNTIME_VERSION=3.19.0
@@ -200,8 +204,8 @@ function test-pin-dockerfile-arg-versions-falls-back-to-tools-table() {
 
   # Arrange
   MISE_TOML="$TEST_TMP/mise.toml"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
-  printf '%s\n' '[tools]' 'ruby = "3.3.0"' '' '[_.docker]' > "$MISE_TOML"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
+  printf '%s\n' '[tools]' 'ruby = "3.3.0"' '' "$DOCKER_TABLE_HEADER" > "$MISE_TOML"
   cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
 ARG RUBY_VERSION=3.2.0
 FROM ruby:${RUBY_VERSION}
@@ -218,7 +222,7 @@ function test-pin-dockerfile-arg-versions-handles-platform-flag-and-stage-alias(
 
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
 ARG PYTHON_VERSION=3.11.0
 FROM --platform=linux/amd64 python:${PYTHON_VERSION} AS base
@@ -239,7 +243,7 @@ function test-pin-dockerfile-arg-versions-leaves-unpinned-args-alone() {
 
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cat > "$TEST_TMP/Dockerfile.input" << 'EOF'
 ARG NODE_IMAGE_VERSION=20.0.0
 FROM example.org/unpinned:${NODE_IMAGE_VERSION}
@@ -257,7 +261,7 @@ function test-pin-dockerfile-arg-versions-substitutes-date-tokens() {
 
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
 FROM example.org/unpinned:1.0.0
 LABEL built="${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}"
@@ -274,7 +278,7 @@ function test-pin-dockerfile-arg-versions-drops-latest-ignore-comments() {
 
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   printf '%s\n' \
     'ARG TOOL_VERSION=1.0.0' \
     '# hadolint ignore=DL3007' \
@@ -300,7 +304,7 @@ function test-version-create-effective-file-writes-exact-lines() {
   local commit
   commit="$(git rev-parse --short HEAD)"
   use-empty-mise-toml
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cp "$TEST_REPO_ROOT/scripts/docker/tests/VERSION" "$TEST_TMP/VERSION"
   printf '%s\n' "20230904-$commit" "2023.09.04-$commit" "somme-name-yyyyeah" > "$TEST_TMP/expected.version"
   # Act
@@ -315,7 +319,7 @@ function test-version-create-effective-file-substitutes-time-tokens() {
 
   # Arrange
   use-empty-mise-toml
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   cat > "$TEST_TMP/VERSION" << 'EOF'
 ${HH}${MM}${SS}
 $HH.$MM.$SS
@@ -333,11 +337,11 @@ function test-version-create-effective-file-skips-missing-version-file() {
 
   # Arrange
   use-empty-mise-toml
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   # Act
   dir="$TEST_TMP" test-capture version-create-effective-file
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-file-not-exists "$TEST_TMP/.version"
 
   return 0
@@ -387,7 +391,7 @@ function test-docker-get-image-version-and-pull-pulls-by-digest-and-tags() {
   # Act
   name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "ghcr.io/org/image:1.2.3@$DIGEST_A" "$TEST_STDOUT" "stdout"
   assert-equal "$(printf '%s\n' \
     "pull --platform linux/amd64 ghcr.io/org/image@$DIGEST_A" \
@@ -408,7 +412,7 @@ function test-docker-get-image-version-and-pull-skips-pull-when-tag-exists() {
   # Act
   name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "ghcr.io/org/image:1.2.3@$DIGEST_A" "$TEST_STDOUT" "stdout"
   assert-equal "" "$(docker-pull-and-tag-calls)" "pull and tag calls"
 
@@ -425,7 +429,7 @@ function test-docker-get-image-version-and-pull-pulls-latest-without-pin() {
   # Act
   name=ghcr.io/org/unpinned test-capture docker-get-image-version-and-pull
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "ghcr.io/org/unpinned:latest" "$TEST_STDOUT" "stdout"
   assert-equal "pull --platform linux/amd64 ghcr.io/org/unpinned:latest" \
     "$(docker-pull-and-tag-calls)" "pull and tag calls"
@@ -472,13 +476,13 @@ function test-docker-build-passes-metadata-and-tags-every-version() {
   commit="$(git rev-parse --short HEAD)"
   copy-image-fixtures
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   test-isolate-path
   test-stub docker
   # Act
   dir="$TEST_TMP" test-capture docker-build
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   build_count="$(test-stub-calls docker | awk '/^build / { n++ } END { print n + 0 }')"
   assert-equal 1 "$build_count" "number of build calls"
   # Spaces around the line and each needle make every needle match whole arguments.
@@ -505,13 +509,13 @@ function test-docker-bake-dockerfile-creates-effective-files() {
   copy-image-fixtures
   echo "*.tmp" > "$TEST_TMP/Dockerfile.dockerignore"
   MISE_TOML="$FIXTURE_MISE_TOML"
-  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
   test-isolate-path
   test-stub docker
   # Act
   dir="$TEST_TMP" test-capture docker-bake-dockerfile
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-file-exists "$TEST_TMP/.version"
   assert-file-exists "$TEST_TMP/Dockerfile.effective"
   assert-file-exists "$TEST_TMP/Dockerfile.effective.dockerignore"
@@ -531,7 +535,7 @@ function test-docker-run-passes-args-command-and-tag() {
   # Act
   args="--env A=1" cmd="python --version" dir="$TEST_TMP" test-capture docker-run
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "run --rm --platform linux/amd64 --env A=1 repository-template/docker-test:1.2.3 python --version" \
     "$(test-stub-calls docker)" "docker calls"
 
@@ -567,7 +571,7 @@ function test-docker-push-pushes-every-version-and-latest() {
   # Act
   dir="$TEST_TMP" test-capture docker-push
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$(printf '%s\n' \
     "push repository-template/docker-test:1.2.3" \
     "push repository-template/docker-test:1.2" \
@@ -591,7 +595,7 @@ function test-docker-clean-removes-images-and-files-in-dir() {
   # Act
   dir="$TEST_TMP/image" test-capture docker-clean
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker "rmi repository-template/docker-test:1.2.3"
   assert-stub-called docker "rmi repository-template/docker-test:latest"
   assert-file-not-exists "$TEST_TMP/image/.version"
@@ -612,7 +616,7 @@ function test-docker-lint-runs-hadolint-on-effective-dockerfile() {
   # Act
   dir="$TEST_TMP" test-capture docker-lint
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "--config scripts/config/hadolint.yaml $(printf '%q' "$TEST_TMP/Dockerfile.effective")" \
     "$(test-stub-calls hadolint)" "hadolint calls"
   assert-stub-not-called docker
@@ -645,7 +649,7 @@ function use-empty-mise-toml() {
 function write-image-pin() {
 
   MISE_TOML="$TEST_TMP/mise.toml"
-  printf '%s\n' '[_.docker]' "\"ghcr.io/org/image\" = \"1.2.3@$DIGEST_A\"" > "$MISE_TOML"
+  printf '%s\n' "$DOCKER_TABLE_HEADER" "\"ghcr.io/org/image\" = \"1.2.3@$DIGEST_A\"" > "$MISE_TOML"
 
   return 0
 }
@@ -678,7 +682,8 @@ function assert-effective-dockerfile-is-pinned-with-metadata() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

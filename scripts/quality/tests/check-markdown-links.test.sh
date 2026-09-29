@@ -17,6 +17,8 @@ set -euo pipefail
 
 function main() {
 
+  local -r EXIT_STATUS_LABEL='exit status'
+
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
@@ -57,7 +59,7 @@ function test-check-markdown-links-rejects-unknown-mode() {
   # Act
   test-capture env check=bogus ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Unrecognised check mode: bogus"
   assert-stub-not-called lychee
   assert-stub-not-called docker
@@ -76,7 +78,7 @@ function test-check-markdown-links-does-nothing-without-markdown-changes() {
   # Act
   test-capture ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called lychee
   assert-stub-not-called docker
 
@@ -95,7 +97,7 @@ function test-check-markdown-links-all-passes-each-existing-file() {
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$options README.md docs/guide.md" "$(test-stub-calls lychee)" "the only lychee call"
 
   return 0
@@ -139,7 +141,7 @@ function test-check-markdown-links-branch-skips-deleted-files() {
   # Act
   test-capture env check=branch ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls lychee) " " README.md "
   assert-not-contains "$(test-stub-calls lychee)" "gone.md"
 
@@ -158,7 +160,7 @@ function test-check-markdown-links-fails-when-the-base-branch-is-missing() {
   # Act
   test-capture env check=branch ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Branch to compare with not found: origin/main"
   assert-stub-not-called lychee
 
@@ -175,7 +177,7 @@ function test-check-markdown-links-propagates-lychee-failure() {
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
 }
@@ -191,7 +193,7 @@ function test-check-markdown-links-uses-docker-when-forced() {
   # Act
   test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called lychee
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
@@ -210,7 +212,7 @@ function test-check-markdown-links-uses-docker-when-lychee-is-missing() {
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-links.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
   quality-assert-one-docker-run
@@ -247,7 +249,8 @@ function test-check-markdown-links-keeps-paths-with-spaces-intact() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

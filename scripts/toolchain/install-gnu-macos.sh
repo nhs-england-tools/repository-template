@@ -137,6 +137,7 @@ function offer-append() {
     */zsh) rc_file="${ZDOTDIR:-${HOME}}/.zshrc" ;;
     */bash) rc_file="$(bash-login-file)" ;;
     */fish) rc_file="${XDG_CONFIG_HOME:-${HOME}/.config}/fish/config.fish" ;;
+    *) rc_file="" ;; # Unknown shells use the manual setup instructions below
   esac
 
   if [[ -n "${rc_file}" ]] && [[ -f "${rc_file}" ]] && grep -Fq '# Added by scripts/toolchain/install-gnu-macos.sh' "${rc_file}"; then
@@ -184,7 +185,8 @@ function bash-login-file() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

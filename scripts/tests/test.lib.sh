@@ -33,6 +33,7 @@ set -euo pipefail
 # test-capture runs the command in a subshell, so its 'cd' and variable changes are discarded.
 
 TEST_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+TEST_INDENT_PATTERN='s/^/    /'
 TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find git grep head ln mkdir mktemp mv rm sed sort tail tee touch tr uniq wc xargs)
 
 # ==============================================================================
@@ -193,8 +194,9 @@ function _test-mktemp-dir() {
 #   $1=[directory to remove]
 function _test-remove-dir() {
 
-  if [[ -n "$1" && -d "$1" ]]; then
-    rm -rf "$1"
+  local dir="$1"
+  if [[ -n "$dir" && -d "$dir" ]]; then
+    rm -rf "$dir"
   fi
 
   return 0
@@ -205,7 +207,8 @@ function _test-remove-dir() {
 #   $1=[file to print]
 function _test-indent() {
 
-  awk '{ print "    " $0 }' "$1"
+  local file="$1"
+  awk '{ print "    " $0 }' "$file"
 
   return 0
 }
@@ -256,8 +259,9 @@ function test-stub() {
 #   $1=[command name]
 function test-stub-calls() {
 
-  if [[ -f "$STUB_DIR/$1.calls" ]]; then
-    cat "$STUB_DIR/$1.calls"
+  local name="$1"
+  if [[ -f "$STUB_DIR/$name.calls" ]]; then
+    cat "$STUB_DIR/$name.calls"
   fi
 
   return 0
@@ -406,8 +410,9 @@ function assert-matches() {
 #   $1=[path to check]
 function assert-file-exists() {
 
-  if [[ ! -e "$1" ]]; then
-    echo "ASSERTION FAILED: file exists: [$1]" >&2
+  local file="$1"
+  if [[ ! -e "$file" ]]; then
+    echo "ASSERTION FAILED: file exists: [$file]" >&2
     return 1
   fi
 
@@ -419,8 +424,9 @@ function assert-file-exists() {
 #   $1=[path to check]
 function assert-file-not-exists() {
 
-  if [[ -e "$1" ]]; then
-    echo "ASSERTION FAILED: file does not exist: [$1]" >&2
+  local file="$1"
+  if [[ -e "$file" ]]; then
+    echo "ASSERTION FAILED: file does not exist: [$file]" >&2
     return 1
   fi
 
@@ -438,7 +444,7 @@ function assert-file-has-line() {
     {
       echo "ASSERTION FAILED: [$file] has the line: [$line]"
       echo "  actual content:"
-      sed 's/^/    /' "$file"
+      sed "$TEST_INDENT_PATTERN" "$file"
     } >&2
     return 1
   fi
@@ -457,9 +463,9 @@ function assert-files-identical() {
     {
       echo "ASSERTION FAILED: [$actual] is byte-identical to [$expected]"
       echo "  expected content:"
-      sed 's/^/    /' "$expected"
+      sed "$TEST_INDENT_PATTERN" "$expected"
       echo "  actual content:"
-      sed 's/^/    /' "$actual"
+      sed "$TEST_INDENT_PATTERN" "$actual"
     } >&2
     return 1
   fi
@@ -478,7 +484,7 @@ function assert-stub-called() {
     {
       echo "ASSERTION FAILED: stub '$name' called with: [$line]"
       echo "  recorded calls:"
-      test-stub-calls "$name" | sed 's/^/    /'
+      test-stub-calls "$name" | sed "$TEST_INDENT_PATTERN"
     } >&2
     return 1
   fi
@@ -496,7 +502,7 @@ function assert-stub-not-called() {
     {
       echo "ASSERTION FAILED: stub '$name' not called"
       echo "  recorded calls:"
-      sed 's/^/    /' "$STUB_DIR/$name.calls"
+      sed "$TEST_INDENT_PATTERN" "$STUB_DIR/$name.calls"
     } >&2
     return 1
   fi
