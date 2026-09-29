@@ -35,7 +35,7 @@ scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-chan
 
 githooks-config: # Trigger Git hooks on commit that are defined in this repository @Configuration
 	make _install-dependency name="pre-commit"
-	pre-commit install \
+	mise exec -- pre-commit install \
 		--config scripts/config/pre-commit.yaml \
 		--install-hooks
 
@@ -44,15 +44,11 @@ githooks-run: # Run git hooks configured in this repository @Operations
 		--config scripts/config/pre-commit.yaml \
 		--all-files
 
-_install-dependency: # Install asdf dependency - mandatory: name=[listed in the '.tool-versions' file]; optional: version=[if not listed]
-	echo ${name}
-	asdf plugin add ${name} ||:
-	asdf install ${name} $(or ${version},)
+_install-dependency: # Install mise dependency - mandatory: name=[listed in 'mise.toml']; optional: version=[if not listed]
+	mise install ${name}$(if ${version},@${version})
 
-_install-dependencies: # Install all the dependencies listed in .tool-versions
-	for plugin in $$(grep ^[a-z] .tool-versions | sed 's/[[:space:]].*//'); do
-		make _install-dependency name="$${plugin}"
-	done
+_install-dependencies: # Install all the dependencies listed in mise.toml
+	mise install
 
 clean:: # Remove all generated and temporary files (common) @Operations
 	rm -rf \

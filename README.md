@@ -46,7 +46,7 @@ cd nhs-england-tools/repository-template
 The following software packages, or their equivalents, are expected to be installed and configured:
 
 - [Docker](https://www.docker.com/) container runtime or a compatible tool, e.g. [Podman](https://podman.io/),
-- [asdf](https://asdf-vm.com/) version manager,
+- [mise](https://mise.jdx.dev/installing-mise.html) version manager (activate it in your shell before running `make config`),
 - [GNU make](https://www.gnu.org/software/make/) 3.82 or later,
 
 > [!NOTE]<br>
@@ -70,6 +70,8 @@ The following software packages, or their equivalents, are expected to be instal
 ### Configuration
 
 Installation and configuration of the toolchain dependencies
+
+Mise reads the versions in [`.tool-versions`](.tool-versions) directly; no plugin setup is needed. After installing and activating mise, run:
 
 ```shell
 make config
