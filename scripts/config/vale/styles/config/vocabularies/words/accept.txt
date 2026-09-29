@@ -6,6 +6,7 @@ Dependabot
 Gitleaks
 Grype
 idempotence
+lockfile
 OAuth
 Octokit
 onboarding
