@@ -33,6 +33,8 @@ function main() {
   test-run-suite \
     test-pin-dockerfile-arg-versions-uses-docker-table-pin \
     test-pin-dockerfile-arg-versions-matches-exact-image-name \
+    test-pin-dockerfile-arg-versions-handles-registry-port \
+    test-pin-dockerfile-arg-versions-pins-every-arg-for-image \
     test-docker-toml-table-entries \
     test-docker-get-image-version \
     test-pin-dockerfile-arg-versions-falls-back-to-tools-table \
@@ -96,6 +98,58 @@ EOF
     '^ARG PYTHON_VERSION=3\.11\.4-alpine3\.18@sha256:' "python pin"
   assert-matches "$(grep '^ARG CIMG_PYTHON_VERSION=' "$TEST_TMP/Dockerfile.effective")" \
     '^ARG CIMG_PYTHON_VERSION=3\.12\.0@sha256:' "cimg/python pin"
+
+  return 0
+}
+
+function test-pin-dockerfile-arg-versions-handles-registry-port() {
+
+  # Arrange
+  MISE_TOML="$TEST_TMP/mise.toml"
+  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  printf '%s\n' '[_.docker]' '"registry.example:5000/team/image" = "2.0.0"' > "$MISE_TOML"
+  cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
+ARG IMAGE_VERSION=1.0.0
+FROM --platform=linux/amd64 registry.example:5000/team/image:${IMAGE_VERSION} AS base
+ARG OTHER_VERSION=1.0.0
+FROM registry.example/team/image:${OTHER_VERSION} AS other
+EOF
+  cat > "$TEST_TMP/Dockerfile.expected" << 'EOF'
+ARG IMAGE_VERSION=2.0.0
+FROM --platform=linux/amd64 registry.example:5000/team/image:${IMAGE_VERSION} AS base
+ARG OTHER_VERSION=1.0.0
+FROM registry.example/team/image:${OTHER_VERSION} AS other
+EOF
+  # Act
+  dir="$TEST_TMP" _pin-dockerfile-arg-versions
+  # Assert
+  assert-files-identical "$TEST_TMP/Dockerfile.expected" "$TEST_TMP/Dockerfile.effective"
+
+  return 0
+}
+
+function test-pin-dockerfile-arg-versions-pins-every-arg-for-image() {
+
+  # Arrange
+  MISE_TOML="$TEST_TMP/mise.toml"
+  export BUILD_DATETIME="2023-09-04T15:46:34+0000"
+  printf '%s\n' '[_.docker]' 'alpine = "3.20.0"' > "$MISE_TOML"
+  cat > "$TEST_TMP/Dockerfile.effective" << 'EOF'
+ARG BUILD_VERSION=3.18.0
+ARG RUNTIME_VERSION=3.19.0
+FROM alpine:${BUILD_VERSION} AS build
+FROM alpine:${RUNTIME_VERSION} AS runtime
+EOF
+  cat > "$TEST_TMP/Dockerfile.expected" << 'EOF'
+ARG BUILD_VERSION=3.20.0
+ARG RUNTIME_VERSION=3.20.0
+FROM alpine:${BUILD_VERSION} AS build
+FROM alpine:${RUNTIME_VERSION} AS runtime
+EOF
+  # Act
+  dir="$TEST_TMP" _pin-dockerfile-arg-versions
+  # Assert
+  assert-files-identical "$TEST_TMP/Dockerfile.expected" "$TEST_TMP/Dockerfile.effective"
 
   return 0
 }
