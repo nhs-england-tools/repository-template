@@ -16,6 +16,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+readonly PODMAN_VERSION_OUTPUT='podman version 5.2.0'
+
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -29,6 +31,10 @@ function main() {
     test-verify-gnu-reports-missing-tool \
     test-verify-gnu-rejects-old-or-non-gnu-make \
     test-verify-gnu-accepts-podman-and-reports-no-runtime \
+    test-verify-gnu-falls-back-after-docker-version-failure \
+    test-verify-gnu-falls-back-after-empty-docker-version \
+    test-verify-gnu-rejects-two-unusable-runtimes \
+    test-verify-gnu-prefers-working-docker \
     test-verify-gnu-rejects-unreportable-runtime-version \
     test-verify-gnu-prints-platform-specific-hint
 
@@ -44,6 +50,7 @@ function test-suite-setup() {
 #!/bin/bash
 # A link named NAME prints the lines of .NAME.fake beside it after the first, to
 # stdout for a "1 " prefix and to stderr for "2 ", then exits with the status on the first line
+: > "${0%/*}/.${0##*/}.called"
 {
   read -r status
   while IFS= read -r line; do
@@ -224,7 +231,7 @@ function test-verify-gnu-accepts-podman-and-reports-no-runtime() {
   local podman_status podman_stdout
   create-minbin
   create-gnu-fakes docker
-  create-fake-tool podman "podman version 5.2.0"
+  create-fake-tool podman "$PODMAN_VERSION_OUTPUT"
   # Act
   run-verify-gnu
   podman_status=$TEST_STATUS
@@ -235,6 +242,84 @@ function test-verify-gnu-accepts-podman-and-reports-no-runtime() {
   assert-equal "0 1" "$podman_status $TEST_STATUS" "exit status with podman, then with no runtime"
   assert-contains "$podman_stdout" "OK       podman: podman version 5.2.0 ($TEST_TMP/fakes/podman)"
   assert-contains "$TEST_STDOUT" "MISSING  docker/podman: neither found on PATH"
+
+  return 0
+}
+
+function test-verify-gnu-falls-back-after-docker-version-failure() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes
+  create-fake-tool docker "" 1 "version unavailable"
+  create-fake-tool podman "$PODMAN_VERSION_OUTPUT"
+  # Act
+  run-verify-gnu
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "fallback after Docker version command fails"
+  assert-contains "$TEST_STDOUT" "UNAVAILABLE docker: failed to report version"
+  assert-contains "$TEST_STDOUT" "OK       podman: $PODMAN_VERSION_OUTPUT ($TEST_TMP/fakes/podman)"
+  assert-not-contains "$TEST_STDOUT" "MISSING  docker/podman"
+  assert-file-exists "$TEST_TMP/fakes/.podman.called"
+
+  return 0
+}
+
+function test-verify-gnu-falls-back-after-empty-docker-version() {
+
+  # Arrange
+  local output
+  create-minbin
+  create-gnu-fakes
+  create-fake-tool podman "$PODMAN_VERSION_OUTPUT"
+  for output in "" "   "; do
+    create-fake-tool docker "$output"
+    # Act
+    run-verify-gnu
+    # Assert
+    assert-equal 0 "$TEST_STATUS" "fallback after empty or whitespace-only Docker version"
+    assert-contains "$TEST_STDOUT" "UNAVAILABLE docker: no version reported"
+    assert-contains "$TEST_STDOUT" "OK       podman: $PODMAN_VERSION_OUTPUT ($TEST_TMP/fakes/podman)"
+    assert-not-contains "$TEST_STDOUT" "MISSING  docker/podman"
+  done
+
+  return 0
+}
+
+function test-verify-gnu-rejects-two-unusable-runtimes() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes
+  create-fake-tool docker "" 1 "version unavailable"
+  create-fake-tool podman ""
+  # Act
+  run-verify-gnu
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "no usable runtime"
+  assert-contains "$TEST_STDOUT" "UNAVAILABLE docker: failed to report version"
+  assert-contains "$TEST_STDOUT" "UNAVAILABLE podman: no version reported"
+  assert-not-contains "$TEST_STDOUT" "MISSING  docker/podman"
+  assert-not-contains "$TEST_STDOUT" "OK       docker:"
+  assert-not-contains "$TEST_STDOUT" "OK       podman:"
+  assert-file-exists "$TEST_TMP/fakes/.podman.called"
+
+  return 0
+}
+
+function test-verify-gnu-prefers-working-docker() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes
+  create-fake-tool podman "$PODMAN_VERSION_OUTPUT"
+  # Act
+  run-verify-gnu
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "Docker preferred when both runtimes work"
+  assert-contains "$TEST_STDOUT" "OK       docker: Docker version 27.3.1, build ce12230 ($TEST_TMP/fakes/docker)"
+  assert-not-contains "$TEST_STDOUT" "OK       podman:"
+  assert-file-not-exists "$TEST_TMP/fakes/.podman.called"
 
   return 0
 }
@@ -253,6 +338,7 @@ function test-verify-gnu-rejects-unreportable-runtime-version() {
     assert-equal 1 "$TEST_STATUS" "$runtime version command failure"
     assert-contains "$TEST_STDOUT" "UNAVAILABLE $runtime: failed to report version"
     assert-not-contains "$TEST_STDOUT" "OK       $runtime:"
+    assert-not-contains "$TEST_STDOUT" "MISSING  docker/podman: neither found on PATH"
 
     # Arrange an installed CLI that succeeds without returning a version.
     create-fake-tool "$runtime" ""
