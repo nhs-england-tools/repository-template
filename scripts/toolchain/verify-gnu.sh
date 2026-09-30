@@ -125,29 +125,33 @@ function check-make() {
 }
 
 # Check that Docker or Podman is on PATH and report its CLI version.
+# Prefer Docker, but try Podman if Docker cannot report a version.
 function check-container-runtime() {
 
-  local runtime path version
+  local runtime path version found=false
 
   for runtime in docker podman; do
     path="$(command -v "${runtime}" 2> /dev/null || true)"
     [[ -n "${path}" ]] || continue
+    found=true
 
     if ! version="$("${runtime}" --version 2>&1)"; then
       echo "UNAVAILABLE ${runtime}: failed to report version (${path})"
-      return 1
+      continue
     fi
     version="${version%%$'\n'*}"
     if [[ -z "${version//[[:space:]]/}" ]]; then
       echo "UNAVAILABLE ${runtime}: no version reported (${path})"
-      return 1
+      continue
     fi
 
     echo "OK       ${runtime}: ${version} (${path})"
     return 0
   done
 
-  echo "MISSING  docker/podman: neither found on PATH"
+  if [[ "${found}" == false ]]; then
+    echo "MISSING  docker/podman: neither found on PATH"
+  fi
   return 1
 }
 
