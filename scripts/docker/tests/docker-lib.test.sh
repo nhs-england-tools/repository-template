@@ -15,11 +15,11 @@ set -euo pipefail
 
 # ==============================================================================
 
-function main() {
+readonly DOCKER_TABLE_HEADER='[_.docker]'
+readonly FIXTURE_BUILD_DATETIME='2023-09-04T15:46:34+0000'
+readonly EXIT_STATUS_LABEL='exit status'
 
-  local -r DOCKER_TABLE_HEADER='[_.docker]'
-  local -r FIXTURE_BUILD_DATETIME='2023-09-04T15:46:34+0000'
-  local -r EXIT_STATUS_LABEL='exit status'
+function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh

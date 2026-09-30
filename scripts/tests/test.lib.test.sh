@@ -15,12 +15,12 @@ set -euo pipefail
 
 # ==============================================================================
 
-function main() {
+readonly FAILED_TEST_OUTPUT='t FAIL'
+readonly STDOUT_LABEL='stdout'
+readonly STDERR_LABEL='stderr'
+readonly EXIT_STATUS_LABEL='exit status'
 
-  local -r FAILED_TEST_OUTPUT='t FAIL'
-  local -r STDOUT_LABEL='stdout'
-  local -r STDERR_LABEL='stderr'
-  local -r EXIT_STATUS_LABEL='exit status'
+function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh

@@ -14,10 +14,10 @@ set -euo pipefail
 
 # ==============================================================================
 
-function main() {
+readonly PASSING_SUITE_BODY='exit 0'
+readonly EXIT_STATUS_LABEL='exit status'
 
-  local -r PASSING_SUITE_BODY='exit 0'
-  local -r EXIT_STATUS_LABEL='exit status'
+function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh

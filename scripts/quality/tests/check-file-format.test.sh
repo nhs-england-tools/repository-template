@@ -15,10 +15,10 @@ set -euo pipefail
 
 # ==============================================================================
 
-function main() {
+readonly A_TXT_ARGUMENT=' a.txt '
+readonly EXIT_STATUS_LABEL='exit status'
 
-  local -r A_TXT_ARGUMENT=' a.txt '
-  local -r EXIT_STATUS_LABEL='exit status'
+function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh

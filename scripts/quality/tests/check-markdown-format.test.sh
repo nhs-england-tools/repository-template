@@ -16,10 +16,10 @@ set -euo pipefail
 
 # ==============================================================================
 
-function main() {
+readonly MARKDOWN_HEADING='# Heading'
+readonly EXIT_STATUS_LABEL='exit status'
 
-  local -r MARKDOWN_HEADING='# Heading'
-  local -r EXIT_STATUS_LABEL='exit status'
+function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh

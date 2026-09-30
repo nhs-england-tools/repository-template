@@ -15,9 +15,9 @@ set -euo pipefail
 
 # ==============================================================================
 
-function main() {
+readonly EXIT_STATUS_LABEL='exit status'
 
-  local -r EXIT_STATUS_LABEL='exit status'
+function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
