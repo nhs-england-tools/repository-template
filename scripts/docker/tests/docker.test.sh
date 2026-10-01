@@ -26,6 +26,7 @@ function main() {
   tests=( \
     test-docker-build \
     test-docker-image-from-signature \
+    test-docker-arg-exact-name-match \
     test-docker-version-file \
     test-docker-test \
     test-docker-run \
@@ -77,9 +78,33 @@ function test-docker-image-from-signature() {
   MISE_TOML="$(git rev-parse --show-toplevel)/scripts/docker/tests/mise.toml.test"
   cp Dockerfile Dockerfile.effective
   # Act
-  _replace-image-latest-by-specific-version
+  _pin-dockerfile-arg-versions
   # Assert
-  grep -q "FROM python:.*-alpine.*@sha256:.*" Dockerfile.effective && return 0 || return 1
+  grep -q "^ARG PYTHON_VERSION=.*-alpine.*@sha256:.*" Dockerfile.effective &&
+  grep -q '^USER nobody$' Dockerfile.effective && return 0 || return 1
+}
+
+function test-docker-arg-exact-name-match() {
+
+  # Arrange
+  MISE_TOML="$(git rev-parse --show-toplevel)/scripts/docker/tests/mise.toml.test"
+  local tmp_dir
+  tmp_dir=$(mktemp -d)
+  cat > "$tmp_dir/Dockerfile.effective" <<'EOF'
+ARG PYTHON_VERSION=3.11.0
+FROM python:${PYTHON_VERSION}
+
+ARG CIMG_PYTHON_VERSION=3.10.0
+FROM cimg/python:${CIMG_PYTHON_VERSION} AS other
+EOF
+  # Act
+  dir="$tmp_dir" _pin-dockerfile-arg-versions
+  # Assert
+  local result=0
+  grep -q "^ARG PYTHON_VERSION=3.11.4-alpine3.18@sha256:" "$tmp_dir/Dockerfile.effective" &&
+  grep -q "^ARG CIMG_PYTHON_VERSION=3.12.0@sha256:" "$tmp_dir/Dockerfile.effective" || result=1
+  rm -rf "$tmp_dir"
+  return "$result"
 }
 
 function test-docker-version-file() {
