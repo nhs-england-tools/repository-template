@@ -143,6 +143,11 @@ function offer-append() {
     return 0
   fi
 
+  if [[ -f "${rc_file}" ]] && grep -Fq '# Added by scripts/toolchain/install-gnu-macos.sh' "${rc_file}"; then
+    echo "${rc_file} already has a block added by this script, skipping. Restart your shell or run: source ${rc_file}" >&2
+    return 0
+  fi
+
   # 'read' fails on end of input (Ctrl-D), which 'set -e' would turn into an exit
   read -r -p "Append this line to ${rc_file} now? [y/N] " reply || { reply=""; echo >&2; }
   if [[ "${reply}" =~ ^[Yy]$ ]]; then
