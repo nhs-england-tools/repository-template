@@ -45,7 +45,7 @@ clean:: # Clean-up project resources (main) @Operations
 	# TODO: Implement project resources clean-up step
 
 config:: # Configure development environment (main) @Configuration
-	$(MAKE) _toolchain-install
+	# TODO: Implement project-specific configuration steps
 
 # ==============================================================================
 

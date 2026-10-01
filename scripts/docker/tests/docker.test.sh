@@ -61,8 +61,13 @@ function test-suite-setup() {
   suffix="$(basename "$SUITE_TMP" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')"
   export DOCKER_IMAGE="repository-template/docker-test-$suffix"
   CLEAN_IMAGE="repository-template/docker-test-clean-$suffix"
+  if ! command -v docker > /dev/null 2>&1; then
+    echo "ERROR Docker test suite cannot run: docker is not installed" >&2
+    return 1
+  fi
+
   if ! docker info > /dev/null 2>&1; then
-    echo "ERROR: the Docker daemon is not reachable, start Docker and rerun" >&2
+    echo "ERROR Docker test suite cannot run: docker is not running or is not reachable" >&2
     return 1
   fi
   mkdir "$SUITE_TMP/image"

@@ -34,7 +34,7 @@ set -euo pipefail
 
 TEST_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 TEST_INDENT_PATTERN='s/^/    /'
-TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find git grep head ln mkdir mktemp mv rm sed sort tail tee touch tr uniq wc xargs)
+TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find git grep head ln mkdir mktemp mv rm sed sleep sort tail tee touch tr uniq wc xargs)
 
 # ==============================================================================
 # Suite runner

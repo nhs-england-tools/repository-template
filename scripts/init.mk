@@ -57,11 +57,26 @@ _toolchain-install-one: _toolchain-check # Install one toolchain tool via mise -
 	echo ${name}
 	mise install $(if ${version},${name}@${version},${name})
 
-_toolchain-install: _toolchain-check # Install every toolchain tool listed in mise.toml via mise
-	mise install
-
-_toolchain-check: # Fail with an actionable message when mise is not installed
+_toolchain-install: # Trust mise.toml and install every toolchain tool listed in it via mise
 	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
+	mise trust --yes mise.toml
+	source scripts/docker/docker.lib.sh
+	tools="$$( _toml-table-entries tools mise.toml | awk '{ print $$1 "@" $$2 }' )"
+	[[ -n "$${tools}" ]] || { echo "No [tools] entries found in mise.toml" >&2; exit 1; }
+	mise install $${tools}
+	echo "Project mise tools installed:"
+	while read -r tool; do
+		name="$${tool%@*}"
+		version="$${tool#*@}"
+		mise ls --installed --local --no-header "$${name}" | awk -v name="$${name}" -v version="$${version}" '$$1 == name && $$2 == version { print "  " $$1 "@" $$2; found = 1 } END { exit !found }'
+	done <<< "$${tools}"
+
+_toolchain-check: # Fail with an actionable message when mise is missing or mise.toml is not trusted
+	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
+	if mise trust --show | grep -q ': untrusted'; then
+		echo "mise.toml is not trusted. Run: make config" >&2
+		exit 1
+	fi
 
 toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in mise.toml (Docker image pins are not checked) @Configuration
 	mise outdated --bump
@@ -82,7 +97,9 @@ clean:: # Remove all generated and temporary files (common) @Operations
 
 config:: # Configure development environment (common) @Configuration
 	$(MAKE) \
-		githooks-config
+		_toolchain-install \
+		githooks-config \
+		docker-pull-pinned-images \
 
 help: # Print help @Others
 	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"

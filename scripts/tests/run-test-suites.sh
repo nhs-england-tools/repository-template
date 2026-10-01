@@ -66,8 +66,8 @@ function find-test-suites() {
 #   suites=[newline-separated list of test suite paths]
 function run-test-suites() {
 
-  local logs suite rc i=0 failed=0
-  local -a pids=() paths=()
+  local logs suite rc reason i=0 failed=0
+  local -a pids=() paths=() failures=()
   logs="$(mktemp -d)"
   # shellcheck disable=SC2064
   trap "rm -rf '$logs'" EXIT
@@ -92,12 +92,20 @@ function run-test-suites() {
     fi
     if [[ $rc -ne 0 ]]; then
       echo "FAILED: ${paths[$i]} (exit code $rc)"
+      reason="$(awk '/^(ERROR|FAILED|ASSERTION FAILED)/ { print; exit }' "$logs/$i.log" || true)"
+      failures+=("${paths[$i]}: ${reason:-exit code $rc}")
       failed=$((failed + 1))
     fi
   done
 
   echo "Suites: ${#paths[@]}, Passed: $((${#paths[@]} - failed)), Failed: $failed"
-  [[ $failed -eq 0 ]] || return 1
+  if [[ $failed -ne 0 ]]; then
+    echo "Failed suites:"
+    for reason in "${failures[@]}"; do
+      echo "  - $reason"
+    done
+    return 1
+  fi
 
   return 0
 }
