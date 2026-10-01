@@ -9,29 +9,29 @@ DOCKER_TITLE ?= $(or "${docker_title}", $(or "${TITLE}", $(or "${title}", "Servi
 FORCE_USE_DOCKER ?= false
 
 docker-bake-dockerfile: # Create Dockerfile.effective - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
-	make _docker cmd="bake-dockerfile" \
+	$(MAKE) _docker cmd="bake-dockerfile" \
 		dir=$(or ${docker_dir}, ${dir})
 
 docker-build: # Build Docker image - optional: docker_dir|dir=[path to the Dockerfile to use, default is '.'] @Development
 	dir=$(or ${docker_dir}, ${dir})
-	make _docker cmd="build"
+	$(MAKE) _docker cmd="build"
 docker-build: docker-lint
 
 docker-lint: # Run hadolint over the Dockerfile - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
 	dir=$(or ${docker_dir}, ${dir})
-	make _docker cmd="lint"
+	$(MAKE) _docker cmd="lint"
 docker-lint: docker-bake-dockerfile
 
 docker-push: # Push Docker image - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
-	make _docker cmd="push" \
+	$(MAKE) _docker cmd="push" \
 		dir=$(or ${docker_dir}, ${dir})
 
 docker-run: # Run Docker image - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Development
-	make _docker cmd="run" \
+	$(MAKE) _docker cmd="run" \
 		dir=$(or ${docker_dir}, ${dir})
 
 clean:: # Remove Docker resources (docker) - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Operations
-	make _docker cmd="clean" \
+	$(MAKE) _docker cmd="clean" \
 		dir=$(or ${docker_dir}, ${dir})
 
 _docker: # Docker command wrapper - mandatory: cmd=[command to execute]; optional: dir=[path to the image directory where the Dockerfile is located, relative to the project's top-level directory, default is '.']

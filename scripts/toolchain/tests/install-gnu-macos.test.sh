@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2034,SC2317,SC2329
 
 set -euo pipefail
@@ -30,9 +30,60 @@ function main() {
     test-install-gnu-macos-requires-homebrew \
     test-install-gnu-macos-installs-formulae-and-recommends-path \
     test-install-gnu-macos-prints-fish-syntax \
+    test-install-gnu-macos-keeps-leading-bash-in-posix-guidance \
+    test-install-gnu-macos-keeps-leading-bash-in-fish-guidance \
     test-install-gnu-macos-reports-path-already-complete \
     test-install-gnu-macos-skips-when-rc-file-has-the-block \
-    test-install-gnu-macos-uses-the-first-bash-login-file
+    test-install-gnu-macos-uses-the-first-bash-login-file \
+    test-direct-script-selects-bash-from-path \
+    test-make-recipe-selects-bash-from-path
+
+  return 0
+}
+
+# A wrapper ahead of the host Bash on PATH records interpreter selection and
+# delegates to that Bash. Its POSIX sh shebang avoids calling itself again.
+function create-bash-selection-wrapper() {
+
+  local real_bash
+  real_bash="$(type -P bash)"
+  mkdir -p "$TEST_TMP/selected-bin"
+  cat > "$TEST_TMP/selected-bin/bash" << EOF
+#!/bin/sh
+printf 'selected\n' >> '$TEST_TMP/bash-selection.log'
+printf '%s\n' "\${1-}" >> '$TEST_TMP/bash-script-args.log'
+export SELECTED_BASH_WRAPPER=1
+exec '$real_bash' "\$@"
+EOF
+  chmod +x "$TEST_TMP/selected-bin/bash"
+
+  return 0
+}
+
+function test-direct-script-selects-bash-from-path() {
+
+  create-bash-selection-wrapper
+  test-stub uname 'echo Linux'
+  test-capture env PATH="$TEST_TMP/selected-bin:$PATH" \
+    "$TEST_REPO_ROOT/scripts/toolchain/install-gnu-macos.sh"
+  assert-equal 0 "$TEST_STATUS" "direct script exit status"
+  assert-file-has-line "$TEST_TMP/bash-script-args.log" \
+    "$TEST_REPO_ROOT/scripts/toolchain/install-gnu-macos.sh"
+
+  return 0
+}
+
+function test-make-recipe-selects-bash-from-path() {
+
+  create-bash-selection-wrapper
+  # Make must receive literal $$ so it passes $ to the recipe shell.
+  # shellcheck disable=SC2016
+  printf 'shell-selection-probe:\n\t@test "$$SELECTED_BASH_WRAPPER" = 1\n' > "$TEST_TMP/probe.mk"
+  test-capture env PATH="$TEST_TMP/selected-bin:$PATH" \
+    make -f "$TEST_REPO_ROOT/Makefile" -f "$TEST_TMP/probe.mk" shell-selection-probe
+  assert-equal 0 "$TEST_STATUS" "Make recipe exit status"
+  assert-contains "$(cat "$TEST_TMP/bash-selection.log")" selected \
+    "Make recipe interpreter"
 
   return 0
 }
@@ -71,13 +122,14 @@ function test-install-gnu-macos-installs-formulae-and-recommends-path() {
 
   # Arrange
   local b="$TEST_TMP/brew" expected
-  expected="export PATH=\"$b/coreutils/libexec/gnubin:$b/findutils/libexec/gnubin:$b/gawk/libexec/gnubin:$b/gnu-sed/libexec/gnubin:$b/grep/libexec/gnubin:\${PATH}\""
+  expected="export PATH=\"$b/bash/bin:$b/coreutils/libexec/gnubin:$b/findutils/libexec/gnubin:$b/gawk/libexec/gnubin:$b/gnu-sed/libexec/gnubin:$b/grep/libexec/gnubin:\${PATH}\""
   arrange-os-and-brew Darwin
+  PATH="$PATH:$b/bash/bin"
   # Act
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-stub-called brew "install coreutils diffutils findutils gawk gnu-sed grep"
+  assert-stub-called brew "install bash coreutils diffutils findutils gawk gnu-sed grep"
   assert-contains "$TEST_STDERR" "  $expected"
   assert-contains "$TEST_STDERR" "Add the line above to your shell profile manually."
   assert-file-not-exists "$TEST_TMP/home/.zshrc"
@@ -89,8 +141,41 @@ function test-install-gnu-macos-prints-fish-syntax() {
 
   # Arrange
   local b="$TEST_TMP/brew" expected
-  expected="fish_add_path --path --prepend \"$b/coreutils/libexec/gnubin\" \"$b/findutils/libexec/gnubin\" \"$b/gawk/libexec/gnubin\" \"$b/gnu-sed/libexec/gnubin\" \"$b/grep/libexec/gnubin\""
+  expected="fish_add_path --path --prepend --move \"$b/bash/bin\" \"$b/coreutils/libexec/gnubin\" \"$b/findutils/libexec/gnubin\" \"$b/gawk/libexec/gnubin\" \"$b/gnu-sed/libexec/gnubin\" \"$b/grep/libexec/gnubin\""
   arrange-os-and-brew Darwin
+  PATH="$PATH:$b/bash/bin"
+  # Act
+  run-install-gnu-macos SHELL=/usr/bin/fish HOME="$TEST_TMP/home"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDERR" "  $expected"
+
+  return 0
+}
+
+function test-install-gnu-macos-keeps-leading-bash-in-posix-guidance() {
+
+  # Arrange
+  local b="$TEST_TMP/brew" expected
+  expected="export PATH=\"$b/bash/bin:$b/coreutils/libexec/gnubin:$b/findutils/libexec/gnubin:$b/gawk/libexec/gnubin:$b/gnu-sed/libexec/gnubin:$b/grep/libexec/gnubin:\${PATH}\""
+  arrange-os-and-brew Darwin
+  PATH="$b/bash/bin:$PATH"
+  # Act
+  run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDERR" "  $expected"
+
+  return 0
+}
+
+function test-install-gnu-macos-keeps-leading-bash-in-fish-guidance() {
+
+  # Arrange
+  local b="$TEST_TMP/brew" expected
+  expected="fish_add_path --path --prepend --move \"$b/bash/bin\" \"$b/coreutils/libexec/gnubin\" \"$b/findutils/libexec/gnubin\" \"$b/gawk/libexec/gnubin\" \"$b/gnu-sed/libexec/gnubin\" \"$b/grep/libexec/gnubin\""
+  arrange-os-and-brew Darwin
+  PATH="$b/bash/bin:$PATH"
   # Act
   run-install-gnu-macos SHELL=/usr/bin/fish HOME="$TEST_TMP/home"
   # Assert
@@ -105,6 +190,7 @@ function test-install-gnu-macos-reports-path-already-complete() {
   # Arrange
   local b="$TEST_TMP/brew" formula
   arrange-os-and-brew Darwin
+  PATH="$b/bash/bin:$PATH"
   for formula in coreutils findutils gawk gnu-sed grep; do
     PATH="$PATH:$b/$formula/libexec/gnubin"
   done
@@ -131,6 +217,8 @@ function test-install-gnu-macos-skips-when-rc-file-has-the-block() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "$zdot/.zshrc already has a block added by this script"
+  assert-contains "$TEST_STDERR" "Update the existing block manually with the line above."
+  assert-not-contains "$TEST_STDERR" "Restart your shell or run: source"
   assert-not-contains "$TEST_STDERR" "Add the line above to your shell profile manually."
   assert-files-identical "$TEST_TMP/zshrc.before" "$zdot/.zshrc"
 
@@ -176,7 +264,7 @@ function arrange-os-and-brew() {
   test-stub uname "echo $os"
   # The body expands TEST_TMP now, because 'env -i' keeps it from the stub
   test-stub brew "[[ \"\${1:-}\" != --prefix ]] || printf '%s\n' \"$b/\${2:-}\""
-  mkdir -p "$b/coreutils/libexec/gnubin" "$b/diffutils" "$b/findutils/libexec/gnubin" \
+  mkdir -p "$b/bash/bin" "$b/coreutils/libexec/gnubin" "$b/diffutils" "$b/findutils/libexec/gnubin" \
     "$b/gawk/libexec/gnubin" "$b/gnu-sed/libexec/gnubin" "$b/grep/libexec/gnubin"
 
   return 0

@@ -10,6 +10,8 @@
 
 ## Using Make
 
+Use GNU Make 3.82 or later. Make resolves the first `bash` on `PATH` when it starts and uses that executable for recipes. Keep GNU Bash 5.2 or later ahead of older system versions on `PATH`.
+
 Sample make target signature definition:
 
 ```makefile
@@ -41,7 +43,7 @@ To see all available make targets, run `make help`.
 
 ## Using Bash
 
-When working in the command-line ensure the environment variables are reset to their initial state. This can be done by reloading shell using the `env -i $SHELL` command.
+Repository scripts use `#!/usr/bin/env bash`, so direct execution also selects the first Bash on `PATH`. On macOS, put Homebrew's `bin` before `/bin` in your shell profile and run `make toolchain-verify-gnu` to check the resolved version and path.
 
 Sample Bash function definition:
 
@@ -109,7 +111,7 @@ Sample make target calling another make target. In this case a parameter `baz` h
 ```makefile
 some-target: # Call another target - mandatory: foo=[description]
   baz=qux \
-    make another-target # 'foo' and 'baz' are passed to the make target
+    $(MAKE) another-target # 'foo' and 'baz' are passed to the make target
 ```
 
 Run it from a terminal:

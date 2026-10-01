@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2016,SC2034,SC2317,SC2329
 
 set -euo pipefail
@@ -595,6 +595,8 @@ function test-stub-works-with-only-the-stub-directory-on-path() {
   # Arrange
   local saved_path="$PATH" rc=0
   test-stub tool 'echo "body $#"; exit 4'
+  # The env shebang needs Bash on PATH; no other external tool is available.
+  ln -s "$(type -P bash)" "$STUB_DIR/bash"
   # Act
   PATH="$STUB_DIR"
   tool "a b" > "$TEST_TMP/out" 2> "$TEST_TMP/err" || rc=$?
@@ -783,7 +785,7 @@ function write-mini-suite() {
   local body="$1"
   shift
   {
-    echo '#!/bin/bash'
+    echo '#!/usr/bin/env bash'
     echo 'set -euo pipefail'
     echo "source '$TEST_REPO_ROOT/scripts/tests/test.lib.sh'"
     printf '%s\n' "$body"
@@ -797,7 +799,7 @@ function write-mini-suite() {
 function create-fake-tool() {
 
   mkdir -p "$TEST_TMP/fake"
-  printf '#!/bin/bash\nexit 0\n' > "$TEST_TMP/fake/fake-tool"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/fake/fake-tool"
   chmod +x "$TEST_TMP/fake/fake-tool"
 
   return 0
@@ -809,10 +811,10 @@ function create-fake-tool() {
 function create-fake-mise-shim() {
 
   mkdir -p "$TEST_TMP/mise/shims" "$TEST_TMP/real" "$TEST_TMP/mise-bin"
-  printf '#!/bin/bash\nexit 1\n' > "$TEST_TMP/mise/shims/fake-tool"
-  printf '#!/bin/bash\nexit 0\n' > "$TEST_TMP/real/fake-tool"
+  printf '#!/usr/bin/env bash\nexit 1\n' > "$TEST_TMP/mise/shims/fake-tool"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/real/fake-tool"
   cat > "$TEST_TMP/mise-bin/mise" << EOF
-#!/bin/bash
+#!/usr/bin/env bash
 pwd -P > '$TEST_TMP/mise-cwd'
 [[ "\$*" == "which fake-tool" && -x '$TEST_TMP/real/fake-tool' ]] || exit 1
 echo '$TEST_TMP/real/fake-tool'

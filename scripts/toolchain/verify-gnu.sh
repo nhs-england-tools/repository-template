@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -12,6 +12,8 @@ set -euo pipefail
 # It also reports, but never installs, GNU make 3.82 or later and the CLI
 # version of a Docker or Podman container runtime on PATH, since
 # scripts/docker/docker.mk needs both prerequisites.
+# It also enforces Bash 5.2 or later on PATH, since the repository's scripts
+# use associative arrays and other features the macOS-shipped Bash 3.2 lacks.
 #
 # Usage:
 #   $ ./verify-gnu.sh
@@ -20,13 +22,15 @@ set -euo pipefail
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 #
 # Exit codes:
-#   0 - Every checked tool resolves to its GNU implementation, make is 3.82 or
-#       later, and a container runtime reports its version
-#   1 - At least one tool is missing, too old, or resolves to a non-GNU
+#   0 - Every checked tool resolves to its required GNU implementation or
+#       GNU-style behaviour, make and bash are new enough, and a container
+#       runtime reports its version
+#   1 - At least one tool is missing, too old, or resolves to an incompatible
 #       implementation
 
 TOOLS=(awk date diff find grep sed)
 MIN_MAKE_VERSION="3.82"
+MIN_BASH_VERSION="5.2"
 
 # ==============================================================================
 
@@ -34,8 +38,14 @@ function main() {
 
   local tool failed=0
 
+  check-bash || failed=$((failed + 1))
+
   for tool in "${TOOLS[@]}"; do
-    check-tool "${tool}" || failed=$((failed + 1))
+    if [[ "${tool}" == "date" ]]; then
+      check-date || failed=$((failed + 1))
+    else
+      check-tool "${tool}" || failed=$((failed + 1))
+    fi
   done
 
   check-make || failed=$((failed + 1))
@@ -43,13 +53,13 @@ function main() {
 
   if [[ ${failed} -gt 0 ]]; then
     echo
-    echo "${failed} tool(s) are not resolving to their required GNU implementation or version."
+    echo "${failed} tool(s) are not resolving to their required GNU-compatible implementation or version."
     if [[ "$(uname -s)" == "Darwin" ]]; then
       echo "Run: make toolchain-install-gnu-macos, then add the printed PATH line to your shell profile."
     else
       echo "Install the missing GNU packages with your system package manager, for example: sudo apt-get install gawk"
     fi
-    echo "Neither make nor a container runtime is installed by this script, install them yourself."
+    echo "Neither make, bash, nor a container runtime is installed by this script, install or upgrade them yourself."
     return 1
   fi
 
@@ -66,7 +76,6 @@ function check-tool() {
   local tool="$1" path version expect
 
   case "${tool}" in
-    date) expect="GNU coreutils" ;;
     diff) expect="GNU diffutils" ;;
     find) expect="GNU findutils" ;;
     awk) expect="GNU Awk" ;;
@@ -93,6 +102,62 @@ function check-tool() {
     return 0
   else
     echo "NOT GNU  ${tool}: ${version} (${path})"
+    return 1
+  fi
+}
+
+# Check that date supports the GNU-style behaviour this repository uses.
+function check-date() {
+
+  local path version formatted epoch
+
+  path="$(command -v date 2> /dev/null || true)"
+  if [[ -z "${path}" ]]; then
+    echo "MISSING  date: not found on PATH"
+    return 1
+  fi
+
+  version="$(date --version 2>&1 | head -n 1 || true)"
+  if [[ -z "${version}" ]]; then
+    version="$(date 2>&1 | head -n 1 || true)"
+  fi
+  [[ -n "${version}" ]] || version="unknown version"
+
+  formatted="$(date --date='2026-09-27T07:08:09+0000' -u +'%Y%m%d%H%M%S' 2> /dev/null || true)"
+  epoch="$(date --date='1970-01-01T00:00:01+0000' -u +'%s' 2> /dev/null || true)"
+  if [[ "${formatted}" == "20260927070809" && "${epoch}" == "1" ]]; then
+    echo "OK       date: GNU-style date (${version}) (${path})"
+    return 0
+  else
+    echo "INCOMPAT date: ${version} (${path}), missing GNU-style --date support"
+    return 1
+  fi
+}
+
+# Check that Bash is on PATH, identifies as GNU, and is at least MIN_BASH_VERSION.
+function check-bash() {
+
+  local path version
+
+  path="$(command -v bash 2> /dev/null || true)"
+  if [[ -z "${path}" ]]; then
+    echo "MISSING  bash: not found on PATH"
+    return 1
+  fi
+
+  version="$(bash --version 2>&1 | head -n 1 || true)"
+  if [[ "${version}" != *"GNU bash"* ]]; then
+    echo "NOT GNU  bash: ${version} (${path})"
+    return 1
+  fi
+
+  version="${version#*version }"
+  version="${version%%[^0-9.]*}"
+  if version-ge "${version}" "${MIN_BASH_VERSION}"; then
+    echo "OK       bash: GNU bash ${version} (${path})"
+    return 0
+  else
+    echo "TOO OLD  bash: GNU bash ${version} (${path}), need ${MIN_BASH_VERSION} or later"
     return 1
   fi
 }

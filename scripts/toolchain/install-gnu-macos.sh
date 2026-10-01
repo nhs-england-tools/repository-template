@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -13,6 +13,11 @@ set -euo pipefail
 # GNU binutils is deliberately not installed: its unprefixed 'ar' and 'ranlib'
 # write archives that Apple's linker rejects when they shadow the Apple tools.
 #
+# Homebrew's 'bash' formula is also installed, because macOS ships bash 3.2
+# (its last GPLv2 release) as /bin/bash and never updates it. This does not
+# touch /bin/bash or the default login shell; it only adds a newer bash to
+# PATH ahead of the GNU utility directories, for scripts that need Bash 5.2+.
+#
 # Usage:
 #   $ ./install-gnu-macos.sh
 #
@@ -23,7 +28,7 @@ set -euo pipefail
 #   0 - The tools are installed, or there is nothing to do on this OS
 #   1 - Homebrew is not installed, or a Homebrew command failed
 
-FORMULAE=(coreutils diffutils findutils gawk gnu-sed grep)
+FORMULAE=(bash coreutils diffutils findutils gawk gnu-sed grep)
 
 # ==============================================================================
 
@@ -52,6 +57,16 @@ function formula-gnu-dir() {
   local formula="$1" prefix
   prefix="$(brew --prefix "${formula}")"
 
+  # Homebrew's bash formula has no gnubin dir, it installs bash straight into
+  # the formula's own bin dir, which needs to lead PATH ahead of every GNU
+  # utility directory so it shadows /bin/bash for interactive/login shells.
+  if [[ "${formula}" == "bash" ]]; then
+    if [[ -d "${prefix}/bin" ]]; then
+      echo "${prefix}/bin"
+    fi
+    return 0
+  fi
+
   # Not every formula renames its binaries (e.g. diffutils installs
   # cmp/diff/diff3/sdiff unprefixed with no gnubin dir at all, already
   # reachable via the normal linked prefix), so only formulae that actually
@@ -67,11 +82,20 @@ function formula-gnu-dir() {
 # to shadow the BSD ones, and optionally append it to the user's shell rc file.
 function recommend-path() {
 
-  local formula dir missing=()
+  local formula dir bash_dir="" missing=()
 
   for formula in "${FORMULAE[@]}"; do
     dir="$(formula-gnu-dir "${formula}")"
     [[ -n "${dir}" ]] || continue
+    if [[ "${formula}" == "bash" ]]; then
+      bash_dir="${dir}"
+      # Bash must lead PATH: merely appearing later can leave /bin/bash first.
+      case "${PATH}" in
+        "${dir}"|"${dir}":*) ;;
+        *) missing+=("${dir}") ;;
+      esac
+      continue
+    fi
     case ":${PATH}:" in
       *":${dir}:"*) ;;
       *) missing+=("${dir}") ;;
@@ -83,12 +107,18 @@ function recommend-path() {
     return 0
   fi
 
+  # Prepending missing GNU directories would push even a leading Bash behind
+  # them, so include Bash first in every generated PATH line.
+  if [[ -n "${bash_dir}" && "${missing[0]}" != "${bash_dir}" ]]; then
+    missing=("${bash_dir}" "${missing[@]}")
+  fi
+
   local line
   line="$(path-line "${missing[@]}")"
 
   {
     echo
-    echo "Add this to your shell profile so 'sed', 'grep', 'date', 'awk', 'find' and others resolve to the GNU versions:"
+    echo "Add this to your shell profile so 'bash' resolves to the newer Homebrew version, and 'sed', 'grep', 'date', 'awk', 'find' and others resolve to the GNU versions:"
     echo
     echo "  ${line}"
     echo
@@ -112,7 +142,7 @@ function path-line() {
       for dir in "$@"; do
         quoted+=("\"${dir}\"")
       done
-      echo "fish_add_path --path --prepend ${quoted[*]}"
+      echo "fish_add_path --path --prepend --move ${quoted[*]}"
       ;;
     *)
       local IFS=:
@@ -141,7 +171,7 @@ function offer-append() {
   esac
 
   if [[ -n "${rc_file}" ]] && [[ -f "${rc_file}" ]] && grep -Fq '# Added by scripts/toolchain/install-gnu-macos.sh' "${rc_file}"; then
-    echo "${rc_file} already has a block added by this script, skipping. Restart your shell or run: source ${rc_file}" >&2
+    echo "${rc_file} already has a block added by this script, skipping. Update the existing block manually with the line above." >&2
     return 0
   fi
 

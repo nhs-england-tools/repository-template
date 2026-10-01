@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC2016,SC2154,SC2166
 
 # SEE: https://github.com/goss-org/goss/blob/master/extras/dgoss/dgoss

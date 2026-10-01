@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2034,SC2317,SC2329
 
 set -euo pipefail
@@ -27,9 +27,13 @@ function main() {
     test-version-ge-examples \
     test-version-ge-properties \
     test-verify-gnu-passes-when-every-tool-is-gnu \
+    test-verify-gnu-accepts-uutils-date-when-gnu-style-behaviour-matches \
+    test-verify-gnu-rejects-date-without-gnu-style-behaviour \
     test-verify-gnu-rejects-bsd-grep-that-claims-gnu-compatibility \
     test-verify-gnu-reports-missing-tool \
     test-verify-gnu-rejects-old-or-non-gnu-make \
+    test-verify-gnu-rejects-old-or-non-gnu-bash \
+    test-verify-gnu-reports-missing-bash \
     test-verify-gnu-accepts-podman-and-reports-no-runtime \
     test-verify-gnu-falls-back-after-docker-version-failure \
     test-verify-gnu-falls-back-after-empty-docker-version \
@@ -47,18 +51,22 @@ function test-suite-setup() {
 
   FAKE_TOOL="$SUITE_TMP/fake-tool"
   cat > "$FAKE_TOOL" << 'EOF'
-#!/bin/bash
+#!/bin/sh
+# This fixture uses POSIX sh because the tests put a fake bash first on PATH.
 # A link named NAME prints the lines of .NAME.fake beside it after the first, to
 # stdout for a "1 " prefix and to stderr for "2 ", then exits with the status on the first line
 : > "${0%/*}/.${0##*/}.called"
 {
   read -r status
   while IFS= read -r line; do
-    if [[ "$line" == "2 "* ]]; then
+    case "$line" in
+      "2 "*)
       printf '%s\n' "${line#2 }" >&2
-    else
+      ;;
+      *)
       printf '%s\n' "${line#1 }"
-    fi
+      ;;
+    esac
   done
 } < "${0%/*}/.${0##*/}.fake"
 exit "$status"
@@ -151,8 +159,9 @@ function test-verify-gnu-passes-when-every-tool-is-gnu() {
   # Arrange
   local f="$TEST_TMP/fakes" expected
   expected="$(printf '%s\n' \
+    "OK       bash: GNU bash 5.2.15 ($f/bash)" \
     "OK       awk: GNU Awk 5.3.0 ($f/awk)" \
-    "OK       date: date (GNU coreutils) 9.5 ($f/date)" \
+    "OK       date: GNU-style date (date (GNU coreutils) 9.5) ($f/date)" \
     "OK       diff: diff (GNU diffutils) 3.10 ($f/diff)" \
     "OK       find: find (GNU findutils) 4.10.0 ($f/find)" \
     "OK       grep: grep (GNU grep) 3.11 ($f/grep)" \
@@ -168,6 +177,38 @@ function test-verify-gnu-passes-when-every-tool-is-gnu() {
   assert-equal 0 "$TEST_STATUS" "exit status"
   assert-equal "$expected" "$TEST_STDOUT" "stdout"
   assert-equal "" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-verify-gnu-accepts-uutils-date-when-gnu-style-behaviour-matches() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes
+  create-fake-date "date (uutils coreutils) 0.8.0"
+  # Act
+  run-verify-gnu
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDOUT" "OK       date: GNU-style date (date (uutils coreutils) 0.8.0) ($TEST_TMP/fakes/date)"
+  assert-contains "$TEST_STDOUT" "All GNU tools verified."
+
+  return 0
+}
+
+function test-verify-gnu-rejects-date-without-gnu-style-behaviour() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes
+  create-fake-tool date "date (BSD date) 1.0"
+  # Act
+  run-verify-gnu
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDOUT" "INCOMPAT date: date (BSD date) 1.0 ($TEST_TMP/fakes/date), missing GNU-style --date support"
+  assert-contains "$TEST_STDOUT" "1 tool(s) are not resolving"
 
   return 0
 }
@@ -221,6 +262,42 @@ function test-verify-gnu-rejects-old-or-non-gnu-make() {
   assert-equal "1 1" "$old_status $TEST_STATUS" "exit status with the old make, then the non-GNU make"
   assert-contains "$old_stdout" "TOO OLD  make: GNU Make 3.81 ($TEST_TMP/fakes/make), need 3.82 or later"
   assert-contains "$TEST_STDOUT" "NOT GNU  make: make: illegal option -- - ($TEST_TMP/fakes/make)"
+
+  return 0
+}
+
+function test-verify-gnu-rejects-old-or-non-gnu-bash() {
+
+  # Arrange
+  local old_status old_stdout
+  create-minbin
+  create-gnu-fakes
+  create-fake-tool bash "GNU bash, version 5.1.16(1)-release (x86_64-pc-linux-gnu)"
+  # Act
+  run-verify-gnu
+  old_status=$TEST_STATUS
+  old_stdout="$TEST_STDOUT"
+  create-fake-tool bash "dash 0.5.11"
+  run-verify-gnu
+  # Assert
+  assert-equal "1 1" "$old_status $TEST_STATUS" "exit status with the old bash, then the non-GNU bash"
+  assert-contains "$old_stdout" "TOO OLD  bash: GNU bash 5.1.16 ($TEST_TMP/fakes/bash), need 5.2 or later"
+  assert-contains "$TEST_STDOUT" "NOT GNU  bash: dash 0.5.11 ($TEST_TMP/fakes/bash)"
+
+  return 0
+}
+
+function test-verify-gnu-reports-missing-bash() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes bash
+  # Act
+  run-verify-gnu
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-contains "$TEST_STDOUT" "MISSING  bash: not found on PATH"
+  assert-contains "$TEST_STDOUT" "1 tool(s) are not resolving"
 
   return 0
 }
@@ -406,6 +483,35 @@ function create-fake-tool() {
   return 0
 }
 
+# Create a fake date that supports the GNU-style behaviours checked by the verifier.
+# Arguments:
+#   $1=[version line]
+function create-fake-date() {
+
+  local dir="$TEST_TMP/fakes"
+  [[ -d "$dir" ]] || mkdir "$dir"
+  cat > "$dir/date" << EOF
+#!/bin/sh
+case "\$*" in
+  "--version")
+    printf '%s\n' '$1'
+    ;;
+  "--date=2026-09-27T07:08:09+0000 -u +%Y%m%d%H%M%S")
+    printf '%s\n' '20260927070809'
+    ;;
+  "--date=1970-01-01T00:00:01+0000 -u +%s")
+    printf '%s\n' '1'
+    ;;
+  *)
+    printf '%s\n' '$1'
+    ;;
+esac
+EOF
+  chmod +x "$dir/date"
+
+  return 0
+}
+
 # Create a fake GNU awk, date, diff, find, grep, sed and make, and a fake docker.
 # The grep and make fakes print a second line, as the real tools do.
 # Arguments:
@@ -414,6 +520,7 @@ function create-gnu-fakes() {
 
   local fake name
   local fakes=(
+    "bash:GNU bash, version 5.2.15(1)-release (aarch64-apple-darwin23.0.0)"
     "awk:GNU Awk 5.3.0" "date:date (GNU coreutils) 9.5" "diff:diff (GNU diffutils) 3.10"
     "find:find (GNU findutils) 4.10.0" $'grep:grep (GNU grep) 3.11\nCopyright (C) 2023 Free Software Foundation, Inc.'
     "sed:sed (GNU sed) 4.9" $'make:GNU Make 4.4.1\nBuilt for aarch64-apple-darwin24.0.0'
@@ -422,18 +529,23 @@ function create-gnu-fakes() {
   for fake in "${fakes[@]}"; do
     name="${fake%%:*}"
     [[ " $* " != *" $name "* ]] || continue
-    create-fake-tool "$name" "${fake#*:}"
+    if [[ "$name" == "date" ]]; then
+      create-fake-date "${fake#*:}"
+    else
+      create-fake-tool "$name" "${fake#*:}"
+    fi
   done
 
   return 0
 }
 
-# Create "$TEST_TMP/minbin" with links to the real bash, head and uname, the only
-# real tools the script under test gets.
+# Create "$TEST_TMP/minbin" with links to the real head and uname, the only real
+# tools the script under test gets unconditionally. The verifier is launched
+# with a captured real Bash, while fake bash remains on PATH for its checks.
 function create-minbin() {
 
   mkdir "$TEST_TMP/minbin"
-  ln -s "$(type -P bash)" "$(type -P head)" "$(type -P uname)" "$TEST_TMP/minbin/"
+  ln -s "$(type -P head)" "$(type -P uname)" "$TEST_TMP/minbin/"
 
   return 0
 }
@@ -442,7 +554,10 @@ function create-minbin() {
 # PATH and nothing else from the caller's environment.
 function run-verify-gnu() {
 
-  test-capture env -i PATH="$TEST_TMP/fakes:$TEST_TMP/minbin" "$TEST_REPO_ROOT/scripts/toolchain/verify-gnu.sh"
+  local real_bash
+  real_bash="$(type -P bash)"
+  test-capture env -i PATH="$TEST_TMP/fakes:$TEST_TMP/minbin" "$real_bash" \
+    "$TEST_REPO_ROOT/scripts/toolchain/verify-gnu.sh"
 
   return 0
 }
