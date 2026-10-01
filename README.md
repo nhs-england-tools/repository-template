@@ -85,7 +85,7 @@ markdown links: ok
 **Out of scope / non-goals**
 
 - Project-specific dependency installation, build, publish, and deploy steps (they are marked as TODOs in the Makefile).
-- Repository-specific tests (the Makefile notes that no tests are required for this template).
+- Tests for a project's own code. `make test` only covers the template's own scripts.
 - Code formatting automation (the Makefile notes that no formatting is required for this template).
 
 ## How it solves the problem
@@ -124,11 +124,13 @@ make lint-markdown-format
 make lint-markdown-links
 ```
 
-Run the test entry point (template placeholder):
+Run the tests:
 
 ```shell
 make test
 ```
+
+`make test` runs every `*.test.sh` suite under [scripts](scripts) in parallel through [run-test-suites.sh](scripts/tests/run-test-suites.sh). The Docker integration suite needs a running Docker daemon. A new suite is picked up automatically when it is executable and git does not ignore it. Keep it in a `tests/` directory next to the scripts it tests.
 
 ### Examples
 

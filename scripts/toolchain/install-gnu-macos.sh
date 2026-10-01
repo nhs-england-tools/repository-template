@@ -123,9 +123,10 @@ function path-line() {
   return 0
 }
 
-# Offer to append the recommended line to the user's shell rc file. Only
-# prompts when connected to an interactive terminal. Otherwise it just prints
-# the instruction and returns, so this is safe to run from CI or a script.
+# Offer to append the recommended line to the user's shell rc file. When the rc
+# file already has the block, it prints the skip message and returns. Otherwise
+# it only prompts when connected to an interactive terminal, and just prints
+# the instruction when not, so this is safe to run from CI or a script.
 # Arguments:
 #   $1=[line to append]
 function offer-append() {
@@ -136,15 +137,16 @@ function offer-append() {
     */zsh) rc_file="${ZDOTDIR:-${HOME}}/.zshrc" ;;
     */bash) rc_file="$(bash-login-file)" ;;
     */fish) rc_file="${XDG_CONFIG_HOME:-${HOME}/.config}/fish/config.fish" ;;
+    *) rc_file="" ;; # Unknown shells use the manual setup instructions below
   esac
 
-  if [[ -z "${rc_file}" ]] || [[ ! -t 0 ]]; then
-    echo "Add the line above to your shell profile manually." >&2
+  if [[ -n "${rc_file}" ]] && [[ -f "${rc_file}" ]] && grep -Fq '# Added by scripts/toolchain/install-gnu-macos.sh' "${rc_file}"; then
+    echo "${rc_file} already has a block added by this script, skipping. Restart your shell or run: source ${rc_file}" >&2
     return 0
   fi
 
-  if [[ -f "${rc_file}" ]] && grep -Fq '# Added by scripts/toolchain/install-gnu-macos.sh' "${rc_file}"; then
-    echo "${rc_file} already has a block added by this script, skipping. Restart your shell or run: source ${rc_file}" >&2
+  if [[ -z "${rc_file}" ]] || [[ ! -t 0 ]]; then
+    echo "Add the line above to your shell profile manually." >&2
     return 0
   fi
 
@@ -183,7 +185,8 @@ function bash-login-file() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1

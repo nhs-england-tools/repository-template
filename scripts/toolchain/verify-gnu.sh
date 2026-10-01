@@ -187,7 +187,8 @@ function version-ge() {
 
 function is-arg-true() {
 
-  if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+  local value="$1"
+  if [[ "$value" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
     return 0
   else
     return 1
@@ -195,6 +196,9 @@ function is-arg-true() {
 }
 
 # ==============================================================================
+
+# Let the test suite source the functions without running main
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 
 is-arg-true "${VERBOSE:-false}" && set -x
 
