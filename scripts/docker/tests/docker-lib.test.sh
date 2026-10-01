@@ -26,7 +26,7 @@ function main() {
   source ./scripts/docker/docker.lib.sh
 
   # The caller's options must not reach the functions under test
-  unset -v args cmd check dir name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF
+  unset -v args cmd check dir name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT
 
   DOCKER_IMAGE=repository-template/docker-test
   DOCKER_TITLE="Repository Template Docker Test"
@@ -55,9 +55,16 @@ function main() {
     test-docker-get-image-version-and-pull-pulls-by-digest-and-tags \
     test-docker-get-image-version-and-pull-skips-pull-when-tag-exists \
     test-docker-get-image-version-and-pull-fails-when-pull-fails \
+    test-docker-get-image-version-and-pull-fails-when-tag-fails \
+    test-docker-get-image-version-and-pull-fails-when-latest-pull-fails \
+    test-docker-get-image-version-and-pull-ignores-lowercase-container-cli \
     test-docker-get-image-version-and-pull-pulls-latest-without-pin \
     test-docker-get-image-version-and-pull-selects-by-match-version \
     test-docker-pull-pinned-images-pulls-every-docker-pin \
+    test-docker-pull-pinned-images-fails-when-pull-fails \
+    test-docker-pull-pinned-images-stops-at-first-failed-pull \
+    test-docker-pull-pinned-images-skips-when-runtime-hangs \
+    test-docker-pull-pinned-images-uses-podman-when-docker-is-unreachable \
     test-docker-pull-pinned-images-skips-when-docker-is-missing \
     test-docker-pull-pinned-images-skips-when-docker-is-unreachable \
     test-docker-build-passes-metadata-and-tags-every-version \
@@ -483,6 +490,58 @@ function test-docker-get-image-version-and-pull-fails-when-pull-fails() {
   return 0
 }
 
+function test-docker-get-image-version-and-pull-fails-when-tag-fails() {
+
+  # Arrange
+  write-image-pin
+  unset match_version
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == "tag" ]]; then echo "tag failed" >&2; exit 24; fi'
+  # Act
+  name=ghcr.io/org/image test-capture docker-get-image-version-and-pull-in-substitution
+  # Assert
+  assert-equal 24 "$TEST_STATUS" "exit status"
+  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-contains "$TEST_STDERR" "tag failed"
+
+  return 0
+}
+
+function test-docker-get-image-version-and-pull-fails-when-latest-pull-fails() {
+
+  # Arrange
+  write-image-pin
+  unset match_version
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == "pull" ]]; then echo "pull failed" >&2; exit 25; fi'
+  # Act
+  name=ghcr.io/org/unpinned test-capture docker-get-image-version-and-pull-in-substitution
+  # Assert
+  assert-equal 25 "$TEST_STATUS" "exit status"
+  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-contains "$TEST_STDERR" "pull failed"
+
+  return 0
+}
+
+function test-docker-get-image-version-and-pull-ignores-lowercase-container-cli() {
+
+  # Arrange
+  write-image-pin
+  unset match_version
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
+  test-stub podman 'exit 1'
+  # Act
+  container_cli=podman name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$(test-stub-calls podman)" "Podman calls"
+  assert-contains "$(test-stub-calls docker)" "pull --platform linux/amd64 ghcr.io/org/image@"
+
+  return 0
+}
+
 function test-docker-get-image-version-and-pull-pulls-latest-without-pin() {
 
   # Arrange
@@ -566,6 +625,78 @@ EOF
   return 0
 }
 
+function test-docker-pull-pinned-images-fails-when-pull-fails() {
+
+  # Arrange
+  write-image-pin
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == "info" ]]; then exit 0; fi; if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == "pull" ]]; then echo "pull failed" >&2; exit 23; fi'
+  # Act
+  test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 23 "$TEST_STATUS" "exit status"
+  assert-equal "Pulling ghcr.io/org/image" "$TEST_STDOUT" "stdout"
+  assert-equal "$(printf '%s\n' \
+    "Checking docker (up to 10s)" \
+    "pull failed" \
+    "ERROR Pulling ghcr.io/org/image with docker failed with exit status 23" \
+    "HINT Check the network connection and registry login, then run 'make docker-pull-pinned-images'")" \
+    "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-docker-pull-pinned-images-stops-at-first-failed-pull() {
+
+  # Arrange
+  MISE_TOML="$TEST_TMP/mise.toml"
+  cat > "$MISE_TOML" << EOF
+[_.docker]
+"ghcr.io/org/first" = "1.0.0@$DIGEST_A"
+"ghcr.io/org/second" = "2.0.0@$DIGEST_B"
+"ghcr.io/org/third" = "3.0.0@$DIGEST_A"
+EOF
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == "info" ]]; then exit 0; fi; if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == "pull" && "${4:-}" == ghcr.io/org/second@* ]]; then exit 26; fi'
+  # Act
+  test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 26 "$TEST_STATUS" "exit status"
+  assert-equal "$(printf '%s\n' \
+    "Pulling ghcr.io/org/first" \
+    "OK ghcr.io/org/first:1.0.0@$DIGEST_A" \
+    "Pulling ghcr.io/org/second")" "$TEST_STDOUT" "stdout"
+  assert-contains "$TEST_STDERR" "ERROR Pulling ghcr.io/org/second with docker failed with exit status 26"
+  assert-equal "$(printf '%s\n' \
+    "pull --platform linux/amd64 ghcr.io/org/first@$DIGEST_A" \
+    "tag ghcr.io/org/first@$DIGEST_A ghcr.io/org/first:1.0.0" \
+    "pull --platform linux/amd64 ghcr.io/org/second@$DIGEST_B")" \
+    "$(docker-pull-and-tag-calls)" "pull and tag calls"
+
+  return 0
+}
+
+function test-docker-pull-pinned-images-skips-when-runtime-hangs() {
+
+  # Arrange
+  write-image-pin
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == "info" ]]; then exec sleep 30; fi'
+  # Act
+  CONTAINER_INFO_TIMEOUT=1 test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "$(printf '%s\n' \
+    "Checking docker (up to 1s)" \
+    "WARN Docker/Podman image pull skipped (docker: no response after 1s; podman: not installed)" \
+    "HINT Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
+    "$TEST_STDERR" "stderr"
+  assert-equal "info" "$(test-stub-calls docker)" "Docker calls"
+
+  return 0
+}
+
 function test-docker-pull-pinned-images-skips-when-docker-is-missing() {
 
   # Arrange
@@ -576,7 +707,10 @@ function test-docker-pull-pinned-images-skips-when-docker-is-missing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "exit status"
   assert-equal "" "$TEST_STDOUT" "stdout"
-  assert-equal "WARN Docker image pull skipped: docker is not installed" "$TEST_STDERR" "stderr"
+  assert-equal "$(printf '%s\n' \
+    "WARN Docker/Podman image pull skipped (docker: not installed; podman: not installed)" \
+    "HINT Install Docker or Podman, see README.md, then run 'make docker-pull-pinned-images'")" \
+    "$TEST_STDERR" "stderr"
 
   return 0
 }
@@ -587,13 +721,45 @@ function test-docker-pull-pinned-images-skips-when-docker-is-unreachable() {
   write-image-pin
   test-isolate-path
   test-stub docker 'if [[ "${1:-}" == "info" ]]; then echo "Cannot connect" >&2; exit 1; fi'
+  test-stub podman 'if [[ "${1:-}" == "info" ]]; then echo "Cannot connect" >&2; exit 1; fi'
   # Act
   test-capture docker-pull-pinned-images
   # Assert
   assert-equal 0 "$TEST_STATUS" "exit status"
   assert-equal "" "$TEST_STDOUT" "stdout"
-  assert-equal "WARN Docker image pull skipped: docker is not running or is not reachable" "$TEST_STDERR" "stderr"
+  assert-equal "$(printf '%s\n' \
+    "Checking docker (up to 10s)" \
+    "Checking podman (up to 10s)" \
+    "WARN Docker/Podman image pull skipped (docker: installed, not running; podman: installed, not running)" \
+    "HINT Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
+    "$TEST_STDERR" "stderr"
   assert-stub-called docker info
+  assert-stub-called podman info
+
+  return 0
+}
+
+function test-docker-pull-pinned-images-uses-podman-when-docker-is-unreachable() {
+
+  # Arrange
+  write-image-pin
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == "info" ]]; then echo "Cannot connect" >&2; exit 1; fi'
+  test-stub podman 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
+  # Act
+  test-capture docker-pull-pinned-images
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal "$(printf '%s\n' \
+    "Pulling ghcr.io/org/image" \
+    "OK ghcr.io/org/image:1.2.3@$DIGEST_A")" "$TEST_STDOUT" "stdout"
+  assert-equal "info" "$(test-stub-calls docker)" "Docker calls"
+  assert-equal "$(printf '%s\n' \
+    "info" \
+    "image inspect ghcr.io/org/image:1.2.3" \
+    "pull --platform linux/amd64 ghcr.io/org/image@$DIGEST_A" \
+    "tag ghcr.io/org/image@$DIGEST_A ghcr.io/org/image:1.2.3")" \
+    "$(test-stub-calls podman)" "Podman calls"
 
   return 0
 }
@@ -779,6 +945,18 @@ function write-image-pin() {
 
   MISE_TOML="$TEST_TMP/mise.toml"
   printf '%s\n' "$DOCKER_TABLE_HEADER" "\"ghcr.io/org/image\" = \"1.2.3@$DIGEST_A\"" > "$MISE_TOML"
+
+  return 0
+}
+
+# Call docker-get-image-version-and-pull the way the callers do, inside a
+# command substitution, which does not inherit errexit, so only its explicit
+# 'return' statements can propagate a failure.
+function docker-get-image-version-and-pull-in-substitution() {
+
+  local result
+  result=$(docker-get-image-version-and-pull) || return "$?"
+  echo "$result"
 
   return 0
 }

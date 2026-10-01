@@ -98,8 +98,8 @@ clean:: # Remove all generated and temporary files (common) @Operations
 config:: # Configure development environment (common) @Configuration
 	$(MAKE) \
 		_toolchain-install \
-		docker-pull-pinned-images \
 		githooks-config \
+		docker-pull-pinned-images \
 
 help: # Print help @Others
 	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"

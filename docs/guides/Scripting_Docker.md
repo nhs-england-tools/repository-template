@@ -270,6 +270,8 @@ This method facilitates dependency management through a single file. The `docker
 
 The reason we do this is so that the deployment version is source-controlled, but the tooling does not interfere with using a more recent Docker image during local development before the new version can be added to the `mise.toml` file. It also serves as a clean way of templating Docker image definition. The `[_.docker]` table lives under the `[_]` key, which mise never uses for toolchain resolution. Its presence does mean mise asks for `mise.toml` to be trusted once per clone. `make config` does this explicitly, installs the pinned native toolchain and pulls every pinned Docker helper image locally.
 
+`docker-pull-pinned-images` uses the first operational runtime of Docker then Podman, where operational means `<runtime> info` succeeds within `CONTAINER_INFO_TIMEOUT` seconds (default `10`). When neither is installed and operational it prints a warning and succeeds, so `make config` still works on a machine without a container runtime. When a runtime is operational, the first failed pull or tag fails the target with that command's exit status and the remaining images are not pulled. Only this pull step falls back to Podman. The scripts that run the helper images call `docker` directly, so on a Podman-only machine provide a `docker` command, for example through `podman-docker`.
+
 ### Variables
 
 Set the `docker_image` or `DOCKER_IMAGE` variable for your image. Alternatively, you can use their shorthand versions, `image` or `IMAGE`. To emphasize that it is a global variable, using the uppercase version is recommended, depending on your implementation.

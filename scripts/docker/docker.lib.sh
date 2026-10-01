@@ -12,6 +12,8 @@ set -euo pipefail
 #   DOCKER_IMAGE=ghcr.io/org/repo      # Docker image name
 #   DOCKER_TITLE="My Docker image"     # Docker image title
 #   MISE_TOML=$project_dir/mise.toml   # Path to the mise config file
+#   CONTAINER_CLI=docker               # Runtime used by docker-get-image-version-and-pull, default is 'docker'
+#   CONTAINER_INFO_TIMEOUT=10          # Seconds to wait for '<runtime> info' before treating it as not operational
 
 # ==============================================================================
 # Functions to be used with custom images.
@@ -163,28 +165,67 @@ function version-create-effective-file() {
 # ==============================================================================
 # Functions to be used with external images.
 
-# Pull every image pinned in the 'mise.toml' file's '[_.docker]' table.
+# Pull every image pinned in the 'mise.toml' file's '[_.docker]' table using the
+# first operational runtime of Docker then Podman. Warn and return 0 when
+# neither is installed and operational. Otherwise stop at the first failed pull
+# and return its status, leaving the remaining images unpulled. Only this
+# function falls back to Podman, the other functions and scripts call 'docker'.
 function docker-pull-pinned-images() {
 
   local config_file="${MISE_TOML:=$(git rev-parse --show-toplevel)/mise.toml}"
   local image
+  local container_cli=""
+  local candidate
+  local image_version
+  local pull_status
+  local probe_status
+  local runtime_installed=false
+  local runtime_states=""
+  local timeout="${CONTAINER_INFO_TIMEOUT:-10}"
+  local rerun="then run 'make docker-pull-pinned-images'"
 
   [[ -f "$config_file" ]] || return 0
 
-  if ! command -v docker > /dev/null 2>&1; then
-    echo "WARN Docker image pull skipped: docker is not installed" >&2
-    return 0
-  fi
+  for candidate in docker podman; do
+    if ! command -v "$candidate" > /dev/null 2>&1; then
+      runtime_states+="${runtime_states:+; }${candidate}: not installed"
+      continue
+    fi
+    runtime_installed=true
+    echo "Checking ${candidate} (up to ${timeout}s)" >&2
+    probe_status=0
+    _container-runtime-is-operational "$candidate" || probe_status=$?
+    if [[ $probe_status -eq 0 ]]; then
+      container_cli="$candidate"
+      break
+    elif [[ $probe_status -eq 124 ]]; then
+      runtime_states+="${runtime_states:+; }${candidate}: no response after ${timeout}s"
+    else
+      runtime_states+="${runtime_states:+; }${candidate}: installed, not running"
+    fi
+  done
 
-  if ! docker info > /dev/null 2>&1; then
-    echo "WARN Docker image pull skipped: docker is not running or is not reachable" >&2
+  if [[ -z "$container_cli" ]]; then
+    echo "WARN Docker/Podman image pull skipped (${runtime_states})" >&2
+    if [[ "$runtime_installed" == true ]]; then
+      echo "HINT Start Docker Desktop or run 'podman machine start', ${rerun}" >&2
+    else
+      echo "HINT Install Docker or Podman, see README.md, ${rerun}" >&2
+    fi
     return 0
   fi
 
   while read -r image _; do
     [[ -n "$image" ]] || continue
     echo "Pulling ${image}"
-    echo "OK $(name="$image" docker-get-image-version-and-pull)"
+    if image_version=$(CONTAINER_CLI="$container_cli" name="$image" docker-get-image-version-and-pull); then
+      echo "OK ${image_version}"
+    else
+      pull_status=$?
+      echo "ERROR Pulling ${image} with ${container_cli} failed with exit status ${pull_status}" >&2
+      echo "HINT Check the network connection and registry login, ${rerun}" >&2
+      return "$pull_status"
+    fi
   done < <(_toml-table-entries "_.docker" "$config_file")
 
   return 0
@@ -199,6 +240,8 @@ function docker-pull-pinned-images() {
 # Arguments (provided as environment variables):
 #   name=[full name of the Docker image]
 #   match_version=[regexp to match the version, for example if the same image is used with multiple tags, default is '.*']
+#   CONTAINER_CLI=[container runtime command, default is 'docker']
+# Return the status of the failed pull or tag command.
 # shellcheck disable=SC2001,SC2154
 function docker-get-image-version-and-pull() {
 
@@ -212,6 +255,7 @@ function docker-get-image-version-and-pull() {
 
   # Get the image full version from the 'mise.toml' file's '[_.docker]' table,
   # match it by name and version regex, if given.
+  local container_cli="${CONTAINER_CLI:-docker}"
   local version="$(_get-docker-image-version)"
 
   # Split the image version into two, tag name and digest sha256.
@@ -219,20 +263,20 @@ function docker-get-image-version-and-pull() {
   local digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already.
-  if ! docker image inspect "${name}:${tag}" > /dev/null 2>&1; then
+  if ! "$container_cli" image inspect "${name}:${tag}" > /dev/null 2>&1; then
     if [[ "$digest" != "latest" ]]; then
       # Pull image by the digest sha256 and tag it.
-      docker pull \
+      "$container_cli" pull \
         --platform linux/amd64 \
         "${name}@${digest}" \
-      >&2
-      docker tag "${name}@${digest}" "${name}:${tag}"
+      >&2 || return "$?"
+      "$container_cli" tag "${name}@${digest}" "${name}:${tag}" || return "$?"
     else
       # Pull the latest image.
-      docker pull \
+      "$container_cli" pull \
         --platform linux/amd64 \
         "${name}:latest" \
-      >&2
+      >&2 || return "$?"
     fi
   fi
 
@@ -241,6 +285,30 @@ function docker-get-image-version-and-pull() {
 
 # ==============================================================================
 # "Private" functions.
+
+# Succeed when '<runtime> info' succeeds within CONTAINER_INFO_TIMEOUT seconds,
+# return 124 on timeout, so a hung daemon socket cannot hang 'make config'.
+# Arguments:
+#   $1=[container runtime command]
+function _container-runtime-is-operational() {
+
+  local runtime="$1"
+  local ticks_left=$(( ${CONTAINER_INFO_TIMEOUT:-10} * 10 ))
+  local pid
+
+  "$runtime" info > /dev/null 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2> /dev/null; do
+    if (( ticks_left <= 0 )); then
+      kill "$pid" 2> /dev/null || true
+      { wait "$pid"; } 2> /dev/null || true
+      return 124
+    fi
+    sleep 0.1
+    ticks_left=$(( ticks_left - 1 ))
+  done
+  wait "$pid"
+}
 
 # Print the version pinned for an image in the 'mise.toml' file's '[_.docker]'
 # table, or 'latest' when there is no pin for exactly that image name.
