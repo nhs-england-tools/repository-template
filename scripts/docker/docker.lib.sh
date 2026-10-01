@@ -236,12 +236,13 @@ function _get-docker-image-version() {
 }
 
 # Print "key value" pairs for every single-line string entry of the given TOML
-# table. Multi-line strings, arrays, inline tables, escaped strings, other
+# table. Pass an empty table name for root-level entries before the first table
+# header. Multi-line strings, arrays, inline tables, escaped strings, other
 # value types and values with characters outside [A-Za-z0-9._:@/+~-] are
 # skipped, never printed, so each output line is always safe to use as a sed
 # substitution pair.
 # Arguments:
-#   $1=[dotted table header, e.g. 'tools' or '_.docker']
+#   $1=[dotted table header, e.g. 'tools' or '_.docker', or empty for root]
 #   $2=[path to the TOML file]
 function _toml-table-entries() {
 
@@ -249,7 +250,10 @@ function _toml-table-entries() {
   local file="$2"
   local rc=0
 
+  [[ "$1" == "" ]] && table=""
+
   awk -v table="$table" -v dq='"' -v sq="'" '
+    BEGIN { in_table = (table == "") }
     function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
     # Set value and after from a plain quoted string at the start of s, or return 0 if s does not start with one
     function quoted(s,  q, rest, end) {
@@ -348,6 +352,22 @@ function _toml-table-entries() {
   ' "$file" || rc=$?
 
   return "$rc"
+}
+
+# Print the single value for a key in a TOML table, failing unless exactly one
+# single-line string entry with that key exists.
+# Arguments:
+#   $1=[dotted table header, e.g. 'tools' or '_.docker', or empty for root]
+#   $2=[entry key]
+#   $3=[path to the TOML file]
+function _toml-table-entry() {
+
+  local table="$1"
+  local key="$2"
+  local file="$3"
+
+  _toml-table-entries "$table" "$file" \
+    | awk -v key="$key" '$1 == key { value = $2; count++ } END { if (count == 1) print value; else exit 1 }'
 }
 
 # Create effective Dockerfile.
