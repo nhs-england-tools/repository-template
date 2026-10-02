@@ -89,7 +89,7 @@ jobs:
         run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
       - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
-        uses: nhs-england-tools/notify-msteams-action@3d354c122e09513108d34d93c729874da45d26a2 # v1.0.7
+        uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
