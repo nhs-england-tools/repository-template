@@ -41,7 +41,8 @@ function main() {
     test-check-markdown-links-propagates-lychee-failure \
     test-check-markdown-links-uses-docker-when-forced \
     test-check-markdown-links-uses-docker-when-lychee-is-missing \
-    test-check-markdown-links-keeps-paths-with-spaces-intact
+    test-check-markdown-links-keeps-paths-with-spaces-intact \
+    test-check-markdown-links-stops-when-the-image-pull-fails
 
   return 0
 }
@@ -241,6 +242,25 @@ function test-check-markdown-links-keeps-paths-with-spaces-intact() {
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS docs/my\\ doc.md"
   quality-assert-one-docker-run
+
+  return 0
+}
+
+function test-check-markdown-links-stops-when-the-image-pull-fails() {
+
+  # Arrange
+  quality-create-fixture-repo README.md
+  test-isolate-path
+  test-stub lychee
+  # shellcheck disable=SC2016
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == pull ]]; then echo "docker: pull access denied" >&2; exit 23; fi'
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-markdown-links.sh
+  # Assert
+  assert-equal 23 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "docker: pull access denied" "pull error on stderr"
+  assert-equal "" "$(test-stub-calls docker | grep '^run ' || true)" "no docker run call"
 
   return 0
 }

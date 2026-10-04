@@ -100,8 +100,8 @@ function run-editorconfig-in-docker() {
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
-  # shellcheck disable=SC2155
-  local image=$(name=mstruebing/editorconfig-checker docker-get-image-version-and-pull)
+  local image
+  image=$(name=mstruebing/editorconfig-checker docker-get-image-version-and-pull) || return "$?"
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/check \
     "$image" \

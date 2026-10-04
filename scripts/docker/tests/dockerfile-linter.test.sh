@@ -34,7 +34,8 @@ function main() {
     test-dockerfile-linter-defaults-to-the-effective-dockerfile \
     test-dockerfile-linter-makes-an-absolute-path-relative \
     test-dockerfile-linter-propagates-hadolint-failure \
-    test-dockerfile-linter-uses-docker-when-forced
+    test-dockerfile-linter-uses-docker-when-forced \
+    test-dockerfile-linter-stops-when-the-image-pull-fails
 
   return 0
 }
@@ -107,6 +108,25 @@ function test-dockerfile-linter-uses-docker-when-forced() {
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $HADOLINT_IMAGE hadolint $options"
   quality-assert-one-docker-run
+
+  return 0
+}
+
+function test-dockerfile-linter-stops-when-the-image-pull-fails() {
+
+  # Arrange
+  quality-create-fixture-repo images/app/Dockerfile
+  test-isolate-path
+  test-stub hadolint
+  # shellcheck disable=SC2016
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == pull ]]; then echo "docker: pull access denied" >&2; exit 23; fi'
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env FORCE_USE_DOCKER=true file=images/app/Dockerfile ./scripts/docker/dockerfile-linter.sh
+  # Assert
+  assert-equal 23 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "docker: pull access denied" "pull error on stderr"
+  assert-equal "" "$(test-stub-calls docker | grep '^run ' || true)" "no docker run call"
 
   return 0
 }
