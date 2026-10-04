@@ -26,19 +26,19 @@ Detailed design notes remain only for proposals that are not merged or already
 implemented by the merged stack. The stack is listed in the [toolchain and setup
 merged record](#merged-record--toolchain-and-setup-stack), and remaining
 proposals are grouped in [Outstanding work](#outstanding-work--proposed-stacks).
-Status uses &#x2705; for merged, &#x1F7E1; for covered by another PR and &#x1F4CB; for planned work. D1 to D5 mark a planned PR that waits on an open [decision](#decisions-needed-before-implementation).
+Status uses &#x2705; for merged, &#x1F6A7; for in progress, &#x1F7E1; for covered by another PR and &#x1F4CB; for planned work. D1 to D5 mark a planned PR that waits on an open [decision](#decisions-needed-before-implementation).
 
 | PR         | Change                                          | Status                                    |
 | ---------- | ----------------------------------------------- | ----------------------------------------- |
 | 1          | ADR template and Tech Radar alignment           | &#x2705; Merged [GitHub #226][pr226]      |
-| 2          | Make shell lint a real, fast failing gate       | &#x1F4CB; Planned · Stack 1 base          |
-| 3          | Add and wire the `lint-shell` target            | &#x1F4CB; Planned · Stack 1               |
-| 4          | Run shell lint in commit-stage CI               | &#x1F4CB; Planned · Stack 1               |
-| 5          | Shell hygiene and clear image-pull failures     | &#x1F4CB; Planned · Stack 2, lands first  |
+| 2          | Make shell lint a real, fast failing gate       | &#x1F6A7; In progress · Stack 1 base      |
+| 3          | Add and wire the `lint-shell` target            | &#x1F6A7; In progress · Stack 1           |
+| 4          | Run shell lint in commit-stage CI               | &#x1F6A7; In progress · Stack 1           |
+| 5          | Shell hygiene and clear image-pull failures     | &#x1F6A7; In progress · Stack 2, first    |
 | 6          | Docker test isolation and runtime errors        | &#x1F7E1; Covered by [GitHub #259][pr259] |
 | 7          | Markdown checks and check-mode guard            | &#x2705; Merged [GitHub #231][pr231]      |
 | 8          | Secret scanning modes and hardening             | &#x2705; Merged [GitHub #230][pr230]      |
-| Optional C | Document `FORCE_USE_DOCKER`                     | &#x1F4CB; Planned · Stack 1               |
+| Optional C | Document `FORCE_USE_DOCKER`                     | &#x1F6A7; In progress · Stack 1           |
 | 9          | Require blank lines after YAML frontmatter      | &#x2705; Merged [GitHub #232][pr232]      |
 | 10         | Format Markdown tables with Prettier            | &#x2705; Merged [GitHub #234][pr234]      |
 | 11         | Skip deleted Markdown files in link checks      | &#x2705; Merged [GitHub #233][pr233]      |
