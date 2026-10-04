@@ -21,10 +21,14 @@ lint-markdown-format: # Check markdown formatting @Quality
 lint-markdown-links: # Check markdown links @Quality
 	$(MAKE) check-markdown-links check=branch
 
+lint-shell: # Lint all tracked shell scripts @Quality
+	$(MAKE) check-shell-lint
+
 lint: # Run linter to check code style and errors @Quality
 	$(MAKE) lint-file-format
 	$(MAKE) lint-markdown-format
 	$(MAKE) lint-markdown-links
+	$(MAKE) lint-shell
 
 typecheck: # Run type checker @Quality
 	# TODO: Implement type checking required for this repository
@@ -61,6 +65,7 @@ ${VERBOSE}.SILENT: \
 	lint-file-format \
 	lint-markdown-format \
 	lint-markdown-links \
+	lint-shell \
 	publish \
 	test \
 	typecheck \
