@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2155
 
 set -euo pipefail
 
@@ -24,6 +23,8 @@ set -euo pipefail
 function docker-build() {
 
   local dir=${dir:-$PWD}
+  local tag
+  local version
 
   version-create-effective-file
   _create-effective-dockerfile
@@ -45,14 +46,16 @@ function docker-build() {
     --tag "${tag}" \
     --rm \
     --file "${dir}/Dockerfile.effective" \
-    .
+    . || return "$?"
 
   # Tag the image with all the stated versions, see the documentation for more details
   for version in $(_get-all-effective-versions) latest; do
     if [[ -n "$version" ]]; then
-      docker tag "${tag}" "${DOCKER_IMAGE}:${version}"
+      docker tag "${tag}" "${DOCKER_IMAGE}:${version}" || return "$?"
     fi
   done
+
+  return 0
 }
 
 # Create the Dockerfile.effective file to bake in version info
@@ -62,8 +65,10 @@ function docker-bake-dockerfile() {
 
   local dir=${dir:-$PWD}
 
-  version-create-effective-file
-  _create-effective-dockerfile
+  version-create-effective-file || return "$?"
+  _create-effective-dockerfile || return "$?"
+
+  return 0
 }
 
 # Run hadolint over the generated Dockerfile.
@@ -71,7 +76,9 @@ function docker-bake-dockerfile() {
 #  dir=[path to the image directory where the Dockerfile.effective is located, default is '.']
 function docker-lint() {
   local dir=${dir:-$PWD}
-  file=${dir}/Dockerfile.effective ./scripts/docker/dockerfile-linter.sh
+  file=${dir}/Dockerfile.effective ./scripts/docker/dockerfile-linter.sh || return "$?"
+
+  return 0
 }
 
 # Check test Docker image.
@@ -90,6 +97,8 @@ function docker-check-test() {
     "${DOCKER_IMAGE}:$(_get-effective-version)" 2>/dev/null \
     ${cmd:-} \
   | grep -q "${check}" && echo PASS || echo FAIL
+
+  return 0
 }
 
 # Run Docker image.
@@ -100,13 +109,16 @@ function docker-check-test() {
 function docker-run() {
 
   local dir=${dir:-$PWD}
-  local tag=$(dir="$dir" _get-effective-tag)
+  local tag
+  tag=$(dir="$dir" _get-effective-tag)
 
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
     ${args:-} \
     "${tag}" \
-    ${cmd:-}
+    ${cmd:-} || return "$?"
+
+  return 0
 }
 
 # Push Docker image.
@@ -118,8 +130,10 @@ function docker-push() {
 
   # Push all the image tags based on the stated versions, see the documentation for more details
   for version in $(dir="$dir" _get-all-effective-versions) latest; do
-    docker push "${DOCKER_IMAGE}:${version}"
+    docker push "${DOCKER_IMAGE}:${version}" || return "$?"
   done
+
+  return 0
 }
 
 # Remove Docker resources.
@@ -135,7 +149,9 @@ function docker-clean() {
   rm -f \
     "$dir/.version" \
     "$dir/Dockerfile.effective" \
-    "$dir/Dockerfile.effective.dockerignore"
+    "$dir/Dockerfile.effective.dockerignore" || return "$?"
+
+  return 0
 }
 
 # Create effective version from the VERSION file.
@@ -158,8 +174,10 @@ function version-create-effective-file() {
       sed "s/\(\${MM}\|\$MM\)/$(date --date="${build_datetime}" -u +"%M")/g" | \
       sed "s/\(\${SS}\|\$SS\)/$(date --date="${build_datetime}" -u +"%S")/g" | \
       sed "s/\(\${hash}\|\$hash\)/$(git rev-parse --short HEAD)/g" \
-    > "$dir/.version"
+    > "$dir/.version" || return "$?"
   fi
+
+  return 0
 }
 
 # ==============================================================================
@@ -256,11 +274,14 @@ function docker-get-image-version-and-pull() {
   # Get the image full version from the 'mise.toml' file's '[_.docker]' table,
   # match it by name and version regex, if given.
   local container_cli="${CONTAINER_CLI:-docker}"
-  local version="$(_get-docker-image-version)"
+  local version
+  version="$(_get-docker-image-version)"
 
   # Split the image version into two, tag name and digest sha256.
-  local tag="$(echo "$version" | sed 's/@.*$//')"
-  local digest="$(echo "$version" | sed 's/^.*@//')"
+  local tag
+  tag="$(echo "$version" | sed 's/@.*$//')"
+  local digest
+  digest="$(echo "$version" | sed 's/^.*@//')"
 
   # Check if the image exists locally already.
   if ! "$container_cli" image inspect "${name}:${tag}" > /dev/null 2>&1; then
@@ -281,6 +302,8 @@ function docker-get-image-version-and-pull() {
   fi
 
   echo "${name}:${version}"
+
+  return 0
 }
 
 # ==============================================================================
@@ -307,7 +330,9 @@ function _container-runtime-is-operational() {
     sleep 0.1
     ticks_left=$(( ticks_left - 1 ))
   done
-  wait "$pid"
+  wait "$pid" || return "$?"
+
+  return 0
 }
 
 # Print the version pinned for an image in the 'mise.toml' file's '[_.docker]'
@@ -463,6 +488,8 @@ function _toml-table-entry() {
 
   _toml-table-entries "$table" "$file" \
     | awk -v key="$key" '$1 == key { value = $2; count++ } END { if (count == 1) print value; else exit 1 }'
+
+  return "$?"
 }
 
 # Create effective Dockerfile.
@@ -479,9 +506,11 @@ function _create-effective-dockerfile() {
   if [[ -f "${dir}/Dockerfile.dockerignore" ]]; then
     cp "${dir}/Dockerfile.dockerignore" "${dir}/Dockerfile.effective.dockerignore"
   fi
-  cp "${dir}/Dockerfile" "${dir}/Dockerfile.effective"
-  _pin-dockerfile-arg-versions
-  _append-metadata
+  cp "${dir}/Dockerfile" "${dir}/Dockerfile.effective" || return "$?"
+  _pin-dockerfile-arg-versions || return "$?"
+  _append-metadata || return "$?"
+
+  return 0
 }
 
 # Pin the 'ARG <NAME>_VERSION=...' defaults that parameterise 'FROM image:${<NAME>_VERSION}'
@@ -563,7 +592,9 @@ function _pin-dockerfile-arg-versions() {
   fi
 
   # Do not ignore the issue if 'latest' is used in the effective image
-  sed -Ei "/# hadolint ignore=DL3007$/d" "${dir}/Dockerfile.effective"
+  sed -Ei "/# hadolint ignore=DL3007$/d" "${dir}/Dockerfile.effective" || return "$?"
+
+  return 0
 }
 
 # Append metadata to the end of Dockerfile.
@@ -576,8 +607,10 @@ function _append-metadata() {
   cat \
     "$dir/Dockerfile.effective" \
     "$(git rev-parse --show-toplevel)/scripts/docker/Dockerfile.metadata" \
-  > "$dir/Dockerfile.effective.tmp"
-  mv "$dir/Dockerfile.effective.tmp" "$dir/Dockerfile.effective"
+  > "$dir/Dockerfile.effective.tmp" || return "$?"
+  mv "$dir/Dockerfile.effective.tmp" "$dir/Dockerfile.effective" || return "$?"
+
+  return 0
 }
 
 # Print top Docker image version.
@@ -588,6 +621,8 @@ function _get-effective-version() {
   local dir=${dir:-$PWD}
 
   head -n 1 "${dir}/.version" 2> /dev/null ||:
+
+  return 0
 }
 
 # Print the effective tag for the image with the version. If you don't have a VERSION file
@@ -597,11 +632,14 @@ function _get-effective-version() {
 function _get-effective-tag() {
 
   local tag=$DOCKER_IMAGE
+  local version
   version=$(_get-effective-version)
   if [[ -n "$version" ]]; then
     tag="${tag}:${version}"
   fi
   echo "$tag"
+
+  return 0
 }
 
 # Print all Docker image versions.
@@ -612,13 +650,16 @@ function _get-all-effective-versions() {
   local dir=${dir:-$PWD}
 
   cat "${dir}/.version" 2> /dev/null ||:
+
+  return 0
 }
 
 # Print Git branch name. Check the GitHub variables first and then the local Git
 # repo.
 function _get-git-branch-name() {
 
-  local branch_name=$(git rev-parse --abbrev-ref HEAD)
+  local branch_name
+  branch_name=$(git rev-parse --abbrev-ref HEAD)
 
   if [[ -n "${GITHUB_HEAD_REF:-}" ]]; then
     branch_name=$GITHUB_HEAD_REF
@@ -628,4 +669,6 @@ function _get-git-branch-name() {
   fi
 
   echo "$branch_name"
+
+  return 0
 }

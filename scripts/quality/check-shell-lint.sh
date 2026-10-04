@@ -15,17 +15,21 @@ set -euo pipefail
 
 # ==============================================================================
 
+# Lint the shell script natively or in Docker.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
   [[ -z "${file:-}" ]] && echo "WARNING: 'file' variable not set, defaulting to itself"
   local file=${file:-scripts/quality/check-shell-lint.sh}
+  local rc=0
   if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    file="$file" run-shellcheck-natively
+    file="$file" run-shellcheck-natively || rc=$?
   else
-    file="$file" run-shellcheck-in-docker
+    file="$file" run-shellcheck-in-docker || rc=$?
   fi
+
+  return "$rc"
 }
 
 # Run ShellCheck natively.
@@ -33,8 +37,11 @@ function main() {
 #   file=[path to the shell script to lint, relative to the project's top-level directory]
 function run-shellcheck-natively() {
 
+  local rc=0
   # shellcheck disable=SC2001
-  shellcheck "$(echo "$file" | sed "s#$PWD#.#")"
+  shellcheck "$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
+
+  return "$rc"
 }
 
 # Run ShellCheck in a Docker container.
@@ -45,18 +52,22 @@ function run-shellcheck-in-docker() {
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
-  # shellcheck disable=SC2155
-  local image=$(name=koalaman/shellcheck docker-get-image-version-and-pull)
+  local image
+  image=$(name=koalaman/shellcheck docker-get-image-version-and-pull) || return "$?"
+  local rc=0
   # shellcheck disable=SC2001
   docker run --rm --platform linux/amd64 \
     --volume "$PWD:/workdir" \
     --workdir /workdir \
     "$image" \
-      "/workdir/$(echo "$file" | sed "s#$PWD#.#")"
+      "/workdir/$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
+
+  return "$rc"
 }
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
 function is-arg-true() {
 
   local value="$1"

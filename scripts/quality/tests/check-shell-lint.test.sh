@@ -35,7 +35,8 @@ function main() {
     test-check-shell-lint-makes-an-absolute-path-relative \
     test-check-shell-lint-propagates-shellcheck-failure \
     test-check-shell-lint-uses-docker-when-forced \
-    test-check-shell-lint-uses-docker-when-shellcheck-is-missing
+    test-check-shell-lint-uses-docker-when-shellcheck-is-missing \
+    test-check-shell-lint-stops-when-the-image-pull-fails
 
   return 0
 }
@@ -124,6 +125,24 @@ function test-check-shell-lint-uses-docker-when-shellcheck-is-missing() {
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
   quality-assert-one-docker-run
+
+  return 0
+}
+
+function test-check-shell-lint-stops-when-the-image-pull-fails() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  # shellcheck disable=SC2016
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == pull ]]; then echo "docker: pull access denied" >&2; exit 23; fi'
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env FORCE_USE_DOCKER=true file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 23 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "docker: pull access denied" "pull error on stderr"
+  assert-equal "" "$(test-stub-calls docker | grep '^run ' || true)" "no docker run call"
 
   return 0
 }

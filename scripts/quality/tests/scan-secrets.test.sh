@@ -44,7 +44,8 @@ function main() {
     test-scan-secrets-propagates-leaks \
     test-scan-secrets-isolates-git-config-natively \
     test-scan-secrets-uses-docker-when-forced \
-    test-scan-secrets-uses-docker-with-a-baseline-file
+    test-scan-secrets-uses-docker-with-a-baseline-file \
+    test-scan-secrets-stops-when-the-image-pull-fails
 
   return 0
 }
@@ -244,6 +245,25 @@ function test-scan-secrets-uses-docker-when-forced() {
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $GITLEAKS_IMAGE $options"
   quality-assert-one-docker-run
+
+  return 0
+}
+
+function test-scan-secrets-stops-when-the-image-pull-fails() {
+
+  # Arrange
+  quality-create-fixture-repo a.txt
+  test-isolate-path
+  test-stub gitleaks
+  # shellcheck disable=SC2016
+  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == pull ]]; then echo "docker: pull access denied" >&2; exit 23; fi'
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env FORCE_USE_DOCKER=true ./scripts/quality/scan-secrets.sh
+  # Assert
+  assert-equal 23 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "docker: pull access denied" "pull error on stderr"
+  assert-equal "" "$(test-stub-calls docker | grep '^run ' || true)" "no docker run call"
 
   return 0
 }
