@@ -4,12 +4,17 @@ This plan tracks a batch of repository-template improvements. Twenty-two PRs
 have merged into `v2` (see the [toolchain and setup merged
 record](#merged-record--toolchain-and-setup-stack) and the [scan-secret and
 markdown-linting merged record](#merged-record--scan-secret--markdown-linting-stack)).
-The remaining work is organised into stacks and standalone PRs in
+Six more PRs are under review as one stack (see [Under
+review](#under-review--shell-lint-and-hygiene-stack)). Their source is the
+reference for how they work, so this plan keeps only their status. The
+remaining work is organised into stacks and standalone PRs in
 [Outstanding work](#outstanding-work--proposed-stacks). The remaining stacks
 are ordered chains of PRs that share files and build on one another. Every
 remaining proposal is self-contained and carries the context needed to raise it.
 
-**Current priority**: land the outstanding proposals in the [recommended
+**Current priority**: get the [stack under
+review](#under-review--shell-lint-and-hygiene-stack) merged, then land the
+outstanding proposals in the [recommended
 order](#outstanding-work--proposed-stacks), then merge `v2` into `main`. Every
 outstanding proposal was reviewed against `v2` on 2026-10-02. Stale diffs were
 removed, verified defects and edge cases were added, and choices that need a
@@ -21,24 +26,25 @@ that waits on an open decision.
 
 ## PR index — what each PR is about
 
-All 35 PRs plus one optional tweak have a one-line summary and current status.
-Detailed design notes remain only for proposals that are not merged or already
-implemented by the merged stack. The stack is listed in the [toolchain and setup
-merged record](#merged-record--toolchain-and-setup-stack), and remaining
-proposals are grouped in [Outstanding work](#outstanding-work--proposed-stacks).
-Status uses &#x2705; for merged, &#x1F6A7; for in progress, &#x1F7E1; for covered by another PR and &#x1F4CB; for planned work. D1 to D5 mark a planned PR that waits on an open [decision](#decisions-needed-before-implementation).
+All 35 PRs plus two optional changes have a one-line summary and current status.
+Detailed design notes remain only for planned proposals. Merged and in-review
+PRs are listed in the [merged records](#merged-record--toolchain-and-setup-stack)
+and the [review record](#under-review--shell-lint-and-hygiene-stack), and
+remaining proposals are grouped in [Outstanding work](#outstanding-work--proposed-stacks).
+Status uses &#x2705; for merged, &#x1F50D; for in review, &#x1F7E1; for covered by another PR and &#x1F4CB; for planned work. D1 to D5 mark a planned PR that waits on an open [decision](#decisions-needed-before-implementation).
 
 | PR         | Change                                          | Status                                    |
 | ---------- | ----------------------------------------------- | ----------------------------------------- |
 | 1          | ADR template and Tech Radar alignment           | &#x2705; Merged [GitHub #226][pr226]      |
-| 2          | Make shell lint a real, fast failing gate       | &#x1F6A7; In progress · Stack 1 base      |
-| 3          | Add and wire the `lint-shell` target            | &#x1F6A7; In progress · Stack 1           |
-| 4          | Run shell lint in commit-stage CI               | &#x1F6A7; In progress · Stack 1           |
-| 5          | Shell hygiene and clear image-pull failures     | &#x1F6A7; In progress · Stack 2, first    |
+| 2          | Make shell lint a real, fast failing gate       | &#x1F50D; In review [GitHub #268][pr268]  |
+| 3          | Add and wire the `lint-shell` target            | &#x1F50D; In review [GitHub #270][pr270]  |
+| 4          | Run shell lint in commit-stage CI               | &#x1F50D; In review [GitHub #271][pr271]  |
+| 5          | Shell hygiene and clear image-pull failures     | &#x1F50D; In review [GitHub #267][pr267]  |
 | 6          | Docker test isolation and runtime errors        | &#x1F7E1; Covered by [GitHub #259][pr259] |
 | 7          | Markdown checks and check-mode guard            | &#x2705; Merged [GitHub #231][pr231]      |
 | 8          | Secret scanning modes and hardening             | &#x2705; Merged [GitHub #230][pr230]      |
-| Optional C | Document `FORCE_USE_DOCKER`                     | &#x1F6A7; In progress · Stack 1           |
+| Optional C | Document `FORCE_USE_DOCKER`                     | &#x1F50D; In review [GitHub #272][pr272]  |
+| Optional D | Run tests within a suite in parallel            | &#x1F50D; In review [GitHub #273][pr273]  |
 | 9          | Require blank lines after YAML frontmatter      | &#x2705; Merged [GitHub #232][pr232]      |
 | 10         | Format Markdown tables with Prettier            | &#x2705; Merged [GitHub #234][pr234]      |
 | 11         | Skip deleted Markdown files in link checks      | &#x2705; Merged [GitHub #233][pr233]      |
@@ -89,6 +95,12 @@ Status uses &#x2705; for merged, &#x1F6A7; for in progress, &#x1F7E1; for covere
 [pr260]: https://github.com/nhs-england-tools/repository-template/pull/260
 [pr261]: https://github.com/nhs-england-tools/repository-template/pull/261
 [pr262]: https://github.com/nhs-england-tools/repository-template/pull/262
+[pr267]: https://github.com/nhs-england-tools/repository-template/pull/267
+[pr268]: https://github.com/nhs-england-tools/repository-template/pull/268
+[pr270]: https://github.com/nhs-england-tools/repository-template/pull/270
+[pr271]: https://github.com/nhs-england-tools/repository-template/pull/271
+[pr272]: https://github.com/nhs-england-tools/repository-template/pull/272
+[pr273]: https://github.com/nhs-england-tools/repository-template/pull/273
 
 ## Notes
 
@@ -124,6 +136,8 @@ Status uses &#x2705; for merged, &#x1F6A7; for in progress, &#x1F7E1; for covere
   scan-secret and markdown-linting PRs, PR 21, and all thirteen toolchain and
   setup PRs. On 2026-10-02 the full test suite passed on `v2`, and native
   ShellCheck 0.11.0 reported no findings across the 28 tracked shell scripts.
+  On 2026-10-05 PR 5, PR 2, PR 3, PR 4, Optional C and Optional D went into
+  review as GitHub stack #269.
 
 ---
 
@@ -158,20 +172,16 @@ Do not raise duplicate PRs for any of this scope.
 ## Outstanding work — proposed stacks
 
 Land the outstanding work in the order below. Within a stack, branch each PR
-off the one below it and land the stack from the bottom up. Stacks 1 and 3 can
-proceed in parallel once PR 5 has merged.
+off the one below it and land the stack from the bottom up.
 
-1. **Stack 2, shell hygiene**: `PR 5`. Land it first. It is small, keeps
-   behaviour and touches one line in most check wrappers, so landing it first
-   saves a rebase in Stacks 1 and 3.
-2. **Stack 1, shell-lint gate**: `PR 2 → PR 3 → PR 4 → Optional C`. Each step
-   is inert until the one below it lands.
-3. **Stack 3, quality-script consistency**: `PR 19 → PR 16 → PR 17 → PR 18 →
-PR 23`. The layers share the `scripts/quality/*` scripts, so stacking turns
-   unavoidable overlap into small successive changes. PR 23 covers only what
-   the earlier layers leave.
-4. **Standalone**: `PR 35` at any time, and `PR 13` only after decision D4.
-5. **Last**: `PR 22` is a checklist for the `v2` to `main` merge, not a commit
+1. **Stack 3, quality-script consistency**: `PR 19 → PR 16 → PR 17 → PR 18 →
+PR 23`. Start it once the [stack under
+   review](#under-review--shell-lint-and-hygiene-stack) has merged, because
+   PR 5 and PR 2 touch the same scripts. The layers share the
+   `scripts/quality/*` scripts, so stacking turns unavoidable overlap into
+   small successive changes. PR 23 covers only what the earlier layers leave.
+2. **Standalone**: `PR 35` at any time, and `PR 13` only after decision D4.
+3. **Last**: `PR 22` is a checklist for the `v2` to `main` merge, not a commit
    on `v2`.
 
 ### Decisions needed before implementation
@@ -208,25 +218,22 @@ before implementation starts.
 
 ### File ownership
 
-Each file that an outstanding PR changes, with the PRs in landing order. Test
-suites under `scripts/**/tests/` change with the script they test.
+Each file that a planned PR changes, with the PRs in landing order. Test
+suites under `scripts/**/tests/` change with the script they test. The [stack
+under review](#under-review--shell-lint-and-hygiene-stack) already touches
+many of these files, so build on it rather than on the plan's older
+descriptions.
 
-- `scripts/docker/docker.lib.sh`: PR 5, then PR 23 for comments only
-- `scripts/docker/dockerfile-linter.sh`: PR 5
-- `scripts/quality/check-shell-lint.sh`: PR 5, PR 2
-- `scripts/init.mk`: PR 2
-- `Makefile`: PR 3
-- `README.md`: PR 3, Optional C, PR 18, and PR 13 if D4 approves it
-- `.github/actions/check-shell-lint/action.yaml` (new) and
-  `.github/workflows/stage-1-commit.yaml`: PR 4
-- `scripts/quality/check-file-format.sh`: PR 5, PR 19, PR 16, PR 18
+- `scripts/docker/docker.lib.sh`: PR 23 for comments only
+- `README.md`: PR 18, and PR 13 if D4 approves it
+- `scripts/quality/check-file-format.sh`: PR 19, PR 16, PR 18
 - `scripts/config/.editorconfigignore` (new) and
   `scripts/config/.markdownlintignore`: PR 19
 - `scripts/quality/check-markdown-format.sh` and
-  `scripts/quality/check-markdown-links.sh`: PR 5, PR 16, PR 17, PR 18
-- `scripts/quality/format-markdown-tables.sh`: PR 5, PR 17
-- `scripts/quality/scan-secrets.sh`: PR 5, PR 16 for the message only, PR 18,
-  PR 23
+  `scripts/quality/check-markdown-links.sh`: PR 16, PR 17, PR 18
+- `scripts/quality/format-markdown-tables.sh`: PR 17
+- `scripts/quality/check-shell-lint.sh`: PR 16, if D1 changes its status
+- `scripts/quality/scan-secrets.sh`: PR 16 for the message only, PR 18, PR 23
 - `scripts/quality/quality.lib.sh` (new) and the existing
   `.github/actions/check-*/action.yaml` files: PR 18
 - `scripts/docker/docker.mk`: PR 23
@@ -237,14 +244,13 @@ suites under `scripts/**/tests/` change with the script they test.
 
 **Cross-stack notes**:
 
-- Do not duplicate the merged toolchain and setup stack.
-- If Stack 1 or Stack 3 lands before PR 5, rebase PR 5. The conflict is one
-  line per wrapper.
-- PR 2 replaces the `find` loop in `scripts/init.mk`, and PR 19 removes the
-  `$($filter)` splat from `check-file-format.sh`. PR 23 therefore leaves both
-  files alone.
-- If PR 2 lands before D1 is decided, PR 16 also updates
-  `check-shell-lint.sh`.
+- Do not duplicate the merged toolchain and setup stack or the stack under
+  review.
+- The stack under review replaces the `find` loop in `scripts/init.mk`, and
+  PR 19 removes the `$($filter)` splat from `check-file-format.sh`. PR 23
+  therefore leaves both files alone.
+- The stack under review gives `check-shell-lint.sh` a `check` mode. If D1
+  picks a new status for an unrecognised mode, PR 16 updates it there too.
 
 ---
 
@@ -269,339 +275,25 @@ SonarQube Cloud static analysis (PR 21) was merged separately as
 
 ---
 
-## PR 2: Make `check-shell-lint` a real, fast gate
+## Under review — shell-lint and hygiene stack
 
-**Scope**: Build system and quality gate
-**Risk**: Low. The target starts failing on findings, which is the purpose of
-the change. Native ShellCheck 0.11.0 reported no findings across the 28 tracked
-scripts on 2026-10-02.
-**Depends on**: PR 5
-**Files**: `scripts/init.mk`, `scripts/quality/check-shell-lint.sh` and
-`scripts/quality/tests/check-shell-lint.test.sh`
+The following PRs are open as GitHub stack #269, based on `v2` and listed from
+the bottom up. Each PR branches off the one above it in this table. Their
+source and PR descriptions are the reference for how they work, so this plan
+keeps no implementation detail for them.
 
-**Problem**: `make check-shell-lint` never fails. The recipe swallows every
-error with `||:` and only checks whether the output is empty. It has three
-further defects:
+| Order | PR         | Review PR     | Summary                                     |
+| ----- | ---------- | ------------- | ------------------------------------------- |
+| 1     | PR 5       | [#267][pr267] | Shell hygiene and clear image-pull failures |
+| 2     | PR 2       | [#268][pr268] | Make shell lint a tracked-file gate         |
+| 3     | PR 3       | [#270][pr270] | Add shell lint to `make lint`               |
+| 4     | PR 4       | [#271][pr271] | Run shell lint in commit-stage CI           |
+| 5     | Optional C | [#272][pr272] | Document `FORCE_USE_DOCKER` workflows       |
+| 6     | Optional D | [#273][pr273] | Run tests within a suite in parallel        |
 
-- It starts one ShellCheck process per file, or one container per file in
-  Docker mode, which means 28 container starts today.
-- `for file in $$(find . -type f -name "*.sh")` splits names on whitespace and
-  expands glob characters.
-- `find .` also walks untracked and ignored paths. In an adopting repository
-  that includes `node_modules/`, `.venv/` and local tool overlays, so the gate
-  would lint third-party scripts.
-
-The earlier proposal kept the logic in the recipe and piped the list into
-`xargs shellcheck`. Plain `xargs` still splits on whitespace, and its fallback
-loop still used `for file in $$files`. With GNU `xargs`, an empty list also runs
-ShellCheck with no files, which exits `3` with "No files specified" rather than
-hanging (verified). The design below replaces it.
-
-**Change**: move the logic into the wrapper script and keep the recipe to one
-line, as [MK-STR-004] requires.
-
-- [ ] Add a `check=all` mode to `check-shell-lint.sh`. It lints every tracked
-      `*.sh` file that still exists, in one ShellCheck call natively or one
-      container in Docker mode.
-- [ ] Build the list NUL-safely and pass it after `--`, so names with spaces,
-      glob characters, non-ASCII characters or a leading dash reach ShellCheck
-      intact:
-
-  ```bash
-  local -a files=()
-  local file
-  while IFS= read -r -d '' file; do
-    [[ -f "$file" ]] && files+=("$file")
-  done < <(git ls-files -z -- '*.sh')
-  ```
-
-- [ ] When the list is empty, do not call ShellCheck, and return `0`.
-- [ ] Return ShellCheck's status unchanged, using the pattern in
-      [Notes](#notes): `1` for findings and `2` when a file cannot be processed.
-- [ ] Keep the single-file `file=<path>` mode and its tests unchanged, because
-      `docker-shellscript-lint` in `docker.mk` uses it.
-- [ ] Reject any other `check` value with the status agreed in
-      [D1](#decisions-needed-before-implementation). If D1 is still open, use `1`
-      and add this script to PR 16.
-- [ ] Document the mode in the script header, including that untracked files
-      are not linted, as the other check scripts already state.
-- [ ] Replace the recipe with one line that matches the other check targets,
-      `check=all ./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"`,
-      and describe the target as "Lint all tracked shell scripts".
-
-**Edge cases**:
-
-- **No tracked scripts**: ShellCheck is not called, and the target prints
-  `shell lint: ok`.
-- **Tracked file deleted in the working tree**: skipped, as PR 11 does for
-  Markdown.
-- **Untracked new script**: not linted until `git add`, as the header states.
-- **Git-ignored local scripts, such as tool overlays**: not linted.
-- **Name with a space, `[x]`, `café` or a leading `-`**: linted as exactly that
-  file.
-- **Vendored `scripts/docker/dgoss.sh`**: linted, and it passes today. Exclude
-  it only if a future upstream update fails.
-- **Scripts without a `.sh` extension**: out of scope, as today.
-- **ShellCheck not installed**: falls back to the pinned `koalaman/shellcheck`
-  image from `mise.toml`.
-- **Image pull fails**: stops with the pull error before `docker run`, once
-  PR 5 has landed.
-- **Run outside `make`**: uses the first `shellcheck` on `PATH`. Under `make`,
-  the mise shims put the pinned 0.11.0 first.
-
-**Tests**: add these to `scripts/quality/tests/check-shell-lint.test.sh`,
-using the existing stubs.
-
-- [ ] `test-check-shell-lint-all-lints-every-tracked-script-in-one-call`
-- [ ] `test-check-shell-lint-all-skips-deleted-and-untracked-files`
-- [ ] `test-check-shell-lint-all-passes-awkward-names-intact`
-- [ ] `test-check-shell-lint-all-without-scripts-does-not-call-shellcheck`
-- [ ] `test-check-shell-lint-all-propagates-shellcheck-failure`
-- [ ] `test-check-shell-lint-all-uses-one-docker-run-when-forced`
-- [ ] `test-check-shell-lint-rejects-unknown-mode`
-
-**Verification**:
-
-- `make check-shell-lint` prints `shell lint: ok` and exits `0` on `v2`,
-  natively and with `FORCE_USE_DOCKER=true`.
-- With a deliberate ShellCheck finding, the target exits non-zero, shows the
-  finding and does not print `shell lint: ok`, in both modes.
-- `make test` passes.
-
----
-
-## PR 3: Add a `lint-shell` target and include it in `make lint`
-
-**Scope**: Build system and documentation
-**Risk**: Low
-**Depends on**: PR 2, so the new gate fails on findings
-**Files**: `Makefile` and `README.md`
-
-**Problem**: `make lint` does not lint shell scripts, and there is no
-`lint-shell` target beside `lint-file-format`, `lint-markdown-format` and
-`lint-markdown-links`.
-
-**Change**:
-
-- [ ] Add `lint-shell: # Lint all tracked shell scripts @Quality`, which runs
-      `$(MAKE) check-shell-lint`.
-- [ ] Call it from `lint` after `lint-markdown-links`, and add it to the
-      `${VERBOSE}.SILENT` list.
-- [ ] In the README "First run" section, add `shell lint: ok` as the fourth
-      line of the expected `make lint` result. Change it in this PR, so the README
-      never shows the wrong output.
-- [ ] In the README "Common workflows" section, add `make lint-shell` to the
-      specific checks. Add one sentence saying that `make lint` stops at the first
-      failing check, and that `make -k lint` runs them all.
-
-**Developer experience**:
-
-- `make lint` gains about 4 seconds natively. One ShellCheck call over the 28
-  tracked scripts took 3.8 seconds on a developer Mac on 2026-10-02. Docker
-  mode adds one container start, not 28.
-- `lint-shell` checks every tracked script, unlike the other `lint-*` targets,
-  which check only the branch's changes. This is deliberate. It is fast enough,
-  and it does not depend on the branch base resolution that PR 18 fixes.
-
-**Out of scope**: adding shell lint to `scripts/config/pre-commit.yaml`. The
-pre-commit hooks run with `check=all`, so it would add about 4 seconds to every
-commit, including commits that change no scripts. Revisit if a
-`staged-changes` mode is added.
-
-**Verification**:
-
-- `make help` lists `lint-shell` under Quality.
-- `make lint` prints four `ok` lines that match the README.
-- A ShellCheck finding makes both `make lint-shell` and `make lint` fail.
-
----
-
-## PR 4: Run shell lint in commit-stage CI
-
-**Scope**: CI quality gate
-**Risk**: Low
-**Depends on**: PR 2 and PR 3
-**Files**: `.github/actions/check-shell-lint/action.yaml` (new) and
-`.github/workflows/stage-1-commit.yaml`
-
-**Problem**: the commit stage runs four checks: `scan-secrets`,
-`check-file-format`, `check-markdown-format` and `check-markdown-links`.
-Without this PR, the shell-lint gate never runs in CI.
-
-The earlier snippet was stale. It pinned `actions/checkout` to v6.0.2 and used
-`ubuntu-latest`. Every commit-stage job now uses `ubuntu-26.04`, checkout
-v7.0.1 and a `jdx/mise-action` step that installs the pinned tool.
-
-**Change**:
-
-- [ ] Add a composite action that runs `make check-shell-lint`, mirroring the
-      existing actions. It needs no `check` or `BRANCH_NAME` input.
-- [ ] Add a "Check shell scripts" job after `check-markdown-links`, with the
-      same shape as its neighbours. Copy the action SHAs from the neighbouring jobs
-      at implementation time, because Dependabot keeps them current.
-
-  ```yaml
-  check-shell-lint:
-    name: "Check shell scripts"
-    runs-on: ubuntu-26.04
-    timeout-minutes: 2
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: "Set up mise"
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          version: ${{ inputs.mise_version }}
-          install: true
-          install_args: "shellcheck"
-          cache: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Check shell scripts"
-        uses: ./.github/actions/check-shell-lint
-  ```
-
-- [ ] Keep the default shallow checkout. The check lints tracked files and
-      needs no history.
-
-**Edge cases**:
-
-- **The runner's preinstalled ShellCheck**: the mise step puts the pinned
-  0.11.0 first, so CI matches `make` locally and the Docker pin.
-- **mise cannot install ShellCheck**: the job fails. It must not fall back
-  silently to the runner's unpinned version.
-- **Required status checks**: where branch protection lists required checks,
-  an administrator must add "Check shell scripts". Otherwise a failing job does
-  not block merges. Say so in the PR description.
-
-**Verification**:
-
-- On a draft PR with a deliberate ShellCheck finding, "Check shell scripts"
-  fails and shows the finding. Without the finding, it passes.
-- The job finishes well within its 2-minute timeout.
-
----
-
-## PR 5: Shell hygiene and clear image-pull failures
-
-**Scope**: Shell script quality and developer experience
-**Risk**: Low. Behaviour is unchanged, except that a failed image pull now
-stops with the pull error.
-**Depends on**: nothing. Land it before Stacks 1 and 3.
-**Files**: `scripts/docker/docker.lib.sh`, `scripts/docker/dockerfile-linter.sh`,
-`scripts/quality/check-shell-lint.sh`, one line in each of
-`check-file-format.sh`, `check-markdown-format.sh`, `check-markdown-links.sh`,
-`format-markdown-tables.sh` and `scan-secrets.sh` under `scripts/quality/`, and
-the matching test suites
-
-**Problem**:
-
-1. **A failed image pull surfaces as a confusing `docker run` error.** Seven
-   wrapper scripts declare and assign the image in one statement,
-   `local image=$(name=… docker-get-image-version-and-pull)`. `local` succeeds
-   whatever the command returns, so the failed pull is ignored and
-   `docker run` starts with an empty image name. Verified with a stubbed
-   `docker`: the pull failed, then `docker run` ran without an image and exited
-   `125`. ShellCheck reports this as SC2155, but every site disables it, and
-   `docker.lib.sh` disables it for the whole file on line 2.
-2. **Implicit globals in `docker.lib.sh`.** `docker-build` assigns `tag` and
-   `_get-effective-tag` assigns `version` without `local`, so both leak into
-   the caller.
-3. **Missing explicit returns and doc comments.** [SH-FN-007] requires an
-   explicit return. `main` and `is-arg-true` have no doc comment in
-   `check-shell-lint.sh` or `dockerfile-linter.sh`.
-
-The earlier diff is obsolete. It targeted
-`_replace-image-latest-by-specific-version` and `.tool-versions`, which merged
-PRs 25 and 30 replaced. It also appended a bare `return 0` to every function,
-which would hide real failures, as [Notes](#notes) explains.
-
-**Change**:
-
-- [ ] At each of the seven wrapper call sites, declare the variable first,
-      return the pull status explicitly and remove the
-      `# shellcheck disable=SC2155`. The explicit `|| return` matters because some
-      callers, such as `run-check` in `scan-secrets.sh`, call the runner in a `||`
-      context where `set -e` does not apply.
-
-  ```bash
-  local image
-  image="$(name=koalaman/shellcheck docker-get-image-version-and-pull)" || return "$?"
-  ```
-
-- [ ] Remove the file-wide SC2155 disable from `docker.lib.sh` and fix each
-      site it hides: `tag` in `docker-run`, `version`, `tag` and `digest` in
-      `docker-get-image-version-and-pull`, and `branch_name` in
-      `_get-git-branch-name`.
-- [ ] Declare `tag` in `docker-build` and `version` in `_get-effective-tag`
-      with `local`.
-- [ ] Add explicit returns:
-  - `return 0` where the last command cannot fail:
-    `docker-get-image-version-and-pull`, `docker-check-test`,
-    `_get-effective-version`, `_get-effective-tag`,
-    `_get-all-effective-versions` and `_get-git-branch-name`
-  - the status-preserving pattern where the last command's status is the
-    result: `docker-build`, `docker-bake-dockerfile`, `docker-lint`,
-    `docker-run`, `docker-push`, `docker-clean`,
-    `version-create-effective-file`, `_create-effective-dockerfile`,
-    `_pin-dockerfile-arg-versions`, `_append-metadata`, `_toml-table-entry`,
-    and `main` and the `run-*` functions in both wrapper scripts
-  - the same pattern for `_container-runtime-is-operational`, whose callers
-    read `124` on timeout from `wait "$pid"`
-  - nothing for `docker-pull-pinned-images`, `_get-docker-image-version` and
-    `_toml-table-entries`, which already return explicitly
-- [ ] Add one-line doc comments to `main` and `is-arg-true` where they are
-      missing.
-
-**Tests**:
-
-- [ ] In each of the seven wrapper suites, add
-      `test-<script>-stops-when-the-image-pull-fails`. Stub `docker` so that `pull`
-      fails, force Docker mode, and assert a non-zero exit, the pull error on
-      stderr and no `docker run` call. This covers the `scan-secrets.sh` path that
-      runs inside `||`.
-- [ ] In `scripts/docker/tests/docker-lib.test.sh`, call each status-carrying
-      function inside `if` with a failing stub and assert that the failure branch
-      runs. A bare `return 0` would break exactly this case. Cover at least
-      `docker-lint`, `docker-run` with a container exit status of `42`, and
-      `_container-runtime-is-operational` returning `124`.
-- [ ] Assert that `tag` and `version` are unset in the caller after
-      `docker-build`.
-
-**Out of scope**:
-
-- `docker-check-test` always exits `0` and reports `PASS` or `FAIL` on stdout.
-  Callers compare that output, so keep it.
-- `docker-run` and `docker-check-test` split `${args:-}` and `${cmd:-}` on
-  purpose. PR 23 documents why.
-
-**Verification**:
-
-- `git ls-files -z -- '*.sh' | xargs -0 shellcheck` reports no findings with
-  the SC2155 disables removed.
-- `make test` passes, including the new tests. With Docker running,
-  `make docker-test-suite-run` also passes.
-
----
-
-## Optional PRs (maintainer's discretion)
-
-### Optional C: Document `FORCE_USE_DOCKER` in the README
-
-**File**: `README.md` · **Risk**: Very low · **Type**: documentation ·
-**Depends on**: PR 3
-
-PR 3 now owns the README changes for shell lint. This option covers the
-remaining gap. The README never explains `FORCE_USE_DOCKER`, although every
-check wrapper honours it.
-
-- [ ] Add a short paragraph to "Common workflows". Explain that each check runs
-      the native tool when it is installed and otherwise falls back to the pinned
-      image in `mise.toml`. Explain that `FORCE_USE_DOCKER=true make lint` forces
-      the container path, for example to reproduce a result with the exact pinned
-      image.
-- [ ] State what it needs: a running Docker daemon reachable through the
-      `docker` command. On Apple silicon the images run as `linux/amd64` under
-      emulation, so runs are slower.
+Merge the stack from the bottom up. Where branch protection lists required
+checks, an administrator must add "Check shell scripts" once PR 4 merges.
+Otherwise a failing shell-lint job does not block merges.
 
 ---
 
