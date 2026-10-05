@@ -129,6 +129,18 @@ make lint-shell
 
 `make lint` stops at the first failing check.
 
+Each check uses its native tool when it is installed and otherwise falls back
+to the image pinned in `mise.toml`. To force the container path, for example to
+reproduce a result with the pinned image, run:
+
+```shell
+FORCE_USE_DOCKER=true make lint
+```
+
+This requires a running Docker daemon reachable through the `docker` command.
+On Apple silicon, images run as `linux/amd64` under emulation, so checks are
+slower.
+
 Run the tests:
 
 ```shell
