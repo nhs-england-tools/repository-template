@@ -16,6 +16,7 @@ set -euo pipefail
 #
 # Arguments (provided as environment variables):
 #   VERBOSE=true  # The suite traces its commands and the harness also prints the output of passing tests, default is 'false'
+#   TEST_JOBS=n   # Number of tests to run in parallel, default is the number of CPUs
 #
 # Optional functions a suite can define:
 #   test-suite-setup     # Runs once before the first test
@@ -39,13 +40,14 @@ TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find gi
 # ==============================================================================
 # Suite runner
 
-# Run the given tests, print a PASS or FAIL line for each and a summary. Fail
-# without running anything when no test is given.
+# Run the given tests in parallel, print a PASS or FAIL line for each in the
+# given order and a summary. Fail without running anything when no test is given.
 # Arguments:
 #   $@=[names of the test functions to run, in order]
 function test-run-suite() {
 
-  local test rc log failed=0
+  local jobs i=0 next=0 failed=0
+  local -a tests=("$@")
 
   if [[ $# -eq 0 ]]; then
     echo "ERROR: no tests to run" >&2
@@ -65,22 +67,21 @@ function test-run-suite() {
     test-suite-setup
   fi
 
-  log="$SUITE_TMP/.test.log"
-  for test in "$@"; do
-    set +e
-    _test-run-one "$test" > "$log" 2>&1 < /dev/null
-    rc=$?
-    set -e
-    if [[ $rc -eq 0 ]]; then
-      echo "$test PASS"
-      if [[ "${VERBOSE:-false}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
-        _test-indent "$log"
-      fi
-    else
-      echo "$test FAIL"
-      _test-indent "$log"
-      failed=$((failed + 1))
+  jobs="${TEST_JOBS:-$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)}"
+  [[ "$jobs" =~ ^[1-9][0-9]*$ ]] || jobs=4
+  _TEST_PIDS=()
+  for i in "${!tests[@]}"; do
+    # Report the oldest running test first, which also keeps the output in order
+    if [[ $((i - next)) -ge $jobs ]]; then
+      _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
+      next=$((next + 1))
     fi
+    _test-run-one "${tests[$i]}" > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null &
+    _TEST_PIDS[i]=$!
+  done
+  while [[ $next -lt ${#tests[@]} ]]; do
+    _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
+    next=$((next + 1))
   done
 
   echo "Total: $#, Passed: $(($# - failed)), Failed: $failed"
@@ -88,6 +89,32 @@ function test-run-suite() {
   [[ $failed -eq 0 ]] || return 1
 
   return 0
+}
+
+# Wait for a test started by test-run-suite and print its PASS or FAIL line,
+# and its output when it failed or VERBOSE is on. Fail when the test failed.
+# Arguments:
+#   $1=[name of the test function]
+#   $2=[index of the test in the suite]
+function _test-report() {
+
+  local test="$1" i="$2" rc log="$SUITE_TMP/.test-$2.log"
+  set +e
+  wait "${_TEST_PIDS[$i]}"
+  rc=$?
+  set -e
+  unset '_TEST_PIDS[i]'
+  if [[ $rc -eq 0 ]]; then
+    echo "$test PASS"
+    if [[ "${VERBOSE:-false}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then
+      _test-indent "$log"
+    fi
+    return 0
+  fi
+  echo "$test FAIL"
+  _test-indent "$log"
+
+  return 1
 }
 
 # Run one test in an isolated subshell with errexit, nounset and pipefail on.
@@ -165,6 +192,10 @@ function _test-suite-exit() {
 
   local rc=$?
   set +e
+  if [[ -n "${_TEST_PIDS[*]:-}" ]]; then
+    kill "${_TEST_PIDS[@]}" 2> /dev/null
+    wait "${_TEST_PIDS[@]}" 2> /dev/null
+  fi
   if declare -F test-suite-teardown > /dev/null; then
     test-suite-teardown || { echo "ERROR: test-suite-teardown failed" >&2; rc=1; }
   fi
@@ -278,17 +309,38 @@ function test-stub-calls() {
 # shellcheck disable=SC2120
 function test-isolate-path() {
 
-  local bin="$TEST_TMP/.bin" tool path
+  local bin="$TEST_TMP/.bin" tool path paths i=0 seen=" "
+  local -a tools=("${TEST_BASE_TOOLS[@]}" "$@") batch=()
   mkdir -p "$bin"
-  for tool in "${TEST_BASE_TOOLS[@]}" "$@"; do
-    path="$(type -P "$tool")" || { echo "test-isolate-path: '$tool' is not on PATH" >&2; return 1; }
+  # One lookup and one 'ln' for all tools, as each process start is slow on macOS.
+  # Bash 3.2 may succeed when only some are found, so count the paths instead.
+  paths="$(type -P "${tools[@]}")" || true
+  if [[ -z "$paths" || $(wc -l <<< "$paths") -ne ${#tools[@]} ]]; then
+    for tool in "${tools[@]}"; do
+      type -P "$tool" > /dev/null || { echo "test-isolate-path: '$tool' is not on PATH" >&2; return 1; }
+    done
+  fi
+  while IFS= read -r path; do
+    tool="${tools[$i]}"
+    i=$((i + 1))
+    [[ "$seen" != *" $tool "* ]] || continue
+    seen="$seen$tool "
     if [[ "$path" == */mise/shims/* ]]; then
       path="$(cd "$TEST_REPO_ROOT" && mise which "$tool")" ||
         { echo "test-isolate-path: cannot resolve the mise shim of '$tool'" >&2; return 1; }
     fi
     # On a repeated call the tool already resolves to its link, which must not point to itself.
-    [[ "$path" == "$bin/$tool" ]] || ln -sf "$path" "$bin/$tool"
-  done
+    if [[ "$path" == "$bin/$tool" ]]; then
+      continue
+    elif [[ "${path##*/}" == "$tool" ]]; then
+      batch+=("$path")
+    else
+      ln -sf "$path" "$bin/$tool"
+    fi
+  done <<< "$paths"
+  if [[ ${#batch[@]} -gt 0 ]]; then
+    ln -sf "${batch[@]}" "$bin/"
+  fi
   PATH="$STUB_DIR:$bin"
   export PATH
 
