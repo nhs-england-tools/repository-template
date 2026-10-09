@@ -71,6 +71,7 @@ Expected result:
 file format: ok
 markdown format: ok
 markdown links: ok
+shell lint: ok
 ```
 
 ## What it does
@@ -123,7 +124,10 @@ Run specific checks when you only need one:
 make lint-file-format
 make lint-markdown-format
 make lint-markdown-links
+make lint-shell
 ```
+
+`make lint` stops at the first failing check.
 
 Run the tests:
 
