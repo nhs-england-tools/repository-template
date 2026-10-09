@@ -19,6 +19,7 @@ readonly FAILED_TEST_OUTPUT='t FAIL'
 readonly STDOUT_LABEL='stdout'
 readonly STDERR_LABEL='stderr'
 readonly EXIT_STATUS_LABEL='exit status'
+readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all its tests, see the output above'
 
 function main() {
 
@@ -49,6 +50,8 @@ function main() {
     test-harness-pins-the-locale \
     test-harness-ends-the-output-of-a-failing-test-with-a-newline \
     test-harness-exits-with-143-on-term \
+    test-harness-stops-a-blocked-test-before-teardown \
+    test-harness-kills-a-test-that-ignores-term-after-the-stop-timeout \
     test-assert-equal-reports-expected-and-actual \
     test-assertions-pass-and-fail-correctly \
     test-assert-file-has-line-matches-whole-lines-only \
@@ -429,6 +432,42 @@ function test-harness-exits-with-143-on-term() {
   return 0
 }
 
+function test-harness-stops-a-blocked-test-before-teardown() {
+
+  # Arrange
+  write-blocked-mini-suite
+  export OUT="$TEST_TMP"
+  # Act
+  term-blocked-mini-suite
+  # Assert
+  assert-equal 143 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
+  assert-file-exists "$TEST_TMP/pids"
+  assert-file-exists "$TEST_TMP/torn-down"
+  assert-file-not-exists "$TEST_TMP/alive-at-teardown"
+  assert-file-not-exists "$TEST_TMP/late-write"
+  assert-equal "$ABORTED_SUITE_ERROR" "$(cat "$TEST_TMP/mini.err")" "$STDERR_LABEL"
+
+  return 0
+}
+
+function test-harness-kills-a-test-that-ignores-term-after-the-stop-timeout() {
+
+  # Arrange
+  write-blocked-mini-suite
+  export OUT="$TEST_TMP" IGNORE_TERM=true TEST_STOP_TIMEOUT=1
+  # Act
+  term-blocked-mini-suite
+  # Assert
+  assert-equal 143 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
+  assert-file-exists "$TEST_TMP/pids"
+  assert-file-exists "$TEST_TMP/torn-down"
+  assert-file-not-exists "$TEST_TMP/alive-at-teardown"
+  assert-file-not-exists "$TEST_TMP/late-write"
+  assert-equal "$ABORTED_SUITE_ERROR" "$(cat "$TEST_TMP/mini.err")" "$STDERR_LABEL"
+
+  return 0
+}
+
 # ==============================================================================
 # Assertions and helpers
 
@@ -791,6 +830,69 @@ function write-mini-suite() {
     printf '%s\n' "$body"
     echo "test-run-suite $*"
   } > "$TEST_TMP/mini.test.sh"
+
+  return 0
+}
+
+# Write a mini test suite whose test blocks in an external command after writing
+# its own PID and the command's PID to "$OUT/pids". The teardown creates
+# "$OUT/alive-at-teardown" if either is still running. With IGNORE_TERM set,
+# the test and the command ignore TERM.
+function write-blocked-mini-suite() {
+
+  local body
+  body="$(cat << 'EOF'
+function test-suite-teardown() {
+  local pid
+  for pid in $(cat "$OUT/pids"); do
+    if kill -0 "$pid" 2> /dev/null; then
+      touch "$OUT/alive-at-teardown"
+    fi
+  done
+  touch "$OUT/torn-down"
+}
+function t() {
+  if [[ -n "${IGNORE_TERM:-}" ]]; then
+    trap "" TERM
+  fi
+  sh -c 'echo "$PPID $$" > "$OUT/pids.tmp" && mv "$OUT/pids.tmp" "$OUT/pids" && exec sleep 60'
+  touch "$OUT/late-write"
+}
+EOF
+  )"
+  write-mini-suite "$body" t
+
+  return 0
+}
+
+# Run the mini suite in the background, wait up to 10 seconds for its test to
+# block, then send TERM to the suite process only. Kill the suite if it has not
+# exited 30 seconds later, and kill the blocked processes too, so a failing
+# harness leaves nothing running. The suite's temporary files go under
+# "$TEST_TMP/tmp". Sets SUITE_STATUS to the suite's exit status.
+function term-blocked-mini-suite() {
+
+  local suite_pid test_pid command_pid ticks=0
+  mkdir "$TEST_TMP/tmp"
+  TMPDIR="$TEST_TMP/tmp" "$BASH" "$TEST_TMP/mini.test.sh" > "$TEST_TMP/mini.out" 2> "$TEST_TMP/mini.err" &
+  suite_pid=$!
+  while [[ ! -f "$TEST_TMP/pids" && $ticks -lt 100 ]] && kill -0 "$suite_pid" 2> /dev/null; do
+    sleep 0.1
+    ticks=$((ticks + 1))
+  done
+  kill -TERM "$suite_pid" 2> /dev/null || true
+  ticks=0
+  while [[ $ticks -lt 300 ]] && kill -0 "$suite_pid" 2> /dev/null; do
+    sleep 0.1
+    ticks=$((ticks + 1))
+  done
+  kill -KILL "$suite_pid" 2> /dev/null || true
+  SUITE_STATUS=0
+  wait "$suite_pid" || SUITE_STATUS=$?
+  if [[ -f "$TEST_TMP/pids" ]]; then
+    read -r test_pid command_pid < "$TEST_TMP/pids"
+    kill -KILL "$test_pid" "$command_pid" 2> /dev/null || true
+  fi
 
   return 0
 }
