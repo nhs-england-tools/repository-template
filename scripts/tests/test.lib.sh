@@ -8,7 +8,9 @@ set -euo pipefail
 # test, not only the last one. A test that calls exit fails, even with status
 # 0, since it never reached its end. Each test also gets its own scratch directory
 # and a command stub directory first on PATH, and nothing a test changes leaks
-# into the next test.
+# into the next test. Each test runs in its own process group, so when the suite
+# is interrupted it stops the running tests and every command they started
+# before the teardown runs.
 #
 # Usage:
 #   $ source ./scripts/tests/test.lib.sh
@@ -17,6 +19,7 @@ set -euo pipefail
 # Arguments (provided as environment variables):
 #   VERBOSE=true  # The suite traces its commands and the harness also prints the output of passing tests, default is 'false'
 #   TEST_JOBS=n   # Number of tests to run in parallel, default is the number of CPUs
+#   TEST_STOP_TIMEOUT=n  # Seconds an interrupted suite waits for its running tests to stop before killing them, default is 5
 #
 # Optional functions a suite can define:
 #   test-suite-setup     # Runs once before the first test
@@ -76,8 +79,11 @@ function test-run-suite() {
       _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
       next=$((next + 1))
     fi
-    _test-run-one "${tests[$i]}" > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null &
+    # Job control gives the test its own process group, whose ID is its PID
+    set -m
+    ( _test-run-isolated "${tests[$i]}" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null &
     _TEST_PIDS[i]=$!
+    set +m
   done
   while [[ $next -lt ${#tests[@]} ]]; do
     _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
@@ -187,14 +193,15 @@ function _test-isolate-git() {
   return 0
 }
 
-# Run the suite teardown, remove the suite scratch directory and keep the exit status.
+# Stop the running tests, run the suite teardown, remove the suite scratch
+# directory and keep the exit status.
 function _test-suite-exit() {
 
   local rc=$?
   set +e
   if [[ -n "${_TEST_PIDS[*]:-}" ]]; then
-    kill "${_TEST_PIDS[@]}" 2> /dev/null
-    wait "${_TEST_PIDS[@]}" 2> /dev/null
+    # Bash 3.2 reports each terminated test on stderr
+    _test-stop-tests 2> /dev/null
   fi
   if declare -F test-suite-teardown > /dev/null; then
     test-suite-teardown || { echo "ERROR: test-suite-teardown failed" >&2; rc=1; }
@@ -205,6 +212,51 @@ function _test-suite-exit() {
     [[ $rc -ne 0 ]] || rc=1
   fi
   exit "$rc"
+}
+
+# Send TERM to the process group of every running test, KILL whatever is left
+# after TEST_STOP_TIMEOUT seconds, then reap the tests.
+function _test-stop-tests() {
+
+  local timeout="${TEST_STOP_TIMEOUT:-5}"
+  [[ "$timeout" =~ ^[0-9]+$ ]] || timeout=5
+  _test-signal-tests TERM
+  _test-wait-for-tests "$((timeout * 10))" || _test-signal-tests KILL
+  _test-wait-for-tests 50
+  wait "${_TEST_PIDS[@]}"
+
+  return 0
+}
+
+# Send a signal to the process group of every running test.
+# Arguments:
+#   $1=[signal name]
+function _test-signal-tests() {
+
+  local signal="$1" pid
+  for pid in "${_TEST_PIDS[@]}"; do
+    kill -"$signal" -- "-$pid" 2> /dev/null
+  done
+
+  return 0
+}
+
+# Wait until the process groups of the running tests are empty, failing when
+# that takes longer than the given time.
+# Arguments:
+#   $1=[time limit, in tenths of a second]
+function _test-wait-for-tests() {
+
+  local limit="$1" ticks=0 pid
+  for pid in "${_TEST_PIDS[@]}"; do
+    while kill -0 -- "-$pid" 2> /dev/null; do
+      [[ $ticks -lt $limit ]] || return 1
+      sleep 0.1
+      ticks=$((ticks + 1))
+    done
+  done
+
+  return 0
 }
 
 # Print the physical path of a new temporary directory, or fail without output.
