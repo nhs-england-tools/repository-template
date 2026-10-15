@@ -80,6 +80,9 @@ function test-run-suite() {
       next=$((next + 1))
     fi
     # Job control gives the test its own process group, whose ID is its PID
+    # Known gap: a signal between the launch and the PID registration below leaves that one test running
+    # unsupervised until it ends on its own. Accepted for now as the window is tiny and the test is short-lived.
+    # If that starts to matter, have the INT and TERM traps only set a flag while launching and exit once registered.
     set -m
     ( _test-run-isolated "${tests[$i]}" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null &
     _TEST_PIDS[i]=$!
@@ -219,7 +222,7 @@ function _test-suite-exit() {
 function _test-stop-tests() {
 
   local timeout="${TEST_STOP_TIMEOUT:-5}"
-  [[ "$timeout" =~ ^[0-9]+$ ]] || timeout=5
+  [[ "$timeout" =~ ^(0|[1-9][0-9]*)$ ]] || timeout=5
   _test-signal-tests TERM
   _test-wait-for-tests "$((timeout * 10))" || _test-signal-tests KILL
   _test-wait-for-tests 50
