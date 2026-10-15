@@ -90,8 +90,8 @@ function run-lychee-in-docker() {
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
-  # shellcheck disable=SC2155
-  local image=$(name=lycheeverse/lychee docker-get-image-version-and-pull)
+  local image
+  image=$(name=lycheeverse/lychee docker-get-image-version-and-pull) || return "$?"
 
   local IFS=$'\n'
   # shellcheck disable=SC2206

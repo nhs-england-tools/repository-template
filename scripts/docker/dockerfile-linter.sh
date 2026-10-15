@@ -15,16 +15,20 @@ set -euo pipefail
 
 # ==============================================================================
 
+# Lint the Dockerfile natively or in Docker.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
   local file=${file:-./Dockerfile.effective}
+  local rc=0
   if command -v hadolint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    file="$file" run-hadolint-natively
+    file="$file" run-hadolint-natively || rc=$?
   else
-    file="$file" run-hadolint-in-docker
+    file="$file" run-hadolint-in-docker || rc=$?
   fi
+
+  return "$rc"
 }
 
 # Run hadolint natively.
@@ -32,10 +36,13 @@ function main() {
 #   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
 function run-hadolint-natively() {
 
+  local rc=0
   # shellcheck disable=SC2001
   hadolint \
     --config scripts/config/hadolint.yaml \
-    "$(echo "$file" | sed "s#$PWD#.#")"
+    "$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
+
+  return "$rc"
 }
 
 # Run hadolint in a Docker container.
@@ -46,8 +53,9 @@ function run-hadolint-in-docker() {
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
-  # shellcheck disable=SC2155
-  local image=$(name=hadolint/hadolint docker-get-image-version-and-pull)
+  local image
+  image=$(name=hadolint/hadolint docker-get-image-version-and-pull) || return "$?"
+  local rc=0
   # shellcheck disable=SC2001
   docker run --rm --platform linux/amd64 \
     --volume "$PWD:/workdir" \
@@ -55,11 +63,14 @@ function run-hadolint-in-docker() {
     "$image" \
       hadolint \
         --config /workdir/scripts/config/hadolint.yaml \
-        "/workdir/$(echo "$file" | sed "s#$PWD#.#")"
+        "/workdir/$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
+
+  return "$rc"
 }
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
 function is-arg-true() {
 
   if [[ "$1" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$ ]]; then

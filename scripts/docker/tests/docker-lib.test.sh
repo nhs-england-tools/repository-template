@@ -72,11 +72,16 @@ function main() {
     test-docker-pull-pinned-images-skips-when-docker-is-unreachable \
     test-docker-build-passes-metadata-and-tags-every-version \
     test-docker-bake-dockerfile-creates-effective-files \
+    test-docker-bake-dockerfile-returns-create-effective-dockerfile-failure-in-conditional-call \
     test-docker-run-passes-args-command-and-tag \
     test-docker-check-test-reports-pass-and-fail \
     test-docker-push-pushes-every-version-and-latest \
     test-docker-clean-removes-images-and-files-in-dir \
-    test-docker-lint-runs-hadolint-on-effective-dockerfile
+    test-docker-lint-runs-hadolint-on-effective-dockerfile \
+    test-docker-lint-returns-hadolint-failure-in-conditional-call \
+    test-docker-run-returns-container-exit-status-in-conditional-call \
+    test-container-runtime-is-operational-returns-timeout-status-in-conditional-call \
+    test-docker-build-leaves-tag-and-version-unset-in-caller-scope
 
   return 0
 }
@@ -823,6 +828,25 @@ function test-docker-bake-dockerfile-creates-effective-files() {
   return 0
 }
 
+function test-docker-bake-dockerfile-returns-create-effective-dockerfile-failure-in-conditional-call() {
+
+  # Arrange
+  local status=0
+  function _create-effective-dockerfile() { return 42; }
+  use-empty-mise-toml
+  test-isolate-path
+  # Act
+  if dir="$TEST_TMP" docker-bake-dockerfile; then
+    status=0
+  else
+    status=$?
+  fi
+  # Assert
+  assert-equal 42 "$status" "$EXIT_STATUS_LABEL"
+
+  return 0
+}
+
 function test-docker-run-passes-args-command-and-tag() {
 
   # Arrange
@@ -918,6 +942,83 @@ function test-docker-lint-runs-hadolint-on-effective-dockerfile() {
   assert-equal "--config scripts/config/hadolint.yaml $(printf '%q' "$TEST_TMP/Dockerfile.effective")" \
     "$(test-stub-calls hadolint)" "hadolint calls"
   assert-stub-not-called docker
+
+  return 0
+}
+
+function test-docker-lint-returns-hadolint-failure-in-conditional-call() {
+
+  # Arrange
+  local status=0
+  use-empty-mise-toml
+  unset FORCE_USE_DOCKER
+  test-isolate-path
+  test-stub hadolint 'exit 42'
+  test-stub docker
+  # Act
+  if dir="$TEST_TMP" docker-lint; then
+    status=0
+  else
+    status=$?
+  fi
+  # Assert
+  assert-equal 42 "$status" "$EXIT_STATUS_LABEL"
+
+  return 0
+}
+
+function test-docker-run-returns-container-exit-status-in-conditional-call() {
+
+  # Arrange
+  local status=0
+  use-empty-mise-toml
+  echo 1.2.3 > "$TEST_TMP/.version"
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == run ]]; then exit 42; fi'
+  # Act
+  if dir="$TEST_TMP" docker-run; then
+    status=0
+  else
+    status=$?
+  fi
+  # Assert
+  assert-equal 42 "$status" "$EXIT_STATUS_LABEL"
+
+  return 0
+}
+
+function test-container-runtime-is-operational-returns-timeout-status-in-conditional-call() {
+
+  # Arrange
+  local status=0
+  test-isolate-path
+  test-stub docker 'if [[ "${1:-}" == info ]]; then exec sleep 30; fi'
+  # Act
+  if CONTAINER_INFO_TIMEOUT=1 _container-runtime-is-operational docker; then
+    status=0
+  else
+    status=$?
+  fi
+  # Assert
+  assert-equal 124 "$status" "$EXIT_STATUS_LABEL"
+
+  return 0
+}
+
+function test-docker-build-leaves-tag-and-version-unset-in-caller-scope() {
+
+  # Arrange
+  copy-image-fixtures
+  MISE_TOML="$FIXTURE_MISE_TOML"
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
+  test-isolate-path
+  test-stub docker
+  unset -v tag version
+  # Act
+  dir="$TEST_TMP" docker-build
+  # Assert
+  assert-equal "unset" "$(declare -p tag > /dev/null 2>&1 && echo set || echo unset)" "tag is unset in the caller"
+  assert-equal "unset" "$(declare -p version > /dev/null 2>&1 && echo set || echo unset)" "version is unset in the caller"
 
   return 0
 }
