@@ -1,0 +1,9 @@
+name: "Check shell scripts"
+description: "Check shell scripts"
+runs:
+  using: "composite"
+  steps:
+    - name: "Check shell scripts"
+      shell: bash
+      run: |
+        make check-shell-lint
