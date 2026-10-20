@@ -7,6 +7,7 @@
   - [Usage](#usage)
     - [Quick start](#quick-start)
     - [Your image implementation](#your-image-implementation)
+    - [Testing your image](#testing-your-image)
   - [Conventions](#conventions)
     - [Versioning](#versioning)
     - [Variables](#variables)
@@ -53,7 +54,6 @@ Here are some key features built into this repository's Docker module:
 - Scripts
   - [`docker.lib.sh`](../../scripts/docker/docker.lib.sh): A library code loaded by custom make targets and CLI scripts
   - [`docker.mk`](../../scripts/docker/docker.mk): Customised implementation of the Docker routines loaded by the `scripts/init.mk` file
-  - [`dgoss.sh`](../../scripts/docker/dgoss.sh): Docker image spec test framework
   - [`dockerfile-linter.sh`](../../scripts/docker/dockerfile-linter.sh): `Dockerfile` linter
 - Configuration
   - [`mise.toml`](../../mise.toml): Stores toolchain pins and, in its `[_.docker]` table, Docker image versions
@@ -224,6 +224,41 @@ Here is a step-by-step guide for an image which packages a third-party tool. It 
 - `infrastructure/images/cypress/Dockerfile.effective`
 - `infrastructure/images/cypress/VERSION`
 - `mise.toml`
+
+### Testing your image
+
+Use [Testcontainers](https://testcontainers.com/) to test the images you build. Testcontainers is a library that starts your image from your product's own test suite. Your tests can then send real requests to the running container and check how it behaves. There are Testcontainers libraries for Java, Go, .NET, Node.js, Python, Rust and other languages, so use the one for your product's language.
+
+Good image tests:
+
+- Start the image by the tag that `make docker-build` produced
+- Wait until the container is ready, using an explicit wait strategy such as a log message, a listening port, an HTTP endpoint or the image's `HEALTHCHECK`. A container that has only started proves very little.
+- Check behaviour through the application's real interface, for example an HTTP response
+- Run in the pipeline after `make docker-build`, so they test the image that will be published
+
+Here is an example in Python with `pytest`, for a version of `my-shiny-app` that serves HTTP on port `8080`:
+
+```python
+import urllib.request
+
+from testcontainers.core.container import DockerContainer
+from testcontainers.core.wait_strategies import HttpWaitStrategy
+
+
+def test_image_serves_greeting():
+    container = (
+        DockerContainer("my-shiny-app:latest")
+        .with_exposed_ports(8080)
+        .waiting_for(HttpWaitStrategy(8080, "/health").for_status_code(200))
+    )
+    with container:
+        url = f"http://{container.get_container_host_ip()}:{container.get_exposed_port(8080)}/"
+        with urllib.request.urlopen(url) as response:
+            assert response.status == 200
+            assert response.read() == b"hello world"
+```
+
+Testcontainers is built for containers that keep running, such as APIs and workers. For an image that runs a single command and exits, like the quick start example, run it with `make docker-run` and check its output and exit code instead.
 
 ## Conventions
 

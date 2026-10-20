@@ -11,8 +11,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a bug report.
-        Please fill out this form as completely as you can.
+        Report reproducible problems with this project. Do not report security vulnerabilities here. Do not include sensitive information.
   - type: checkboxes
     id: preflight
     attributes:
@@ -47,18 +46,18 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      description: Steps to reproduce the behaviour.
+      description: Give the shortest steps that reproduce the issue, or explain why you cannot reproduce it reliably.
       placeholder: |
         1. ...
         2. ...
         3. ...
     validations:
-      required: false
+      required: true
   - type: textarea
     id: environment
     attributes:
       label: Environment
-      description: Add relevant details about your setup.
+      description: Add relevant details only. Redact credentials and do not include personal data or PII/PID.
       value: |
         - OS:
         - Tool versions:
@@ -78,7 +77,7 @@ body:
     id: logs
     attributes:
       label: Relevant command output
-      description: Please copy and paste relevant output. This will be formatted as code.
+      description: Optional. Redact credentials and do not include personal data or PII/PID. Output is formatted as code.
       render: shell
     validations:
       required: false
@@ -93,7 +92,7 @@ body:
     id: conduct
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow this project's Code of Conduct.
+      description: By submitting this issue, you agree to follow the [Code of Conduct](https://github.com/nhs-england-tools/repository-template/blob/main/.github/CODE_OF_CONDUCT.md).
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
@@ -101,7 +100,7 @@ body:
     id: sensitive
     attributes:
       label: Sensitive information
-      description: Please do not include PII or PID, or any other sensitive data. See [data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public).
+      description: Please do not include credentials, PII/PID, or other sensitive data. See [NHS data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public).
       options:
         - label: I confirm this report does not include PII/PID, or sensitive data
           required: true

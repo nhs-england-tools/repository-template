@@ -1,7 +1,4 @@
-.scannerwork
 .version
-
 *.code-workspace
-!project.code-workspace
 
 # Please add your custom content below!

@@ -166,15 +166,16 @@ Aim for modular, configurable components so projects can extend or replace parts
 
 ## Security
 
-For vulnerability reporting guidance, see [security.md](.github/security.md).
+For vulnerability reporting guidance, see [SECURITY.md](.github/SECURITY.md).
 
 ## Support
 
-TODO: confirm the support or contact route for this repository (for example issues, discussions, or a team mailbox).
+For help using this project, [open a support request in GitHub Issues](https://github.com/nhs-england-tools/repository-template/issues/new?template=1_support_request.yaml).
 
 ## Contributing
 
-See the contributing guide at [contributing.md](.github/contributing.md).
+See the contributing guide at [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+Please follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md) when participating.
 
 At a high level:
 
