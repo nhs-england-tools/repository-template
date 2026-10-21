@@ -17,13 +17,17 @@ updates:
   - package-ecosystem: "npm"
     directories:
       - "**/*"
+    exclude-paths:
+      - ".mise/**" # mise owns its lockfile sidecars
     schedule:
       interval: "daily"
     cooldown:
       default-days: 7
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directories:
       - "**/*"
+    exclude-paths:
+      - ".mise/**" # mise owns its lockfile sidecars
     schedule:
       interval: "daily"
     cooldown:

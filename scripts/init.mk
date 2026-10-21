@@ -51,13 +51,12 @@ _toolchain-install-one: _toolchain-check # Install one toolchain tool via mise -
 	echo ${name}
 	mise install $(if ${version},${name}@${version},${name})
 
-_toolchain-install: # Trust mise.toml and install every toolchain tool listed in it via mise
-	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
-	mise trust --yes mise.toml
+_toolchain-install: _toolchain-check # Install every toolchain tool listed in mise.toml via mise, from mise.lock
 	source scripts/docker/docker.lib.sh
 	tools="$$( _toml-table-entries tools mise.toml | awk '{ print $$1 "@" $$2 }' )"
 	[[ -n "$${tools}" ]] || { echo "No [tools] entries found in mise.toml" >&2; exit 1; }
-	mise install $${tools}
+	# Name the tools so global config tools are neither installed nor required in mise.lock
+	mise install --locked $$(sed 's/@[^@]*$$//' <<< "$${tools}")
 	echo "Project mise tools installed:"
 	while read -r tool; do
 		name="$${tool%@*}"
@@ -68,12 +67,23 @@ _toolchain-install: # Trust mise.toml and install every toolchain tool listed in
 _toolchain-check: # Fail with an actionable message when mise is missing or mise.toml is not trusted
 	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
 	if mise trust --show | grep -q ': untrusted'; then
-		echo "mise.toml is not trusted. Run: make config" >&2
+		echo "mise.toml is not trusted. Review it, then run: mise trust mise.toml" >&2
 		exit 1
 	fi
 
 toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in mise.toml (Docker image pins are not checked) @Configuration
 	mise outdated --bump
+
+toolchain-upgrade: exclude ?= editorconfig-checker
+toolchain-upgrade: _toolchain-check # Bump native tools pinned in mise.toml to the newest releases and refresh mise.lock (Docker image pins are not updated) - optional: exclude=[space-separated tools to skip, default is editorconfig-checker as 4.x drops the ec binary], dry_run=[true to preview only] @Configuration
+	# A separate assignment so a failed lookup stops the recipe instead of reading as 'up to date'
+	outdated="$$(mise outdated --bump --json)"
+	specs="$$(jq -r --arg p "$$(pwd -P)/mise.toml" 'to_entries[] | select(.value.source.path == $$p and (.key as $$k | $$ARGS.positional | any(. == $$k) | not)) | "\(.key)@\(.value.bump)"' --args $(exclude) <<< "$${outdated}")"
+	[[ -n "$${specs}" ]] || { echo "All pinned tools are up to date"; exit 0; }
+	echo "$${specs}"
+	[[ "$(dry_run)" =~ ^(true|yes|y|on|1)$$ ]] && exit 0
+	# 'mise lock' resolves new versions and rewrites mise.toml pins, which 'mise upgrade' cannot do under locked mode
+	mise lock $${specs} && mise install --locked $$(sed 's/@[^@]*$$//' <<< "$${specs}") && mise lock
 
 toolchain-install-gnu-macos: # Install this repository's required GNU userland tools via Homebrew (macOS only, no-op on Linux) @Configuration
 	./scripts/toolchain/install-gnu-macos.sh
@@ -193,5 +203,6 @@ ${VERBOSE}.SILENT: \
 	scan-secrets \
 	toolchain-install-gnu-macos \
 	toolchain-outdated \
+	toolchain-upgrade \
 	toolchain-verify-gnu \
 	version-create-effective-file \

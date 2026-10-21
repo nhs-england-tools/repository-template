@@ -25,7 +25,7 @@ The following software packages, or their equivalents, are expected to be instal
 - [GNU make](https://www.gnu.org/software/make/) 3.82 or later
 - GNU Bash 5.2 or later, with `bash` on `PATH` before older system versions
 - [Docker](https://www.docker.com/) container runtime or a compatible tool, for example [Podman](https://podman.io/)
-- [mise](https://mise.jdx.dev/) toolchain manager, installed with `curl https://mise.run | sh` and activated in your shell profile, for example `echo 'eval "$(mise activate zsh)"' >> ~/.zshrc`. `make config` trusts this repository's `mise.toml` and installs every pinned native tool, including [Python](https://www.python.org/) (needed to run Git hooks) and [`jq`](https://jqlang.github.io/jq/). The `make` targets find the pinned toolchain tools without activation, but running them directly needs it.
+- [mise](https://mise.jdx.dev/) toolchain manager, installed with `curl https://mise.run | sh` and activated in your shell profile, for example `echo 'eval "$(mise activate zsh)"' >> ~/.zshrc`. Review this repository's `mise.toml` and trust it with `mise trust mise.toml` before you run `make config`, which installs every pinned native tool, including [Python](https://www.python.org/) (needed to run Git hooks) and [`jq`](https://jqlang.github.io/jq/). The `make` targets find the pinned toolchain tools without activation, but running them directly needs it.
 
 > [!NOTE]<br>
 > The GNU Make and Bash versions supplied by macOS are too old. Install [Homebrew](https://brew.sh/), then install both tools:
@@ -51,9 +51,10 @@ git clone https://github.com/nhs-england-tools/repository-template.git
 cd repository-template
 ```
 
-Install and configure tooling:
+Review `mise.toml`, trust it, then install and configure tooling:
 
 ```shell
+mise trust mise.toml
 make config
 ```
 
@@ -106,7 +107,7 @@ Key terms:
 
 ### Configuration
 
-- Run `make config` to trust `mise.toml`, install the pinned native toolchain, pull pinned Docker helper images and configure the local development environment.
+- After you review and trust `mise.toml`, run `make config` to install the pinned native toolchain, pull pinned Docker helper images and configure the local development environment. It stops with a message while `mise.toml` is untrusted.
 - Tooling configuration files live in [scripts/config](scripts/config); update these to match your project needs.
 - TODO: confirm any additional configuration steps required for new projects.
 
@@ -148,6 +149,8 @@ make test
 ```
 
 `make test` runs every `*.test.sh` suite under [scripts](scripts) in parallel through [run-test-suites.sh](scripts/tests/run-test-suites.sh). The Docker integration suite needs a running Docker daemon. A new suite is picked up automatically when it is executable and git does not ignore it. Keep it in a `tests/` directory next to the scripts it tests.
+
+To update mise tools, Docker images, GitHub Actions and application packages, follow [Updating Dependencies](docs/guides/Updating_Dependencies.md).
 
 ### Examples
 

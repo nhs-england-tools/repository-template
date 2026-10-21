@@ -1,5 +1,14 @@
 # Minimum mise CLI version for developers; CI/CD pins the exact same version, SEE: .github/workflows/cicd-1-pull-request.yaml
-min_version = "2026.9.14"
+min_version = "2026.10.9"
+
+[settings]
+lockfile = true
+lockfile_platforms = ["linux-arm64", "linux-x64", "macos-arm64", "macos-x64"]
+minimum_release_age = "7d"
+locked_verify_provenance = true
+
+[tool_config]
+locked = true
 
 [tools]
 editorconfig-checker = "3.11.3"
@@ -7,12 +16,12 @@ gitleaks = "8.30.1"
 hadolint = "2.15.1"
 jq = "1.8.2"
 lychee = "0.24.2"
-node = "24.21.0"
+node = "26.12.0"
 "npm:markdownlint-cli" = "0.49.1"
-pre-commit = "4.6.2"
-python = "3.14.7"
+pre-commit = "4.7.0"
+python = "3.15.0"
 shellcheck = "0.11.0"
-yq = "4.53.6"
+yq = "4.54.1"
 # NOTE: editorconfig-checker 4.x drops the `ec` binary that check-file-format.sh calls, so stay on 3.x.
 
 # ==============================================================================
@@ -33,4 +42,4 @@ yq = "4.53.6"
 # editorconfig-checker, SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags keep in sync with the editorconfig-checker version above
 "mstruebing/editorconfig-checker" = "v3.11.3@sha256:b3128d82e0518b81df28d245200d86de4bf361f065668be1d1626aacd47b785e"
 # node, SEE: https://hub.docker.com/_/node/tags (prettier runtime) keep in sync with the node version above
-"node" = "24.21.0-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
+"node" = "26.12.0-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11"
