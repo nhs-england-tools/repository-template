@@ -18,6 +18,7 @@ set -euo pipefail
 
 readonly MARKDOWN_HEADING='# Heading'
 readonly EXIT_STATUS_LABEL='exit status'
+readonly FRONTMATTER_TITLE='title: x'
 
 function main() {
 
@@ -114,7 +115,7 @@ function test-check-markdown-format-preserves-unusual-paths-through-frontmatter(
   quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
   test-isolate-path python3
   test-stub markdownlint
-  printf '%s\n' '---' 'title: x' '---' '# Heading' > "$TEST_TMP/repo/$newline_file"
+  printf '%s\n' '---' "$FRONTMATTER_TITLE" '---' '# Heading' > "$TEST_TMP/repo/$newline_file"
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
@@ -232,7 +233,7 @@ function test-check-markdown-format-flags-missing-blank-line-after-frontmatter()
   quality-create-fixture-repo README.md
   test-isolate-path python3
   test-stub markdownlint
-  printf '%s\n' '---' 'title: x' '---' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/README.md"
+  printf '%s\n' '---' "$FRONTMATTER_TITLE" '---' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/README.md"
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
@@ -249,9 +250,9 @@ function test-check-markdown-format-accepts-valid-frontmatter-and-plain-files() 
   quality-create-fixture-repo valid.md plain.md unterminated.md
   test-isolate-path python3
   test-stub markdownlint
-  printf '%s\n' '---' 'title: x' '---' '' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/valid.md"
+  printf '%s\n' '---' "$FRONTMATTER_TITLE" '---' '' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/valid.md"
   printf '%s\n' "$MARKDOWN_HEADING" '' 'Text' > "$TEST_TMP/repo/plain.md"
-  printf '%s\n' '---' 'title: x' "$MARKDOWN_HEADING" > "$TEST_TMP/repo/unterminated.md"
+  printf '%s\n' '---' "$FRONTMATTER_TITLE" "$MARKDOWN_HEADING" > "$TEST_TMP/repo/unterminated.md"
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh

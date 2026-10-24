@@ -17,6 +17,8 @@ set -euo pipefail
 # ==============================================================================
 
 readonly PODMAN_VERSION_OUTPUT='podman version 5.2.0'
+readonly EXIT_STATUS_LABEL='exit status'
+readonly SINGLE_TOOL_RESOLUTION_SUMMARY='1 tool(s) are not resolving'
 
 function main() {
 
@@ -174,7 +176,7 @@ function test-verify-gnu-passes-when-every-tool-is-gnu() {
   # Act
   run-verify-gnu
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$expected" "$TEST_STDOUT" "stdout"
   assert-equal "" "$TEST_STDERR" "stderr"
 
@@ -190,7 +192,7 @@ function test-verify-gnu-accepts-uutils-date-when-gnu-style-behaviour-matches() 
   # Act
   run-verify-gnu
   # Assert
-  assert-equal 0 "$TEST_STATUS" "exit status"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "OK       date: GNU-style date (date (uutils coreutils) 0.8.0) ($TEST_TMP/fakes/date)"
   assert-contains "$TEST_STDOUT" "All GNU tools verified."
 
@@ -206,9 +208,9 @@ function test-verify-gnu-rejects-date-without-gnu-style-behaviour() {
   # Act
   run-verify-gnu
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "INCOMPAT date: date (BSD date) 1.0 ($TEST_TMP/fakes/date), missing GNU-style --date support"
-  assert-contains "$TEST_STDOUT" "1 tool(s) are not resolving"
+  assert-contains "$TEST_STDOUT" "$SINGLE_TOOL_RESOLUTION_SUMMARY"
 
   return 0
 }
@@ -222,9 +224,9 @@ function test-verify-gnu-rejects-bsd-grep-that-claims-gnu-compatibility() {
   # Act
   run-verify-gnu
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "NOT GNU  grep: grep (BSD grep, GNU compatible) 2.6.0-FreeBSD ($TEST_TMP/fakes/grep)"
-  assert-contains "$TEST_STDOUT" "1 tool(s) are not resolving"
+  assert-contains "$TEST_STDOUT" "$SINGLE_TOOL_RESOLUTION_SUMMARY"
 
   return 0
 }
@@ -237,9 +239,9 @@ function test-verify-gnu-reports-missing-tool() {
   # Act
   run-verify-gnu
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "MISSING  sed: not found on PATH"
-  assert-contains "$TEST_STDOUT" "1 tool(s) are not resolving"
+  assert-contains "$TEST_STDOUT" "$SINGLE_TOOL_RESOLUTION_SUMMARY"
 
   return 0
 }
@@ -295,9 +297,9 @@ function test-verify-gnu-reports-missing-bash() {
   # Act
   run-verify-gnu
   # Assert
-  assert-equal 1 "$TEST_STATUS" "exit status"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "MISSING  bash: not found on PATH"
-  assert-contains "$TEST_STDOUT" "1 tool(s) are not resolving"
+  assert-contains "$TEST_STDOUT" "$SINGLE_TOOL_RESOLUTION_SUMMARY"
 
   return 0
 }

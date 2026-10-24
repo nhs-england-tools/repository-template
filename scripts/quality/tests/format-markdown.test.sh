@@ -16,6 +16,7 @@ set -euo pipefail
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
+readonly DOC_WITH_SPACE='docs/my doc.md'
 
 function main() {
 
@@ -89,7 +90,7 @@ function test-format-markdown-formats-existing-tracked-files() {
 
   # Arrange
   local r="$TEST_TMP/repo"
-  quality-create-fixture-repo README.md "docs/my doc.md" gone.md
+  quality-create-fixture-repo README.md "$DOC_WITH_SPACE" gone.md
   test-isolate-path
   test-stub npx
   test-stub docker
@@ -111,12 +112,12 @@ function test-format-markdown-working-tree-and-staged-select-the-right-files() {
 
   # Arrange
   local working_call staged_call
-  quality-create-fixture-repo README.md "docs/my doc.md"
+  quality-create-fixture-repo README.md "$DOC_WITH_SPACE"
   test-isolate-path
   test-stub npx
   printf '%s\n' changed >> "$TEST_TMP/repo/README.md"
-  printf '%s\n' changed >> "$TEST_TMP/repo/docs/my doc.md"
-  git -C "$TEST_TMP/repo" add "docs/my doc.md"
+  printf '%s\n' changed >> "$TEST_TMP/repo/$DOC_WITH_SPACE"
+  git -C "$TEST_TMP/repo" add "$DOC_WITH_SPACE"
   cd "$TEST_TMP/repo"
   # Act
   test-capture ./scripts/quality/format-markdown.sh
@@ -244,7 +245,7 @@ function test-format-markdown-uses-docker-when-forced() {
 
   # Arrange
   local options="--config /workdir/scripts/config/prettierrc.yaml --ignore-path /workdir/scripts/config/.prettierignore --write"
-  quality-create-fixture-repo README.md "docs/my doc.md" gone.md
+  quality-create-fixture-repo README.md "$DOC_WITH_SPACE" gone.md
   test-isolate-path
   test-stub npx
   test-stub docker

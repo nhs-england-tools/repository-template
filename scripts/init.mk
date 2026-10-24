@@ -8,6 +8,9 @@ endif
 
 # ==============================================================================
 
+format-markdown: # Format Markdown files @Quality
+	./scripts/quality/format-markdown.sh
+
 scan-secrets: check ?= whole-history
 scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit) @Quality
 	check=$(check) ./scripts/quality/scan-secrets.sh
@@ -23,9 +26,6 @@ check-markdown-format: # Check markdown formatting (set check=all|staged-changes
 check-markdown-links: check ?= all
 check-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
-
-format-markdown: # Format Markdown files @Quality
-	./scripts/quality/format-markdown.sh
 
 check-shell-lint: check ?= all
 check-shell-lint: # Lint all tracked shell scripts @Quality

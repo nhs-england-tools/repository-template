@@ -36,7 +36,7 @@ jobs:
           python_version="$(_toml-table-entry tools python mise.toml)"
           echo "nodejs_version=${nodejs_version}" >> "$GITHUB_OUTPUT"
           echo "python_version=${python_version}" >> "$GITHUB_OUTPUT"
-          # TODO: Get the version, but it may not be the .version file as this should come from the CI/CD Pull Request Workflow
+          # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
       - name: "List variables"
         run: |
@@ -61,7 +61,7 @@ jobs:
       - name: "Get the artefacts"
         run: |
           echo "Getting the artefacts created by the build stage ..."
-          # TODO: Use either action/cache or action/upload-artifact
+          # Template placeholder: connect the project's build artifact handoff.
       - name: "Create release"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

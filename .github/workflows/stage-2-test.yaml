@@ -77,11 +77,13 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          # Test coverage: add sonar.*.coverage.reportPaths and sonar.exclusions
+          # Each adopting Engineering team maintains sonar.*.coverage.reportPaths
+          # and sonar.exclusions for its tests and generated files.
           args: >
             -Dsonar.organization=${{ vars.SONAR_ORGANISATION_KEY }}
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
             -Dsonar.sources=.
+            -Dsonar.exclusions=.mise/locks/**/package.json
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
       - name: "Skip static analysis"

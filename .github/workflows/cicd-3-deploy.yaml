@@ -38,7 +38,7 @@ jobs:
           python_version="$(_toml-table-entry tools python mise.toml)"
           echo "nodejs_version=${nodejs_version}" >> "$GITHUB_OUTPUT"
           echo "python_version=${python_version}" >> "$GITHUB_OUTPUT"
-          # TODO: Get the version, but it may not be the .version file as this should come from the CI/CD Pull Request Workflow
+          # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
           echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
       - name: "List variables"
@@ -61,7 +61,7 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-  # TODO: More jobs or/and steps here
+  # Template placeholder: add project-specific deployment jobs and steps here.
   # success:
   #   name: "Success notification"
   #   runs-on: ubuntu-26.04

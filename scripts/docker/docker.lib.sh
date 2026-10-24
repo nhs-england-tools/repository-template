@@ -366,11 +366,12 @@ function _get-docker-image-version() {
 #   $2=[path to the TOML file]
 function _toml-table-entries() {
 
-  local table="[$1]"
+  local table_name="$1"
+  local table="[$table_name]"
   local file="$2"
   local rc=0
 
-  [[ "$1" == "" ]] && table=""
+  [[ "$table_name" == "" ]] && table=""
 
   awk -v table="$table" -v dq='"' -v sq="'" '
     BEGIN { in_table = (table == "") }
