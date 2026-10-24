@@ -23,21 +23,17 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-file-format.sh scripts/docker/docker.lib.sh scripts/config/editorconfig-checker.json)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh scripts/docker/docker.lib.sh scripts/config/editorconfig-checker.json)
   QUALITY_FIXTURE_FORMAT='%s\n'
 
   # The caller's options must not reach the script under test
   unset -v MISE_TOML match_version check dry_run dry_run_opt filter BRANCH_NAME FORCE_USE_DOCKER
 
   EC_IMAGE=mstruebing/editorconfig-checker:v6.0.0@sha256:6666666666666666666666666666666666666666666666666666666666666666
-  # The sh -c argument as recorded with %q, the double space comes from the empty dry_run_opt
-  IFS= read -r EC_DOCKER_COMMAND << 'EOF'
-ec\ -config\ /check/scripts/config/editorconfig-checker.json\ --exclude\ \'.git/\'\ \ \$\(git\ ls-files\)\ /dev/null
-EOF
-
   test-run-suite \
     test-check-file-format-rejects-unknown-mode \
     test-check-file-format-all-checks-every-tracked-file \
+    test-check-file-format-preserves-unusual-paths-in-native-and-docker \
     test-check-file-format-working-tree-changes-checks-modified-files-only \
     test-check-file-format-staged-changes-checks-staged-files-only \
     test-check-file-format-branch-checks-changes-since-branch \
@@ -90,6 +86,30 @@ function test-check-file-format-all-checks-every-tracked-file() {
   assert-equal "$prefix" "${calls:0:${#prefix}}" "start of the ec call"
   assert-contains "$calls " "$A_TXT_ARGUMENT"
   assert-contains "$calls " " b.txt "
+
+  return 0
+}
+
+function test-check-file-format-preserves-unusual-paths-in-native-and-docker() {
+
+  # Arrange
+  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
+  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
+  test-isolate-path
+  test-stub ec
+  test-stub docker
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=all ./scripts/quality/check-file-format.sh
+  local native_status="$TEST_STATUS"
+  test-capture env check=all FORCE_USE_DOCKER=true ./scripts/quality/check-file-format.sh
+  # Assert
+  assert-equal 0 "$native_status" "native exit status"
+  assert-equal 0 "$TEST_STATUS" "Docker exit status"
+  assert-contains "$(test-stub-calls ec)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls ec)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$glob_file")"
 
   return 0
 }
@@ -176,7 +196,7 @@ function test-check-file-format-fails-when-the-base-branch-is-missing() {
   test-capture env check=branch ./scripts/quality/check-file-format.sh
   # Assert
   assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "fatal: ambiguous argument 'origin/main': unknown revision"
+  assert-contains "$TEST_STDERR" "Branch to compare with not found: origin/main"
   assert-stub-not-called ec
 
   return 0
@@ -244,7 +264,7 @@ function test-check-file-format-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called ec
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/check $EC_IMAGE sh -c $EC_DOCKER_COMMAND"
+    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/check $EC_IMAGE ec -config /check/scripts/config/editorconfig-checker.json --exclude .git/ a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh /dev/null"
   quality-assert-one-docker-run
 
   return 0
@@ -262,7 +282,7 @@ function test-check-file-format-uses-docker-when-ec-is-missing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/check $EC_IMAGE sh -c $EC_DOCKER_COMMAND"
+    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/check $EC_IMAGE ec -config /check/scripts/config/editorconfig-checker.json --exclude .git/ a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh /dev/null"
   quality-assert-one-docker-run
 
   return 0

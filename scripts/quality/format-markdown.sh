@@ -2,14 +2,15 @@
 
 set -euo pipefail
 
-# Format markdown tables to satisfy MD060 aligned style. This is a prettier
-# command wrapper. It will run prettier natively via npx if Node.js is
-# available, otherwise it will run it in a Docker container.
+# Format Markdown files with Prettier, including aligned tables. It runs
+# Prettier natively via npx if Node.js is available, otherwise in Docker.
 #
 # Usage:
-#   $ [options] ./format-markdown-tables.sh
+#   $ [options] ./format-markdown.sh
 #
 # Options:
+#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
 #   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
 #   VERBOSE=true            # Show all the executed commands, default is `false`
 #
@@ -17,53 +18,59 @@ set -euo pipefail
 #   0 - All files formatted successfully
 #   1 - Formatting failed
 
+# The `check` parameter controls which files are formatted.
+#
+#   check=all: format all existing tracked Markdown files
+#   check=staged-changes: format Markdown files staged for commit
+#   check=working-tree-changes: format modified, unstaged Markdown files. This is the default.
+#   check=branch: format all changes since branching from $BRANCH_NAME
+#
+# Untracked files are not included in any mode.
+
 # ==============================================================================
 
-# Format markdown tables natively or in Docker.
+# Format Markdown files in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  # Filter to tracked markdown files that still exist on disk, so prettier is
-  # never handed a path deleted in the working tree but not yet staged. Ignore
-  # rules are applied by prettier itself via --ignore-path below.
-  local files
-  files="$(git ls-files "*.md" | while IFS= read -r f; do if [[ -f "$f" ]]; then printf '%s\n' "$f"; fi; done)"
+  # shellcheck disable=SC1091
+  source ./scripts/quality/git-files.lib.sh
+  local check_mode=${check:-working-tree-changes}
+  local -a files=()
+  quality-collect-git-files files "$check_mode" '*.md' || return "$?"
 
-  if [[ -z "$files" ]]; then
+  if [[ ${#files[@]} -eq 0 ]]; then
     return 0
   fi
 
   if command -v npx > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    files="$files" run-prettier-natively
+    run-prettier-natively "${files[@]}" || return "$?"
   else
-    files="$files" run-prettier-in-docker
+    run-prettier-in-docker "${files[@]}" || return "$?"
   fi
 
   return 0
 }
 
 # Run prettier natively via npx.
-# Arguments (provided as environment variables):
-#   files=[newline-separated list of markdown files to format]
+# Arguments:
+#   $@=[Markdown file paths to format, relative to the project's top-level directory]
 function run-prettier-natively() {
 
-  local IFS=$'\n'
-  # shellcheck disable=SC2206
-  local -a file_list=($files)
-
+  local rc=0
   npx --yes prettier@3 \
     --config "$PWD/scripts/config/prettierrc.yaml" \
     --ignore-path "$PWD/scripts/config/.prettierignore" \
     --write \
-    "${file_list[@]}"
+    "$@" || rc=$?
 
-  return 0
+  return "$rc"
 }
 
 # Run prettier in a Docker container.
-# Arguments (provided as environment variables):
-#   files=[newline-separated list of markdown files to format]
+# Arguments:
+#   $@=[Markdown file paths to format, relative to the project's top-level directory]
 function run-prettier-in-docker() {
 
   # shellcheck disable=SC1091
@@ -72,10 +79,7 @@ function run-prettier-in-docker() {
   local image
   image=$(name=node docker-get-image-version-and-pull) || return "$?"
 
-  local IFS=$'\n'
-  # shellcheck disable=SC2206
-  local -a file_list=($files)
-
+  local rc=0
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
@@ -84,9 +88,9 @@ function run-prettier-in-docker() {
       --config /workdir/scripts/config/prettierrc.yaml \
       --ignore-path /workdir/scripts/config/.prettierignore \
       --write \
-      "${file_list[@]}"
+      "$@" || rc=$?
 
-  return 0
+  return "$rc"
 }
 
 # ==============================================================================

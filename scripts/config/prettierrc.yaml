@@ -1,3 +1,5 @@
-# Prettier configuration scoped to markdown table formatting.
-# Invoked by scripts/quality/format-markdown-tables.sh
-proseWrap: preserve
+# Prettier configuration for Markdown formatting, including aligned tables.
+# Invoked by scripts/quality/format-markdown.sh
+printWidth: 80
+proseWrap: always
+useTabs: false

@@ -22,7 +22,7 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-links.sh scripts/docker/docker.lib.sh scripts/config/lychee.toml)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-links.sh scripts/quality/git-files.lib.sh scripts/docker/docker.lib.sh scripts/config/lychee.toml)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
@@ -42,6 +42,8 @@ function main() {
     test-check-markdown-links-uses-docker-when-forced \
     test-check-markdown-links-uses-docker-when-lychee-is-missing \
     test-check-markdown-links-keeps-paths-with-spaces-intact \
+    test-check-markdown-links-preserves-newline-and-glob-paths \
+    test-check-markdown-links-treats-dash-leading-name-as-path \
     test-check-markdown-links-stops-when-the-image-pull-fails
 
   return 0
@@ -100,6 +102,48 @@ function test-check-markdown-links-all-passes-each-existing-file() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$options README.md docs/guide.md" "$(test-stub-calls lychee)" "the only lychee call"
+
+  return 0
+}
+
+function test-check-markdown-links-preserves-newline-and-glob-paths() {
+
+  # Arrange
+  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
+  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
+  test-isolate-path
+  test-stub lychee
+  test-stub docker
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=all ./scripts/quality/check-markdown-links.sh
+  local native_status="$TEST_STATUS"
+  test-capture env check=all FORCE_USE_DOCKER=true ./scripts/quality/check-markdown-links.sh
+  # Assert
+  assert-equal 0 "$native_status" "native exit status"
+  assert-equal 0 "$TEST_STATUS" "Docker exit status"
+  assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$glob_file")"
+
+  return 0
+}
+
+function test-check-markdown-links-treats-dash-leading-name-as-path() {
+
+  # Arrange
+  quality-create-fixture-repo README.md
+  printf '# Heading\n' > "$TEST_TMP/repo/-not-an-option.md"
+  git -C "$TEST_TMP/repo" add -- '-not-an-option.md'
+  test-isolate-path
+  test-stub lychee
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=all ./scripts/quality/check-markdown-links.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(test-stub-calls lychee)" ' ./-not-an-option.md'
 
   return 0
 }

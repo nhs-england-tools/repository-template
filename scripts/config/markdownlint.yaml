@@ -20,9 +20,13 @@ MD010: # no-hard-tabs
     - makefile
 
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md013.md
-# Line length: Flags lines exceeding a maximum character limit.
-# Disabled: Long lines are acceptable for readability in documentation.
-MD013: false
+# Line length: Wrap prose at 80 characters to support side-by-side code reviews.
+# Headings, code blocks and tables are exempt.
+MD013:
+  line_length: 80
+  headings: false
+  code_blocks: false
+  tables: false
 
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
 # Multiple headings with same content: Flags duplicate heading text.
@@ -49,7 +53,8 @@ MD036: false
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md
 # First line in file should be a top-level heading: Flags files not starting with H1.
 # Disabled: Many prompt/agent files start with YAML front-matter.
-MD041: false
+MD041:
+  allow_preamble: true
 
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/md060.md
 # Table column style: Enforces vertically aligned pipe characters in tables.

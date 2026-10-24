@@ -30,34 +30,16 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  local check=${check:-working-tree-changes}
-  local files
-  case $check in
-    "all")
-      files="$(git ls-files "*.md" | while IFS= read -r f; do if [[ -f "$f" ]]; then printf '%s\n' "$f"; fi; done)"
-      ;;
-    "staged-changes")
-      files="$(git diff --diff-filter=ACMRT --name-only --cached "*.md")"
-      ;;
-    "working-tree-changes")
-      files="$(git diff --diff-filter=ACMRT --name-only "*.md")"
-      ;;
-    "branch")
-      if ! git rev-parse --verify --quiet "${BRANCH_NAME:-origin/main}^{commit}" > /dev/null; then
-        echo "Branch to compare with not found: ${BRANCH_NAME:-origin/main}" >&2 && exit 1
-      fi
-      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --diff-filter=ACMRT --name-only "*.md") | sort | uniq )"
-      ;;
-    *)
-      echo "Unrecognised check mode: $check" >&2 && exit 1
-      ;;
-  esac
+  # shellcheck disable=SC1091
+  source ./scripts/quality/git-files.lib.sh
+  local -a files=()
+  quality-collect-git-files files "${check:-working-tree-changes}" '*.md' || return "$?"
 
-  if [[ -n "$files" ]]; then
+  if [[ ${#files[@]} -gt 0 ]]; then
     if command -v lychee > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-      files="$files" run-lychee-natively
+      run-lychee-natively "${files[@]}" || return "$?"
     else
-      files="$files" run-lychee-in-docker
+      run-lychee-in-docker "${files[@]}" || return "$?"
     fi
   fi
 
@@ -65,26 +47,22 @@ function main() {
 }
 
 # Run lychee natively.
-# Arguments (provided as environment variables):
-#   files=[files to check]
+# Arguments:
+#   $@=[files to check]
 function run-lychee-natively() {
-
-  local IFS=$'\n'
-  # shellcheck disable=SC2206
-  local -a file_list=($files)
 
   lychee \
     --config "$PWD/scripts/config/lychee.toml" \
     --no-progress \
     --quiet \
-    "${file_list[@]}"
+    "$@" || return "$?"
 
   return 0
 }
 
 # Run lychee in a Docker container.
-# Arguments (provided as environment variables):
-#   files=[files to check]
+# Arguments:
+#   $@=[files to check]
 function run-lychee-in-docker() {
 
   # shellcheck disable=SC1091
@@ -93,10 +71,6 @@ function run-lychee-in-docker() {
   local image
   image=$(name=lycheeverse/lychee docker-get-image-version-and-pull) || return "$?"
 
-  local IFS=$'\n'
-  # shellcheck disable=SC2206
-  local -a file_list=($files)
-
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
@@ -104,7 +78,7 @@ function run-lychee-in-docker() {
       --config /workdir/scripts/config/lychee.toml \
       --no-progress \
       --quiet \
-      "${file_list[@]}"
+      "$@" || return "$?"
 
   return 0
 }

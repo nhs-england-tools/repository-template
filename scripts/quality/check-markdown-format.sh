@@ -36,61 +36,39 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  local check=${check:-working-tree-changes}
-  local files
-  case $check in
-    "all")
-      files="$(git ls-files "*.md" | while IFS= read -r f; do if [[ -f "$f" ]]; then printf '%s\n' "$f"; fi; done)"
-      ;;
-    "staged-changes")
-      files="$(git diff --diff-filter=ACMRT --name-only --cached "*.md")"
-      ;;
-    "working-tree-changes")
-      files="$(git diff --diff-filter=ACMRT --name-only "*.md")"
-      ;;
-    "branch")
-      if ! git rev-parse --verify --quiet "${BRANCH_NAME:-origin/main}^{commit}" > /dev/null; then
-        echo "Branch to compare with not found: ${BRANCH_NAME:-origin/main}" >&2 && exit 1
-      fi
-      files="$( (git diff --diff-filter=ACMRT --name-only "${BRANCH_NAME:-origin/main}" "*.md"; git diff --diff-filter=ACMRT --name-only "*.md") | sort | uniq )"
-      ;;
-    *)
-      echo "Unrecognised check mode: $check" >&2 && exit 1
-      ;;
-  esac
+  # shellcheck disable=SC1091
+  source ./scripts/quality/git-files.lib.sh
+  local -a files=()
+  quality-collect-git-files files "${check:-working-tree-changes}" '*.md' || return "$?"
 
-  if [[ -n "$files" ]]; then
+  if [[ ${#files[@]} -gt 0 ]]; then
     if command -v markdownlint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-      files="$files" run-markdownlint-natively
+      run-markdownlint-natively "${files[@]}" || return "$?"
     else
-      files="$files" run-markdownlint-in-docker
+      run-markdownlint-in-docker "${files[@]}" || return "$?"
     fi
-    files="$files" check-frontmatter-blank-line
+    check-frontmatter-blank-line "${files[@]}" || return "$?"
   fi
 
   return 0
 }
 
 # Run markdownlint natively.
-# Arguments (provided as environment variables):
-#   files=[files to check]
+# Arguments:
+#   $@=[files to check]
 function run-markdownlint-natively() {
 
-  local IFS=$'\n'
-  # shellcheck disable=SC2206
-  local -a file_list=($files)
-
   markdownlint \
-    "${file_list[@]}" \
+    "$@" \
     --config "$PWD/scripts/config/markdownlint.yaml" \
-    --ignore-path "$PWD/scripts/config/.markdownlintignore"
+    --ignore-path "$PWD/scripts/config/.markdownlintignore" || return "$?"
 
   return 0
 }
 
 # Run markdownlint in a Docker container.
-# Arguments (provided as environment variables):
-#   files=[files to check]
+# Arguments:
+#   $@=[files to check]
 function run-markdownlint-in-docker() {
 
   # shellcheck disable=SC1091
@@ -99,17 +77,13 @@ function run-markdownlint-in-docker() {
   local image
   image=$(name=ghcr.io/igorshubovych/markdownlint-cli docker-get-image-version-and-pull) || return "$?"
 
-  local IFS=$'\n'
-  # shellcheck disable=SC2206
-  local -a file_list=($files)
-
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
     "$image" \
-      "${file_list[@]}" \
+      "$@" \
       --config /workdir/scripts/config/markdownlint.yaml \
-      --ignore-path /workdir/scripts/config/.markdownlintignore
+      --ignore-path /workdir/scripts/config/.markdownlintignore || return "$?"
 
   return 0
 }
@@ -117,15 +91,13 @@ function run-markdownlint-in-docker() {
 # Enforce a blank line between the YAML frontmatter closing `---` and the
 # following content. `markdownlint` does not provide a built-in rule for this
 # (MD022 ignores frontmatter delimiters), so we enforce it here.
-# Arguments (provided as environment variables):
-#   files=[files to check]
+# Arguments:
+#   $@=[files to check]
 function check-frontmatter-blank-line() {
 
-  # No explicit `return 0` here: the python3 exit status is the result of the
-  # check, so a violation (exit 1) must propagate to fail the check under set -e.
-  python3 - <<'PY'
-import os, sys
-files = [f for f in os.environ.get("files", "").splitlines() if f]
+  python3 - "$@" <<'PY'
+import sys
+files = sys.argv[1:]
 violations = []
 encoding_warnings = []
 for path in files:

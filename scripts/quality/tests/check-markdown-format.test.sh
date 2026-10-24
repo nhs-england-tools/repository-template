@@ -24,7 +24,7 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-format.sh scripts/docker/docker.lib.sh scripts/config/markdownlint.yaml scripts/config/.markdownlintignore)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-format.sh scripts/quality/git-files.lib.sh scripts/docker/docker.lib.sh scripts/config/markdownlint.yaml scripts/config/.markdownlintignore)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
@@ -36,6 +36,7 @@ function main() {
     test-check-markdown-format-rejects-unknown-mode \
     test-check-markdown-format-does-nothing-without-markdown-changes \
     test-check-markdown-format-all-passes-each-existing-file \
+    test-check-markdown-format-preserves-unusual-paths-through-frontmatter \
     test-check-markdown-format-working-tree-and-staged-select-the-right-files \
     test-check-markdown-format-branch-skips-deleted-files \
     test-check-markdown-format-fails-when-the-base-branch-is-missing \
@@ -102,6 +103,26 @@ function test-check-markdown-format-all-passes-each-existing-file() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "README.md docs/my\\ doc.md $options" "$(test-stub-calls markdownlint)" "the only markdownlint call"
+
+  return 0
+}
+
+function test-check-markdown-format-preserves-unusual-paths-through-frontmatter() {
+
+  # Arrange
+  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
+  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
+  test-isolate-path python3
+  test-stub markdownlint
+  printf '%s\n' '---' 'title: x' '---' '# Heading' > "$TEST_TMP/repo/$newline_file"
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=all ./scripts/quality/check-markdown-format.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$glob_file")"
+  assert-contains "$TEST_STDERR" "$newline_file:4: missing blank line after YAML frontmatter"
 
   return 0
 }

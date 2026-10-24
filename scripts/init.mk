@@ -24,8 +24,8 @@ check-markdown-links: check ?= all
 check-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
-format-markdown-tables: # Format markdown tables @Quality
-	./scripts/quality/format-markdown-tables.sh
+format-markdown: # Format Markdown files @Quality
+	./scripts/quality/format-markdown.sh
 
 check-shell-lint: check ?= all
 check-shell-lint: # Lint all tracked shell scripts @Quality
@@ -195,7 +195,7 @@ ${VERBOSE}.SILENT: \
 	check-shell-lint \
 	clean \
 	config \
-	format-markdown-tables \
+	format-markdown \
 	githooks-config \
 	githooks-run \
 	help \
