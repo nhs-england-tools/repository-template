@@ -7,9 +7,15 @@
 
 ## Overview
 
-Git hooks are implemented as Make targets that pre-commit executes automatically on each commit (after you run `make config` to install the hooks). Each hook runs a `make` target, which in turn calls the appropriate script under `scripts/quality/`. The same Make targets are reused in CI/CD, keeping local checks and pipeline checks consistent.
+Git hooks are implemented as Make targets that pre-commit executes automatically
+on each commit (after you run `make config` to install the hooks). Each hook
+runs a `make` target, which in turn calls the appropriate script under
+`scripts/quality/`. The same Make targets are reused in CI/CD, keeping local
+checks and pipeline checks consistent.
 
-The [pre-commit](https://pre-commit.com/) framework is a powerful tool for managing Git hooks, providing automated hook installation and management capabilities.
+The [pre-commit](https://pre-commit.com/) framework is a powerful tool for
+managing Git hooks, providing automated hook installation and management
+capabilities.
 
 ## Key files
 
@@ -23,7 +29,9 @@ The [pre-commit](https://pre-commit.com/) framework is a powerful tool for manag
 
 ## Testing
 
-You can run and test the process by executing the following commands from your terminal. These commands should be run from the top-level directory of the repository:
+You can run and test the process by executing the following commands from your
+terminal. These commands should be run from the top-level directory of the
+repository:
 
 ```shell
 make githooks-config

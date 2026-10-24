@@ -1,7 +1,5 @@
 <!-- markdownlint-disable-file first-line-heading -->
 
-## Summary
-
 <!--
 Write 1-3 sentences that stand alone in notifications and history. State what
 changed and the value or problem it addresses. Keep this short. The sections
@@ -43,7 +41,8 @@ command and its result. Summarise useful output rather than pasting long logs.
 For docs-only or configuration-only changes, say what checks were run and why
 runtime testing does not apply. List checks not run and the reason.
 
-For CLI checks, use this structure when it helps a reviewer reproduce the result:
+For CLI checks, use this structure when it helps a reviewer reproduce the
+result:
 
 Test 1: Name the behaviour being checked.
 Prerequisites: Only what is needed to repeat the check.
@@ -57,7 +56,10 @@ not apply rather than filling them with boilerplate.
 
 ## Type of changes
 
-<!-- What types of changes does your code introduce? Put an `x` in all the boxes that apply. -->
+<!--
+What types of changes does your code introduce? Put an `x` in all the boxes that
+apply.
+-->
 
 - [ ] Refactoring (non-breaking change)
 - [ ] New feature (non-breaking change which adds functionality)
@@ -66,7 +68,9 @@ not apply rather than filling them with boilerplate.
 
 ## Checklist
 
-<!-- Go over all the following points, and put an `x` in all the boxes that apply. -->
+<!--
+Go over all the following points, and put an `x` in all the boxes that apply.
+-->
 
 - [ ] I am familiar with the [contributing guidelines](./CONTRIBUTING.md)
 - [ ] I have followed the code style of the project
@@ -80,6 +84,13 @@ not apply rather than filling them with boilerplate.
 
 ## Sensitive information
 
-Please do not include credentials, PII/PID, or other sensitive data. See [NHS data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public). Check the PR description, commits, code changes, logs, screenshots, and test fixtures. If sensitive information has already been shared, follow the project's approved incident or information governance process and contact maintainers privately.
+Please do not include credentials, PII/PID, or other sensitive data. See [NHS
+data safety guidance]. Check the PR description, commits, code changes, logs,
+screenshots, and test fixtures. If sensitive information has already been
+shared, follow the project's approved incident or information governance process
+and contact maintainers privately.
 
 - [ ] I confirm this pull request does not include PII/PID or sensitive data.
+
+[NHS data safety guidance]:
+  https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public
