@@ -1,249 +1,271 @@
-# Guide: Sign Git commits
+# Sign Git commits
 
-- [Guide: Sign Git commits](#guide-sign-git-commits)
-  - [Overview](#overview)
-  - [Signing commits using GPG](#signing-commits-using-gpg)
+- [Sign Git commits](#sign-git-commits)
+  - [Sign with GPG](#sign-with-gpg)
     - [Generate GPG key](#generate-gpg-key)
-    - [Configure Git](#configure-git)
-    - [Configure GitHub](#configure-github)
-    - [Troubleshooting](#troubleshooting)
-    - [Additional settings](#additional-settings)
-  - [Signing commits using SSH](#signing-commits-using-ssh)
-    - [Generate SSH key](#generate-ssh-key)
-    - [Configure Git](#configure-git-1)
-    - [Configure GitHub](#configure-github-1)
-  - [Testing](#testing)
+    - [Back up, import or remove a GPG key](#back-up-import-or-remove-a-gpg-key)
+    - [Configure Git for GPG](#configure-git-for-gpg)
+    - [Add the GPG key to GitHub](#add-the-gpg-key-to-github)
+    - [Troubleshoot and configure GPG agent](#troubleshoot-and-configure-gpg-agent)
+  - [Sign with SSH](#sign-with-ssh)
+    - [Generate or select an SSH key](#generate-or-select-an-ssh-key)
+    - [Configure Git for SSH](#configure-git-for-ssh)
+    - [Add the SSH signing key to GitHub](#add-the-ssh-signing-key-to-github)
+  - [Verify signing](#verify-signing)
 
-## Overview
+This template does not configure commit signing or manage signing keys. Git
+signs commits locally, and GitHub verifies signatures made with a key on your
+account. Choose GPG or SSH. See GitHub's
+[commit signature documentation](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification)
+for account-specific requirements.
 
-Signing Git commits is a good practice and ensures the correct web of trust has
-been established for the distributed version control management, e.g.
-[Bitwarden](https://bitwarden.com/).
+> [!WARNING]
+> A batch file containing a passphrase and a private-key export both contain
+> sensitive material. Keep them outside the repository, restrict access, and
+> remove or protect copies after use. `Expire-Date: 0` creates a key without an
+> expiry, and `git config --global` changes signing for all repositories.
+> Choose settings that meet your organisation's policy.
 
-There are two ways to sign commits in GitHub, using a GPG or an SSH signature.
-Detailed information about this can be found in the following
-[documentation](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification).
-It is recommended to use the GPG method for signing commits as GPG keys can be
-set to expire or be revoked if needed. Below is a step-by-step guide on how to
-set it up.
-
-## Signing commits using GPG
+## Sign with GPG
 
 ### Generate GPG key
 
-<!-- markdownlint-disable-next-line no-inline-html -->
+First check whether you already have a signing key:
 
-If you do not have it already generate a new pair of GPG keys. Please change the
-passphrase (<span style="color:red">pleaseChooseYourKeyPassphrase</span>) below
-and save it in your password manager.
+```shell
+gpg --list-secret-keys --keyid-format LONG
+```
+
+If you need a new key, generate it interactively and choose a passphrase and
+expiry when prompted. Do not put a passphrase in a command or temporary file:
+
+```shell
+gpg --full-generate-key
+```
+
+To create the original example's ECDSA P-256 primary key and ECDH P-256
+encryption subkey without prompts, use a GnuPG batch parameter file. Replace
+the name, email and passphrase before running this. `Expire-Date: 0` means the
+key does not expire; change it to a duration such as `1y` if you want an expiry.
+The parameter file contains your passphrase in plain text until removed. The
+quoted `'EOF'` keeps the passphrase literal, so the shell does not expand `$`,
+backticks or `$(...)` in it. GnuPG ignores leading and trailing spaces in the
+passphrase:
 
 ```shell
 USER_NAME="Your Name"
-USER_EMAIL="your.name@email"
-file=$(echo $USER_EMAIL | sed "s/[^[:alpha:]]/-/g")
-
-mkdir -p "$HOME/.gnupg"
-chmod 0700 "$HOME/.gnupg"
-cd "$HOME/.gnupg"
-cat > "$file.gpg-key.script" <<EOF
-  %echo Generating a GPG key
-  Key-Type: ECDSA
-  Key-Curve: nistp256
-  Subkey-Type: ECDH
-  Subkey-Curve: nistp256
-  Name-Real: $USER_NAME
-  Name-Email: $USER_EMAIL
-  Expire-Date: 0
-  Passphrase: pleaseChooseYourKeyPassphrase
-  %commit
-  %echo done
+USER_EMAIL="your.name@example.com"
+key_params="$(mktemp "${TMPDIR:-/tmp}/gpg-key.XXXXXXXX")"
+chmod 600 "$key_params"
+{
+  cat <<'EOF'
+Key-Type: ECDSA
+Key-Curve: nistp256
+Subkey-Type: ECDH
+Subkey-Curve: nistp256
+Expire-Date: 0
+Passphrase: replace-with-your-passphrase
 EOF
-gpg --batch --generate-key "$file.gpg-key.script"
-rm "$file.gpg-key.script"
-# or do it manually by running `gpg --full-gen-key`
+  printf 'Name-Real: %s\nName-Email: %s\n' "$USER_NAME" "$USER_EMAIL"
+  echo '%commit'
+} > "$key_params"
+gpg --batch --pinentry-mode loopback --generate-key "$key_params"
+rm -- "$key_params"
 ```
 
-Make note of the ID and save the keys.
+The second curve field is `Subkey-Curve`, not another `Key-Curve`. Do not run
+these commands with a real passphrase where your terminal history or session
+logs might capture it. If generation is interrupted, remove the parameter
+file before leaving the terminal. Check the key ID and fingerprint:
 
 ```shell
-gpg --list-secret-keys --keyid-format LONG $USER_EMAIL
+gpg --list-secret-keys --keyid-format LONG "$USER_EMAIL"
 ```
 
-You should see a similar output to this:
+An ECDSA/ECDH key from this example has an output shape like this:
 
-```shell
-sec   nistp256/AAAAAAAAAAAAAAAA 2023-01-01 [SCA]
-      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-uid                 [ultimate] Your Name <your.name@email>
-ssb   nistp256/BBBBBBBBBBBBBBBB 2023-01-01 [E]
+```text
+sec   nistp256/AAAAAAAAAAAAAAAA YYYY-MM-DD [SCA]
+  <primary-key-fingerprint>
+uid   [ultimate] Your Name <your.name@example.com>
+ssb   nistp256/BBBBBBBBBBBBBBBB YYYY-MM-DD [E]
+  <subkey-fingerprint>
 ```
 
-Export your keys.
+### Back up, import or remove a GPG key
+
+Make a portable backup if your key-transfer process requires one. Set `KEY_ID`
+to the primary key ID from the listing above. The second export contains your
+**private key**, not just its public half. `umask 077` creates that file
+readable only by you, and `chmod 600` also fixes a file left by an earlier
+export:
 
 ```shell
-ID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-gpg --armor --export $ID > $file.gpg-key.pub
-gpg --armor --export-secret-keys $ID > $file.gpg-key
+KEY_ID=YOUR_KEY_ID
+gpg --list-secret-keys --keyid-format LONG "$KEY_ID"
+gpg --armor --export "$KEY_ID" > "$HOME/.gnupg/github-signing-key.pub.asc"
+(umask 077 && gpg --armor --export-secret-keys "$KEY_ID" > "$HOME/.gnupg/github-signing-key.private.asc")
+chmod 600 "$HOME/.gnupg/github-signing-key.private.asc"
 ```
 
-Import already existing private key. GPG keys are stored in the `~/.gnupg`
-directory.
+Transfer the private backup through your organisation's approved secure
+process. Keep it outside the repository and remove any temporary copy once the
+backup is verified. To restore it on another machine, import the private backup
+from its secure location and confirm that the secret key appears:
 
 ```shell
-gpg --import $file.gpg-key
+gpg --import /path/to/secure-backup.asc
+gpg --list-secret-keys --keyid-format LONG
 ```
 
-Remove keys from the GPG agent if no longer needed.
+If you need to remove a key locally, first confirm the ID and that you have a
+usable backup. These commands delete the private key, then its public key from
+your local GnuPG keyring; they do not remove keys from your GitHub account:
 
 ```shell
-gpg --delete-secret-keys $ID
-gpg --delete-keys $ID
+KEY_ID=YOUR_KEY_ID
+gpg --delete-secret-keys "$KEY_ID"
+gpg --delete-keys "$KEY_ID"
 ```
 
-### Configure Git
+### Configure Git for GPG
 
-Use the
-[following commands](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-gpg-key)
-to set your default signing key in Git to the ID of the GPG key you generated.
-Replace `$ID` with your actual GPG key ID from the script above.
-
-```shell
-git config --global user.signingkey $ID
-```
-
-Then enable automatic signing of Git commits by running:
+Replace `YOUR_KEY_ID` below with the long ID of the key you want to use. Git
+uses that key for future commits. The key's email identity must match your Git
+committer email and a verified email on your GitHub account. Check your Git
+identity with `git config user.email`. For an existing key with a different
+identity, see GitHub's
+[email association guidance](https://docs.github.com/en/authentication/managing-commit-signature-verification/associating-an-email-with-your-gpg-key).
 
 ```shell
+git config --global gpg.format openpgp
+git config --global user.signingkey YOUR_KEY_ID
 git config --global commit.gpgsign true
 ```
 
-### Configure GitHub
+### Add the GPG key to GitHub
 
-To
-[add your GPG public key to your GitHub account](https://docs.github.com/en/authentication/managing-commit-signature-verification/adding-a-gpg-key-to-your-github-account)
-follow these steps:
-
-1. Navigate to your GitHub account settings.
-2. From the sidebar, click on "**SSH and GPG keys**".
-3. Click on the "**New GPG key**" button.
-4. In the "**Title**" field, enter a descriptive name for the key, like "My
-   GitHub signing key".
-5. Copy the contents of your public key file and paste it into the "**Key**"
-   field.
-
-   ```shell
-   cat $file.gpg-key.pub
-   ```
-
-6. Click "**Add GPG key**" to save.
-
-After completing these steps, your new signing key will be listed in the "**SSH
-and GPG keys**" section of your GitHub profile.
-
-### Troubleshooting
-
-If you receive the error message `error: gpg failed to sign the data`, make sure
-you added `export GPG_TTY=$(tty)` to your `~/.zshrc` or `~/.bashrc`, and
-restarted your terminal.
+Export the **public** key to your terminal for the GitHub website. Never upload
+the private-key backup:
 
 ```shell
-sed -i '/^export GPG_TTY/d' ~/.exports
-echo "export GPG_TTY=\$TTY" >> ~/.exports
+gpg --armor --export YOUR_KEY_ID
 ```
 
-### Additional settings
+1. Open your GitHub profile menu and select **Settings**.
+2. In the **Access** section, open **SSH and GPG keys**.
+3. Select **New GPG key** and enter a descriptive title.
+4. Paste the complete public key from the command above into **Key**.
+5. Select **Add GPG key** and confirm your account access if prompted.
 
-Configure caching git commit signature passphrase for 3 hours
+Alternatively, use GitHub CLI after signing in with `gh auth login`. The
+default `gh` login scopes do not include `write:gpg_key`, so add it first.
+The CLI reads a public-key file, so export one if you have not already done so:
 
 ```shell
-source ~/.zshrc # or ~/.bashrc
-mkdir -p ~/.gnupg
-sed -i '/^pinentry-program/d' ~/.gnupg/gpg-agent.conf 2>/dev/null ||:
-echo "pinentry-program $(whereis -q pinentry)" >> ~/.gnupg/gpg-agent.conf
-sed -i '/^default-cache-ttl/d' ~/.gnupg/gpg-agent.conf
-echo "default-cache-ttl 10800" >> ~/.gnupg/gpg-agent.conf
-sed -i '/^max-cache-ttl/d' ~/.gnupg/gpg-agent.conf
-echo "max-cache-ttl 10800" >> ~/.gnupg/gpg-agent.conf
+gh auth refresh -h github.com -s write:gpg_key
+gpg --armor --export YOUR_KEY_ID > "$HOME/.gnupg/github-signing-key.pub.asc"
+gh gpg-key add "$HOME/.gnupg/github-signing-key.pub.asc" --title "My signing key"
+```
+
+See GitHub's [GPG key instructions](https://docs.github.com/en/authentication/managing-commit-signature-verification/adding-a-gpg-key-to-your-github-account).
+
+### Troubleshoot and configure GPG agent
+
+If GPG reports `gpg failed to sign the data`, try setting `GPG_TTY` in your
+current terminal:
+
+```shell
+export GPG_TTY="$(tty)"
+```
+
+If it helps, add that export to the shell startup file you actually use so it
+is set for each new terminal. On macOS, if GnuPG needs a graphical passphrase
+prompt, find an installed pinentry program with `command -v pinentry-mac` and
+set `pinentry-program` to its full path in `$HOME/.gnupg/gpg-agent.conf`.
+
+To cache the GPG signing passphrase for up to three hours, set these options in
+`$HOME/.gnupg/gpg-agent.conf`. Edit existing entries instead of adding
+duplicates. A longer cache increases the time an unlocked key is available:
+
+```text
+default-cache-ttl 10800
+max-cache-ttl 10800
+```
+
+Stop the agent after changing the file; GnuPG restarts it on the next use:
+
+```shell
 gpgconf --kill gpg-agent
-git config --global credential.helper cache
-#git config --global --unset credential.helper
 ```
 
-## Signing commits using SSH
+`git config --global credential.helper cache` is a separate optional setting
+for Git authentication credentials. It does not cache your GPG signing
+passphrase.
 
-### Generate SSH key
+## Sign with SSH
 
-You should not do this if you already have GPG signing set up. One or the other
-is fine, but not both.
+### Generate or select an SSH key
 
-If you do not already have SSH key access set up on your GitHub account, first
-[generate a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
-To create a new SSH key, you need to run the following command. This will
-generate a new SSH key of the type `ed25519` and associate it with your email
-address. Please replace your.name@email with your actual email address.
+Use an existing SSH key or generate a dedicated signing key. If you create one,
+use an unused path and enter its passphrase interactively. If you already have a
+key, use its path in the commands below instead:
 
 ```shell
-ssh-keygen -t ed25519 -C "your.name@email" -f "~/.ssh/github-signing-key"
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+ssh-keygen -t ed25519 -C "your.name@example.com" \
+  -f "$HOME/.ssh/github-signing-key"
 ```
 
-When you run this command, it will ask you to enter a passphrase. Choose a
-strong passphrase and make sure to remember it, as you will need to provide it
-when your key is loaded by the SSH agent.
+### Configure Git for SSH
 
-### Configure Git
-
-If you are signing commits locally using an SSH key, you need to
-[configure Git](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-ssh-key)
-accordingly since it is not the default method.
-
-Run the following command to instruct Git to use the SSH signing key format,
-instead of the default GPG:
+Tell Git to sign future commits with that private key:
 
 ```shell
 git config --global gpg.format ssh
-```
-
-Next, specify the private key for Git to use:
-
-```shell
-git config --global user.signingkey ~/.ssh/github-signing-key
-```
-
-Lastly, instruct Git to sign all of your commits:
-
-```shell
+git config --global user.signingkey "$HOME/.ssh/github-signing-key"
 git config --global commit.gpgsign true
 ```
 
-### Configure GitHub
+### Add the SSH signing key to GitHub
 
-To
-[add your SSH public key to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-follow these steps:
+Display only the public key. If you are using an existing SSH key, substitute
+its public-key path:
 
-1. Navigate to your GitHub account settings.
-2. From the sidebar, click on "**SSH and GPG keys**".
-3. Click on the "**New SSH key**" button.
-4. In the "**Title**" field, enter a descriptive name for the key, like "My
-   GitHub signing key".
-5. Copy the contents of your public key file and paste it into the "**Key**"
-   field.
+```shell
+cat "$HOME/.ssh/github-signing-key.pub"
+```
 
-   ```shell
-   cat ~/.ssh/github-signing-key.pub
-   ```
+1. Open your GitHub profile menu and select **Settings**.
+2. In the **Access** section, open **SSH and GPG keys**.
+3. Select **New SSH key** and enter a descriptive title.
+4. Set **Key type** to **Signing Key**.
+5. Paste the public key from the command above into **Key**.
+6. Select **Add SSH key** and confirm your account access if prompted.
 
-6. Ensure to select "**Signing Key**" from the "**Key type**" dropdown.
-7. Click "**Add SSH key**" to save.
+If this key is already registered as an authentication key, add it again as a
+signing key. Alternatively, use GitHub CLI after signing in with
+`gh auth login`. Add the `write:ssh_signing_key` scope first, then use the
+public-key path you chose:
 
-After completing these steps, your new signing key will be listed in the "**SSH
-and GPG keys**" section of your GitHub profile.
+```shell
+gh auth refresh -h github.com -s write:ssh_signing_key
+gh ssh-key add "$HOME/.ssh/github-signing-key.pub" --type signing --title "My signing key"
+```
 
-## Testing
+See GitHub's
+[SSH key instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
+If Git cannot prompt for your key's passphrase, follow GitHub's
+[ssh-agent setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+to load the key securely.
 
-To ensure your configuration works as expected, make a commit to a branch
-locally and push it to GitHub. When you view the commit history of the branch on
-GitHub,
-[your latest commit](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification#about-commit-signature-verification)
-should now display a `Verified` tag, which indicates successful signing with
-your GPG or SSH key.
+## Verify signing
+
+After your next normal commit and push, check that GitHub shows **Verified**
+beside the commit. This confirms that GitHub recognised the signature and its
+associated public key, not that the template configured signing for you. If a
+GPG signature is **Unverified**, check that the uploaded public key, the key's
+email identity and `git config user.email` agree with your verified GitHub
+email. For other failures, see GitHub's
+[signature troubleshooting](https://docs.github.com/en/authentication/troubleshooting-commit-signature-verification/checking-your-commit-and-tag-signature-verification-status).

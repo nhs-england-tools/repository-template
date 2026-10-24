@@ -1,6 +1,6 @@
-# Developer Guide: Bash and Make
+# Use Bash and Make
 
-- [Developer Guide: Bash and Make](#developer-guide-bash-and-make)
+- [Use Bash and Make](#use-bash-and-make)
   - [Using Make](#using-make)
     - [Make extensions](#make-extensions)
   - [Using Bash](#using-bash)
@@ -15,17 +15,20 @@ Use GNU Make 3.82 or later. Make resolves the first `bash` on `PATH` when it
 starts and uses that executable for recipes. Keep GNU Bash 5.2 or later ahead of
 older system versions on `PATH`.
 
-Sample make target signature definition:
+Sample make target signature definition. In the Markdown examples below, the
+leading spaces represent the tab required before each Make recipe line. Replace
+them with a literal tab when adding the snippets to a Makefile.
 
 ```makefile
 some-target: # Target description - mandatory: foo=[description]; optional: baz=[description, default is 'qux'] @Category
-    # Recipe implementation...
+  # Recipe implementation...
 ```
 
 - `some-target`: This is the name of the target you would specify when you want
   to run this particular target. Use the kebab-case naming convention and prefix
-  with an underscore `_` to mark it as a "private" target. The first part of the
-  name is used for grouping, e.g. `docker-*`.
+  with an underscore `_` to mark it as a "private" target. Prefix related
+  targets consistently, for example `docker-*`. `make help` groups targets by
+  `@Category`, not by name.
 - `Target Description`: Provided directly after the target name as a single
   line, so be concise.
 - `mandatory` parameters: Parameters that must be provided when invoking the
@@ -72,15 +75,16 @@ To see all available make targets, run `make help`.
 Add team targets without editing the main `Makefile`. The
 [init.mk](../../scripts/init.mk) file loads every `*.ext.mk` file under
 `scripts/` and its subdirectories, sorted by path. Its targets work with
-`make <target>` and appear in `make help`.
+`make <target>` and appear in `make help`. The example below assumes you also
+create `scripts/backend/lambda-invoke.sh` in your project.
 
 ```makefile
 # scripts/backend/backend.ext.mk
 
 backend-lambda-invoke: event ?= events/default.json
 backend-lambda-invoke: # Invoke a Lambda function locally - mandatory: name=[function name]; optional: event=[event file path, default is 'events/default.json'] @Development
-    $(if $(name),,$(error name is required. Usage: make backend-lambda-invoke name=my-function))
-    name=$(name) event=$(event) ./scripts/backend/lambda-invoke.sh
+  $(if $(name),,$(error name is required. Usage: make backend-lambda-invoke name=my-function))
+  name=$(name) event=$(event) ./scripts/backend/lambda-invoke.sh
 
 ${VERBOSE}.SILENT: \
     backend-lambda-invoke \
@@ -120,6 +124,10 @@ function some-shell-function() {
 ```
 
 Run Bash function from a terminal:
+
+The function and script names in these examples are placeholders. See
+[docker.lib.sh](../../scripts/docker/docker.lib.sh) for a bundled function
+library.
 
 ```shell
 source scripts/a-suite-of-shell-functions
@@ -203,7 +211,7 @@ foo=bar make some-target
 
 To assist in investigating scripting issues, the `VERBOSE` variable is available
 for both Make and Bash scripts. If it is set to `true` or `1`, it prints all the
-commands that the script executes to the standard output. Here is how to use it:
+commands that the script executes to stderr. Here is how to use it:
 
 for Make targets
 

@@ -1,6 +1,6 @@
-# Guide: Scan secrets
+# Scan secrets
 
-- [Guide: Scan secrets](#guide-scan-secrets)
+- [Scan secrets](#scan-secrets)
   - [Overview](#overview)
   - [Key files](#key-files)
   - [Configuration checklist](#configuration-checklist)
@@ -16,8 +16,9 @@ strongly discouraged as it may lead to security incidents.
 
 [Gitleaks](https://github.com/gitleaks/gitleaks) is a powerful open-source tool
 designed to identify hard-coded secrets and other sensitive information in Git
-repositories. It works by scanning the commit history and the working directory
-for sensitive data that should not be there.
+repositories. This template's scanner checks commit history by default. Set
+`check=all` to check staged changes, the working tree and commits on the current
+branch instead.
 
 ## Key files
 
@@ -43,19 +44,21 @@ for sensitive data that should not be there.
   pipeline, providing additional protection against hard-coded secrets that
   might have been included prior to the rule additions or by bypassing the
   scanner
-- Further details on this topic can be found in the
-  [decision record](https://github.com/nhs-england-tools/repository-template/blob/main/docs/adr/ADR-002_Scan_repository_for_hardcoded_secrets.md)
-  as well as in the
-  [NHSE Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets)
-  where a usage of an alternative tool is shown
+- The [NHS Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets)
+  shows an alternative tool
 
 ## Testing
 
-You can execute and test the secret scanning across all commits locally on a
-developer's workstation using the following command
+You can scan every commit on every branch locally from the repository root:
 
 ```shell
-ALL_FILES=true ./scripts/quality/scan-secrets.sh
+check=whole-history ./scripts/quality/scan-secrets.sh
+```
+
+To check only staged changes, working-tree files and commits on your branch:
+
+```shell
+check=all ./scripts/quality/scan-secrets.sh
 ```
 
 ## Removing sensitive data

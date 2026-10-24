@@ -1,6 +1,6 @@
-# Guide: Run Git hooks on commit
+# Run Git hooks on commit
 
-- [Guide: Run Git hooks on commit](#guide-run-git-hooks-on-commit)
+- [Run Git hooks on commit](#run-git-hooks-on-commit)
   - [Overview](#overview)
   - [Key files](#key-files)
   - [Testing](#testing)
@@ -29,11 +29,15 @@ capabilities.
 
 ## Testing
 
-You can run and test the process by executing the following commands from your
-terminal. These commands should be run from the top-level directory of the
-repository:
+Review and trust `mise.toml` before installing the hooks. Run these commands
+from the repository root. If you already ran `make config`, the hooks are
+installed and you can skip `make githooks-config`:
 
 ```shell
+mise trust mise.toml
 make githooks-config
 make githooks-run
 ```
+
+`githooks-run` executes the entries in `pre-commit.yaml` against all files.
+Secret scanning uses `check=whole-history`, as it does on each commit.

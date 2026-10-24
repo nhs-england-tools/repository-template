@@ -1,4 +1,15 @@
-# Updating Dependencies
+# Update Dependencies
+
+- [Update Dependencies](#update-dependencies)
+  - [Dependency Sources](#dependency-sources)
+  - [Ground Rules](#ground-rules)
+  - [Update by Source](#update-by-source)
+    - [mise Tools](#mise-tools)
+    - [Docker Images](#docker-images)
+    - [GitHub Actions and Runners](#github-actions-and-runners)
+    - [Application Packages](#application-packages)
+    - [Homebrew Tools](#homebrew-tools)
+  - [Verify the Update](#verify-the-update)
 
 Keeping dependencies current brings security fixes and compatibility
 improvements. Exact pins and lockfiles make builds repeatable, while verified
@@ -13,17 +24,19 @@ came from. Review updates and run the repository checks before merging them.
   `.mise/locks/`.
 - **Docker images:** the custom `[_.docker]` table in
   [mise.toml](../../mise.toml) pins helper images by version tag and SHA-256
-  digest. Dockerfile base images are resolved from these entries by the Docker
-  helpers.
+  digest. When a `FROM` uses an `ARG` for its version, the Docker helpers
+  resolve a matching `[_.docker]` pin (or a `[tools]` fallback).
 - **GitHub Actions:** external actions are referenced in
   [workflow files](../../.github/workflows/) by full commit SHA, with a release
   tag comment. Workflows also select the GitHub-hosted runner image with
   `runs-on`.
 - **Application packages:** the expected dependencies are Python and npm
   (TypeScript) packages, as these language ecosystems are supported by
-  Engineering and approved on the NHS Tech Radar. This template currently has no
-  application dependency manifests. [Dependabot](../../.github/dependabot.yaml)
-  is configured for npm (including pnpm) and uv if those manifests are added.
+  Engineering and approved on the NHS Tech Radar, see
+  [Technology Recommendations](../adr/Technology_Recommendations.md). This
+  template currently has no application dependency manifests.
+  [Dependabot](../../.github/dependabot.yaml) is configured for npm (including
+  pnpm) and uv if those manifests are added.
 - **Host prerequisites:** the macOS GNU tools installed by
   [install-gnu-macos.sh](../../scripts/toolchain/install-gnu-macos.sh) are
   Homebrew-managed and are not version-pinned here.
@@ -45,7 +58,8 @@ hook revisions to update.
   [Docker Images](#docker-images).
 - **An empty update is a valid result.** When every check below reports nothing
   to change, stop. The only expected `make toolchain-outdated` entry is
-  `editorconfig-checker` 4.x, which is excluded deliberately.
+  `editorconfig-checker` 4.x, which `make toolchain-upgrade` excludes
+  deliberately.
 - **Update everything in one pull request,** then verify once at the end.
 - **Do not bypass the safeguards.** Do not shorten the cooldown with
   `MISE_MINIMUM_RELEASE_AGE` or `--minimum-release-age` outside the reviewed
@@ -56,7 +70,7 @@ hook revisions to update.
   the error. Report it and investigate the upstream release first, see the mise
   [checksum mismatch guidance](https://mise.jdx.dev/dev-tools/mise-lock.html#checksum-mismatch).
 
-## Updating Dependencies
+## Update by Source
 
 ### mise Tools
 
@@ -113,8 +127,8 @@ No Make target updates the CLI or `min_version`. See the
 The `[_.docker]` table lets the scripts run the same tools in containers when
 they are not installed natively, so each image must run the same version as its
 mise tool. The `make toolchain-outdated` and `make toolchain-upgrade` targets do
-not touch `[_.docker]`, so after every `[tools]` change, update the images by
-hand.
+not touch `[_.docker]`. After a `[tools]` change, update any matching image pin
+by hand.
 
 **The rule:** the version in each `[_.docker]` entry equals the version of the
 matching `[tools]` entry, allowing for the image's tag spelling (for example a

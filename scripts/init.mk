@@ -184,7 +184,7 @@ HELP_SCRIPT = \
 	}
 
 # ==============================================================================
-# Extensions: load every '*.ext.mk' file under scripts/ in a stable order, see docs/guides/Bash_and_Make.md
+# Extensions: load every '*.ext.mk' file under scripts/ in a stable order, see docs/guides/Use_Bash_and_Make.md
 
 include $(sort $(shell find scripts \( -type f -o -type l \) -name '*.ext.mk'))
 

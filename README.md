@@ -207,7 +207,7 @@ automatically when it is executable and git does not ignore it. Keep it in a
 `tests/` directory next to the scripts it tests.
 
 To update mise tools, Docker images, GitHub Actions and application packages,
-follow [Updating Dependencies](docs/guides/Updating_Dependencies.md).
+follow [Update Dependencies](docs/guides/Update_Dependencies.md).
 
 ### Examples
 
