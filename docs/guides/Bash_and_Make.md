@@ -2,6 +2,7 @@
 
 - [Developer Guide: Bash and Make](#developer-guide-bash-and-make)
   - [Using Make](#using-make)
+    - [Make extensions](#make-extensions)
   - [Using Bash](#using-bash)
   - [Make and Bash working together](#make-and-bash-working-together)
   - [Conventions](#conventions)
@@ -65,6 +66,40 @@ invocation. This has been configured in this repository by setting the
 special target in the `scripts/init.mk` file.
 
 To see all available make targets, run `make help`.
+
+### Make extensions
+
+Add team targets without editing the main `Makefile`. The
+[init.mk](../../scripts/init.mk) file loads every `*.ext.mk` file under
+`scripts/` and its subdirectories, sorted by path. Its targets work with
+`make <target>` and appear in `make help`.
+
+```makefile
+# scripts/backend/backend.ext.mk
+
+backend-lambda-invoke: event ?= events/default.json
+backend-lambda-invoke: # Invoke a Lambda function locally - mandatory: name=[function name]; optional: event=[event file path, default is 'events/default.json'] @Development
+    $(if $(name),,$(error name is required. Usage: make backend-lambda-invoke name=my-function))
+    name=$(name) event=$(event) ./scripts/backend/lambda-invoke.sh
+
+${VERBOSE}.SILENT: \
+    backend-lambda-invoke \
+```
+
+Follow these rules:
+
+- Name only entry points `*.ext.mk`. Name helpers `*.lib.mk`, like `*.lib.sh`
+  for shell libraries, and include them from the entry point that needs them.
+  An `*.ext.mk` file must not include another `*.ext.mk` file.
+- All targets share one namespace. Prefix target names with the extension
+  name, for example `backend-lambda-invoke`.
+- Extend existing targets with a prerequisite, for example
+  `lint: backend-lint`. Add to `clean::` and `config::` with a new double-colon
+  rule. Do not give an existing single-colon target a second recipe, as Make
+  replaces the first one and prints a warning.
+- Keep extension paths free of spaces, as Make splits file lists on whitespace.
+- When load order matters, use one `*.ext.mk` file that includes `*.lib.mk`
+  files in the order needed.
 
 ## Using Bash
 
