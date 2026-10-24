@@ -3,32 +3,32 @@
 lockfile_version = 2
 
 [[tools.editorconfig-checker]]
-version = "3.11.3"
+version = "4.0.2"
 backend = "github:editorconfig-checker/editorconfig-checker"
-specifiers = ["3.11.3"]
+specifiers = ["4.0.2"]
 
 [tools.editorconfig-checker."platforms.linux-arm64"]
-checksum = "sha256:6646317558facabd6ab1395bb0b212bdb7e3ed130b91c31ff92fa5372d2bf604"
-url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v3.11.3/editorconfig-checker-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/543324012"
+checksum = "sha256:abad76da8c9950fdc2a314bcd66969172aa823e9c595fa7e3a389a91e34d025e"
+url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.2/editorconfig-checker-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/574675779"
 provenance = "github-attestations"
 
 [tools.editorconfig-checker."platforms.linux-x64"]
-checksum = "sha256:7b7c828bd4bd7976f66d91f288cb1319b5f27c7fb5faa6b8cca9a0a7ff182578"
-url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v3.11.3/editorconfig-checker-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/543324020"
+checksum = "sha256:44efaef3ed14c6ab52eb87481d78e5e5c204796dccf26e2f4598a61ba17f8003"
+url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.2/editorconfig-checker-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/574675771"
 provenance = "github-attestations"
 
 [tools.editorconfig-checker."platforms.macos-arm64"]
-checksum = "sha256:eeb0e5d1db4a913277da781bc40802542eb42c4f3f43b7c87c000714dd905faf"
-url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v3.11.3/ec-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/543324096"
+checksum = "sha256:ff59f57717d95fc62b8e372c8051dbbb766f7d660942409a85d027b0feb2422c"
+url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.2/editorconfig-checker-darwin-all.tar.gz"
+url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/574675773"
 provenance = "github-attestations"
 
 [tools.editorconfig-checker."platforms.macos-x64"]
-checksum = "sha256:126c8fa83500389078f6b2072a04170f063787ec9905e5d1ab69a5a62ee5b10d"
-url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v3.11.3/ec-darwin-amd64.tar.gz"
-url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/543324099"
+checksum = "sha256:ff59f57717d95fc62b8e372c8051dbbb766f7d660942409a85d027b0feb2422c"
+url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.2/editorconfig-checker-darwin-all.tar.gz"
+url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/574675773"
 provenance = "github-attestations"
 
 [[tools.gitleaks]]

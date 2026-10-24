@@ -74,8 +74,7 @@ _toolchain-check: # Fail with an actionable message when mise is missing or mise
 toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in mise.toml (Docker image pins are not checked) @Configuration
 	mise outdated --bump
 
-toolchain-upgrade: exclude ?= editorconfig-checker
-toolchain-upgrade: _toolchain-check # Bump native tools pinned in mise.toml to the newest releases and refresh mise.lock (Docker image pins are not updated) - optional: exclude=[space-separated tools to skip, default is editorconfig-checker as 4.x drops the ec binary], dry_run=[true to preview only] @Configuration
+toolchain-upgrade: _toolchain-check # Bump native tools pinned in mise.toml to the newest releases and refresh mise.lock (Docker image pins are not updated) - optional: exclude=[space-separated tools to skip], dry_run=[true to preview only] @Configuration
 	# A separate assignment so a failed lookup stops the recipe instead of reading as 'up to date'
 	outdated="$$(mise outdated --bump --json)"
 	specs="$$(jq -r --arg p "$$(pwd -P)/mise.toml" 'to_entries[] | select(.value.source.path == $$p and (.key as $$k | $$ARGS.positional | any(. == $$k) | not)) | "\(.key)@\(.value.bump)"' --args $(exclude) <<< "$${outdated}")"

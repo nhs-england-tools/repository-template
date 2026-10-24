@@ -57,9 +57,7 @@ hook revisions to update.
   mise tool must carry the same version as that tool. See
   [Docker Images](#docker-images).
 - **An empty update is a valid result.** When every check below reports nothing
-  to change, stop. The only expected `make toolchain-outdated` entry is
-  `editorconfig-checker` 4.x, which `make toolchain-upgrade` excludes
-  deliberately.
+  to change, stop.
 - **Update everything in one pull request,** then verify once at the end.
 - **Do not bypass the safeguards.** Do not shorten the cooldown with
   `MISE_MINIMUM_RELEASE_AGE` or `--minimum-release-age` outside the reviewed
@@ -87,11 +85,8 @@ make toolchain-upgrade dry_run=true
 make toolchain-upgrade
 ```
 
-The upgrade target updates `mise.toml` and refreshes the lock data. It excludes
-`editorconfig-checker` by default because version 4 removes the `ec` executable
-used by this repository. Review that tool separately before changing the
-exclusion. Commit `mise.toml`, `mise.lock` and any changed `.mise/locks/`
-sidecars together.
+The upgrade target updates `mise.toml` and refreshes the lock data. Commit
+`mise.toml`, `mise.lock` and any changed `.mise/locks/` sidecars together.
 
 The configured `minimum_release_age = "7d"` delays newly published versions when
 mise resolves an update. Existing exact pins and versions already recorded in

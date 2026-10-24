@@ -11,7 +11,7 @@ locked_verify_provenance = true
 locked = true
 
 [tools]
-editorconfig-checker = "3.11.3"
+editorconfig-checker = "4.0.2"
 gitleaks = "8.30.1"
 hadolint = "2.15.1"
 jq = "1.8.2"
@@ -22,7 +22,6 @@ pre-commit = "4.7.0"
 python = "3.15.0"
 shellcheck = "0.11.0"
 yq = "4.54.1"
-# NOTE: editorconfig-checker 4.x drops the `ec` binary that check-file-format.sh calls, so stay on 3.x.
 
 # ==============================================================================
 # The table below is reserved for Docker image versions and is never parsed by
@@ -40,6 +39,6 @@ yq = "4.54.1"
 # lychee, SEE: https://hub.docker.com/r/lycheeverse/lychee keep in sync with the lychee version above
 "lycheeverse/lychee" = "0.24.2@sha256:e2d19e57cf6ab037026f20b8e449a1f30d9d7f81eef4194763aab2eab20bd28d"
 # editorconfig-checker, SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags keep in sync with the editorconfig-checker version above
-"mstruebing/editorconfig-checker" = "v3.11.3@sha256:b3128d82e0518b81df28d245200d86de4bf361f065668be1d1626aacd47b785e"
+"mstruebing/editorconfig-checker" = "4.0.2@sha256:2ba6232bfa0058f72f5f7d7816711590aa764afab1542af30b3ecb4553587918"
 # node, SEE: https://hub.docker.com/_/node/tags (prettier runtime) keep in sync with the node version above
 "node" = "26.12.0-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11"

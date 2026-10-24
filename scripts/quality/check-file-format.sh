@@ -5,8 +5,8 @@ set -euo pipefail
 # Pre-commit git hook to check the EditorConfig rules compliance over changed
 # files. It ensures all non-binary files across the codebase are formatted
 # according to the style defined in the `.editorconfig` file. This is an
-# `ec` (editorconfig-checker) command wrapper. It will run `ec` natively if it
-# is installed, otherwise it will run it in a Docker container.
+# `editorconfig-checker` command wrapper. It will run it natively if it is
+# installed, otherwise it will run it in a Docker container.
 #
 # Usage:
 #   $ [options] ./check-file-format.sh
@@ -53,9 +53,9 @@ function main() {
     dry_run_opt=(--dry-run)
   fi
 
-  # Pass /dev/null when no paths are selected so ec cannot treat an empty
-  # argument list as a request to check all tracked files.
-  if command -v ec > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  # Pass /dev/null when no paths are selected so editorconfig-checker cannot
+  # treat an empty argument list as a request to check all tracked files.
+  if command -v editorconfig-checker > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     run-editorconfig-natively "${dry_run_opt[@]}" "${files[@]}" /dev/null || return "$?"
   else
     run-editorconfig-in-docker "${dry_run_opt[@]}" "${files[@]}" /dev/null || return "$?"
@@ -69,7 +69,7 @@ function main() {
 #   $@=[optional dry-run flag, paths to check and /dev/null backstop]
 function run-editorconfig-natively() {
 
-  ec \
+  editorconfig-checker \
     -config "$PWD/scripts/config/editorconfig-checker.json" \
     --exclude '.git/' "$@" || return "$?"
 
@@ -86,10 +86,13 @@ function run-editorconfig-in-docker() {
 
   local image
   image=$(name=mstruebing/editorconfig-checker docker-get-image-version-and-pull) || return "$?"
+  # Forward the variables that select the output format and colour natively
   docker run --rm --platform linux/amd64 \
+    --env GITHUB_ACTIONS \
+    --env NO_COLOR \
     --volume "$PWD":/check \
     "$image" \
-      ec -config /check/scripts/config/editorconfig-checker.json --exclude '.git/' "$@" || return "$?"
+      editorconfig-checker -config /check/scripts/config/editorconfig-checker.json --exclude '.git/' "$@" || return "$?"
 
   return 0
 }
