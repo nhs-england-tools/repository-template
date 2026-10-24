@@ -91,13 +91,15 @@ toolchain-install-gnu-macos: # Install this repository's required GNU userland t
 toolchain-verify-gnu: # Verify GNU tools, GNU Make 3.82+ and Bash 5.2+ on PATH; report Docker/Podman versions (any OS) @Configuration
 	./scripts/toolchain/verify-gnu.sh
 
-clean:: # Remove all generated and temporary files (common) @Operations
-	rm -rf \
-		*report*.json \
-		*report*json.zip \
-		docs/diagrams/.*.bkp \
-		docs/diagrams/.*.dtmp \
-		.version
+clean:: # Remove files ignored by Git and the empty directories left behind (common) - optional: CONFIRM=[true to delete, default is a preview only] @Operations
+	if [[ "$(CONFIRM)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
+		git clean -f -d -X
+		find . -mindepth 1 -type d -empty -not -path '*/.git/*' -delete
+	else
+		git clean -n -d -X
+		find . -mindepth 1 -type d -empty -not -path '*/.git/*' | sed 's|^\./|Would remove empty directory |'
+		echo "Preview only, run 'make clean CONFIRM=true' to delete"
+	fi
 
 config:: # Configure development environment (common) @Configuration
 	$(MAKE) \
