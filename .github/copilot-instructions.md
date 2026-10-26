@@ -18,9 +18,11 @@
 
 ## Repository verification policy 🔍
 
-Run failing tests and focused checks while working. The Stop hook runs
-`make lint` and `make test` after edits. Do not repeat those full gates manually
-unless diagnosing a failure or the hook is unavailable.
+Run failing tests and focused checks while working. After edits, the Stop hook
+runs `make lint` and `make test`. Since `make lint` checks tracked files only,
+stage newly created files so they are included. Do not stage existing files just
+for the hook. Do not rerun the full gates manually unless diagnosing a failure
+or the hook is unavailable.
 
 ## Communication style 💬
 

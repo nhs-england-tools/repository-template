@@ -9,6 +9,8 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+permissions: {}
+
 jobs:
   metadata:
     name: "Set CI/CD metadata"
@@ -30,6 +32,8 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -52,9 +56,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          branch_name=${GITHUB_HEAD_REF:-$(echo $GITHUB_REF | sed 's#refs/heads/##')}
+          branch_name=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
           echo "Current branch is '$branch_name'"
-          if gh pr list --head $branch_name | grep -q .; then
+          if gh pr list --head "$branch_name" | grep -q .; then
             echo "Pull request exists"
             echo "does_pull_request_exist=true" >> $GITHUB_OUTPUT
           else
@@ -62,16 +66,17 @@ jobs:
             echo "does_pull_request_exist=false" >> $GITHUB_OUTPUT
           fi
       - name: "List variables"
+        env:
+          BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
+          BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
+          BUILD_TIMESTAMP: ${{ steps.variables.outputs.build_timestamp }}
+          BUILD_EPOCH: ${{ steps.variables.outputs.build_epoch }}
+          NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
+          PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
+          MISE_VERSION: ${{ steps.variables.outputs.mise_version }}
+          VERSION: ${{ steps.variables.outputs.version }}
+          DOES_PULL_REQUEST_EXIST: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
         run: |
-          export BUILD_DATETIME_LONDON="${{ steps.variables.outputs.build_datetime_london }}"
-          export BUILD_DATETIME="${{ steps.variables.outputs.build_datetime }}"
-          export BUILD_TIMESTAMP="${{ steps.variables.outputs.build_timestamp }}"
-          export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
-          export NODEJS_VERSION="${{ steps.variables.outputs.nodejs_version }}"
-          export PYTHON_VERSION="${{ steps.variables.outputs.python_version }}"
-          export MISE_VERSION="${{ steps.variables.outputs.mise_version }}"
-          export VERSION="${{ steps.variables.outputs.version }}"
-          export DOES_PULL_REQUEST_EXIST="${{ steps.pr_exists.outputs.does_pull_request_exist }}"
           make list-variables
   commit-stage: # Recommended maximum execution time is 2 minutes
     name: "Commit stage"

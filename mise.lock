@@ -166,6 +166,12 @@ aube = { path = ".mise/locks/npm-markdownlint-cli/0.49.1", digest = "sha256:51f2
 backend = "npm:markdownlint-cli"
 specifiers = ["0.49.1"]
 
+[[tools."npm:prettier"]]
+version = "3.9.10"
+aube = { path = ".mise/locks/npm-prettier/3.9.10", digest = "sha256:0a52cf3e98ebe971f9f0c338c08e668756d290a8d14fe3fd308251084fba1522" }
+backend = "npm:prettier"
+specifiers = ["3.9.10"]
+
 [[tools.pre-commit]]
 version = "4.7.0"
 backend = "aqua:pre-commit/pre-commit"

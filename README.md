@@ -106,6 +106,7 @@ file format: ok
 markdown format: ok
 markdown links: ok
 shell lint: ok
+workflow security checks: ok
 ```
 
 ## What it does
@@ -115,7 +116,7 @@ shell lint: ok
 - Provides a baseline repository structure with documentation and scripts.
 - Includes Makefile targets for configuration, linting, and testing.
 - Supplies quality check scripts for file format, markdown format, markdown
-  links, shell linting, and secrets scanning.
+  links, shell linting, secrets scanning, and GitHub Actions workflow security.
 - Offers developer and user guidance in the docs directory.
 - Includes workflow definitions under the .github directory for CI/CD
   configuration.
@@ -172,6 +173,7 @@ make lint-file-format
 make lint-markdown-format
 make lint-markdown-links
 make lint-shell
+make lint-workflow-security
 ```
 
 Format Markdown files, including tables:
@@ -183,8 +185,10 @@ make format-markdown
 `make lint` stops at the first failing check.
 
 Each check uses its native tool when it is installed and otherwise falls back to
-the image pinned in `mise.toml`. To force the container path, for example to
-reproduce a result with the pinned image, run:
+the image pinned in `mise.toml`. The workflow security check is the exception.
+It has no container fallback and needs the `yq` and `jq` versions that
+`make config` installs. To force the container path, for example to reproduce a
+result with the pinned image, run:
 
 ```shell
 FORCE_USE_DOCKER=true make lint
@@ -193,6 +197,13 @@ FORCE_USE_DOCKER=true make lint
 This requires a running Docker daemon reachable through the `docker` command. On
 Apple silicon, images run as `linux/amd64` under emulation, so checks are
 slower.
+
+The workflow security check enforces the GitHub Actions baseline listed in
+[check-workflow-security.jq](scripts/quality/check-workflow-security.jq). A job
+that needs a write permission must be listed in
+[workflow-security.yaml](scripts/config/workflow-security.yaml) after a security
+review. [Harden repository security](docs/guides/Harden_repository_security.md)
+explains the controls and how to fix a failing check.
 
 Run the tests:
 
@@ -262,7 +273,7 @@ At a high level:
 - [scripts/config](scripts/config) — configuration for quality and tooling
   checks.
 - [scripts/quality](scripts/quality) — scripts for file format, markdown, shell
-  linting, and secrets scanning.
+  linting, secrets scanning, and workflow security.
 - [scripts/docker](scripts/docker) — Docker helper scripts and related test
   assets.
 - [Makefile](Makefile) — primary entry point for quality and configuration

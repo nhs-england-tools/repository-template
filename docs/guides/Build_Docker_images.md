@@ -54,8 +54,8 @@ run `make config` to install the pinned tools before building an image.
 
 By default, the Make targets look for an image's `Dockerfile` under
 `infrastructure/images/$DOCKER_IMAGE`. You can supply `dir=<path>` to use a
-different location. This example creates an image named `my-shiny-app` under
-the default directory. Its application and Dockerfile are not bundled with the
+different location. This example creates an image named `my-shiny-app` under the
+default directory. Its application and Dockerfile are not bundled with the
 template.
 
 First, we need an application to package. Let's do the simplest possible thing,
@@ -207,8 +207,8 @@ image name as a key in [mise.toml](../../mise.toml)'s `[_.docker]` table with
 the value `TAG@sha256:DIGEST`. Keep a real tag as the Dockerfile `ARG` default,
 and use that argument in `FROM IMAGE:${BASE_VERSION}`. The helper matches the
 `FROM` image name to `[_.docker]` and rewrites the argument in
-`Dockerfile.effective`. Run `make docker-bake-dockerfile` with the image name and
-directory as in the example above, then inspect the generated `ARG` for the
+`Dockerfile.effective`. Run `make docker-bake-dockerfile` with the image name
+and directory as in the example above, then inspect the generated `ARG` for the
 digest. See [Update Dependencies](Update_Dependencies.md#docker-images) for the
 release cooldown and digest checks. Commit the source Dockerfile and
 `mise.toml`, not `Dockerfile.effective`.
@@ -296,8 +296,8 @@ ignored. `docker-get-image-version-and-pull` matches the image name exactly, so
 a lookup for `node` never returns the pin for `cimg/node`.
 
 When an image has a matching pin in `[_.docker]`, the `docker-build` function
-rewrites its `ARG ..._VERSION=...` default in `Dockerfile.effective`, for example
-turning `ARG PYTHON_VERSION=3.11.0` into
+rewrites its `ARG ..._VERSION=...` default in `Dockerfile.effective`, for
+example turning `ARG PYTHON_VERSION=3.11.0` into
 `ARG PYTHON_VERSION=1.0.0@sha256:1234567890...abcdef` for a
 `FROM python:${PYTHON_VERSION}` instruction if you add a `python` image pin.
 Additionally, the

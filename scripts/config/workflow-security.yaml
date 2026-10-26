@@ -1,0 +1,7 @@
+# Write permissions approved for GitHub Actions jobs, enforced by
+# scripts/quality/check-workflow-security.sh. Each entry lets a job change the
+# repository or its packages, so add one only after a security review.
+approved_write_permissions:
+  - workflow: cicd-2-publish.yaml
+    job: publish
+    permission: contents

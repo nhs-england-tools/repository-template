@@ -93,14 +93,14 @@ ${VERBOSE}.SILENT: \
 Follow these rules:
 
 - Name only entry points `*.ext.mk`. Name helpers `*.lib.mk`, like `*.lib.sh`
-  for shell libraries, and include them from the entry point that needs them.
-  An `*.ext.mk` file must not include another `*.ext.mk` file.
-- All targets share one namespace. Prefix target names with the extension
-  name, for example `backend-lambda-invoke`.
-- Extend existing targets with a prerequisite, for example
-  `lint: backend-lint`. Add to `clean::` and `config::` with a new double-colon
-  rule. Do not give an existing single-colon target a second recipe, as Make
-  replaces the first one and prints a warning.
+  for shell libraries, and include them from the entry point that needs them. An
+  `*.ext.mk` file must not include another `*.ext.mk` file.
+- All targets share one namespace. Prefix target names with the extension name,
+  for example `backend-lambda-invoke`.
+- Extend existing targets with a prerequisite, for example `lint: backend-lint`.
+  Add to `clean::` and `config::` with a new double-colon rule. Do not give an
+  existing single-colon target a second recipe, as Make replaces the first one
+  and prints a warning.
 - Keep extension paths free of spaces, as Make splits file lists on whitespace.
 - When load order matters, use one `*.ext.mk` file that includes `*.lib.mk`
   files in the order needed.

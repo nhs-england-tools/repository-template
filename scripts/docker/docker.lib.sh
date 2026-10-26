@@ -259,7 +259,7 @@ function docker-pull-pinned-images() {
 #   name=[full name of the Docker image]
 #   match_version=[regexp to match the version, for example if the same image is used with multiple tags, default is '.*']
 #   CONTAINER_CLI=[container runtime command, default is 'docker']
-# Return the status of the failed pull or tag command.
+# Return 1 for a missing or invalid pin, or the status of a failed pull or tag.
 # shellcheck disable=SC2001,SC2154
 function docker-get-image-version-and-pull() {
 
@@ -275,7 +275,7 @@ function docker-get-image-version-and-pull() {
   # match it by name and version regex, if given.
   local container_cli="${CONTAINER_CLI:-docker}"
   local version
-  version="$(_get-docker-image-version)"
+  version="$(_get-docker-image-version)" || return "$?"
 
   # Split the image version into two, tag name and digest sha256.
   local tag
@@ -285,20 +285,11 @@ function docker-get-image-version-and-pull() {
 
   # Check if the image exists locally already.
   if ! "$container_cli" image inspect "${name}:${tag}" > /dev/null 2>&1; then
-    if [[ "$digest" != "latest" ]]; then
-      # Pull image by the digest sha256 and tag it.
-      "$container_cli" pull \
-        --platform linux/amd64 \
-        "${name}@${digest}" \
-      >&2 || return "$?"
-      "$container_cli" tag "${name}@${digest}" "${name}:${tag}" || return "$?"
-    else
-      # Pull the latest image.
-      "$container_cli" pull \
-        --platform linux/amd64 \
-        "${name}:latest" \
-      >&2 || return "$?"
-    fi
+    "$container_cli" pull \
+      --platform linux/amd64 \
+      "${name}@${digest}" \
+    >&2 || return "$?"
+    "$container_cli" tag "${name}@${digest}" "${name}:${tag}" || return "$?"
   fi
 
   echo "${name}:${version}"
@@ -336,7 +327,7 @@ function _container-runtime-is-operational() {
 }
 
 # Print the version pinned for an image in the 'mise.toml' file's '[_.docker]'
-# table, or 'latest' when there is no pin for exactly that image name.
+# table. Reject missing pins, unversioned tags and invalid digests.
 # Arguments (provided as environment variables):
 #   name=[full name of the Docker image]
 #   match_version=[regexp to match the version, default is '.*']
@@ -350,7 +341,11 @@ function _get-docker-image-version() {
       | grep "${match_version:-".*"}" \
       | head -n 1 || true)
   fi
-  echo "${version:-latest}"
+  if [[ "$version" == "latest@"* || ! "$version" =~ ^[^@]+@sha256:[[:xdigit:]]{64}$ ]]; then
+    echo "ERROR: no pinned SHA-256 digest for $name in $config_file" >&2
+    return 1
+  fi
+  echo "$version"
 
   return 0
 }

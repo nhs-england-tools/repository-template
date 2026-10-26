@@ -2,28 +2,29 @@
 
 set -euo pipefail
 
-# ShellCheck command wrapper. It will run ShellCheck natively if it is
-# installed, otherwise it will run it in a Docker container.
+# Lint shell scripts with ShellCheck. It runs ShellCheck natively when
+# installed, otherwise in a Docker container.
 #
 # Usage:
-#   $ [options] ./check-shell-lint.sh
+#   $ [options] ./scripts/quality/check-shell-lint.sh
 #
-# Arguments (provided as environment variables):
-#   check=file              # Lint the single shell script given by 'file', default mode
-#   check=all               # Lint tracked existing '*.sh' files in one ShellCheck call or Docker container, ignoring 'file'
-#   file=shellscript        # Path to the shell script to lint, relative to the project's top-level directory, default is itself
-#   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true            # Show all the executed commands, default is 'false'
+# Options:
+#   check={file,all}       # Check mode, default is 'file'
+#   file=path              # Script to lint in 'file' mode, relative to the repository root, default is this script
+#   FORCE_USE_DOCKER=true  # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true           # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All files passed, or no tracked files were found
-#   1 - ShellCheck findings, unsupported check mode, or local setup failure
-#   Other non-zero statuses from Git, Bash setup, ShellCheck, image pulls, or Docker are propagated.
+#   1 - ShellCheck findings, an unsupported check mode, or a local setup failure
+#   Other - Non-zero statuses from Git, Bash, ShellCheck, image pulls or Docker are passed through
 #
 # Notes:
-#   1) In 'all' mode, only tracked existing '*.sh' files are linted.
-#   2) Untracked scripts, including ignored ones, are not linted.
-#   3) In 'all' mode, sourced tracked libraries are ShellCheck inputs too. Their assignments can affect diagnostics compared with single-file mode.
+#   1) 'file' mode lints one script. 'all' mode lints every existing tracked
+#      '*.sh' file in one ShellCheck call or Docker container, and ignores 'file'.
+#   2) Untracked scripts, including ignored ones, are never linted.
+#   3) In 'all' mode, sourced tracked libraries are ShellCheck inputs too. Their
+#      assignments can change diagnostics compared with 'file' mode.
 
 # ==============================================================================
 
@@ -130,7 +131,8 @@ function run-shellcheck-in-docker() {
   local rc=0
   # shellcheck disable=SC2001
   docker run --rm --platform linux/amd64 \
-    --volume "$PWD:/workdir" \
+    --network none \
+    --volume "$PWD:/workdir:ro" \
     --workdir /workdir \
     "$image" \
       "/workdir/$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
@@ -155,7 +157,8 @@ function run-shellcheck-in-docker-all() {
   done
   local rc=0
   docker run --rm --platform linux/amd64 \
-    --volume "$PWD:/workdir" \
+    --network none \
+    --volume "$PWD:/workdir:ro" \
     --workdir /workdir \
     "$image" \
     -- "${container_files[@]}" || rc=$?
@@ -166,6 +169,8 @@ function run-shellcheck-in-docker-all() {
 # ==============================================================================
 
 # Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

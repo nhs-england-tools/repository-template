@@ -2,34 +2,31 @@
 
 set -euo pipefail
 
-# Pre-commit git hook to scan for secrets hard-coded in the codebase. This is a
-# gitleaks command wrapper. It will run gitleaks natively if it is installed,
-# otherwise it will run it in a Docker container.
+# Scan the codebase and its Git history for hard-coded secrets. It runs
+# gitleaks natively when installed, otherwise in a Docker container.
 #
 # Usage:
-#   $ [options] ./scan-secrets.sh
+#   $ [options] ./scripts/quality/scan-secrets.sh
 #
 # Options:
 #   check={all,staged-changes,working-tree-changes,branch,whole-history,last-commit}
-#                                                     # Check mode, default is 'whole-history'
-#   BRANCH_NAME=other-branch-than-main                # Branch to compare with, default is 'origin/main'
-#   FORCE_USE_DOCKER=true                             # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                      # Show all the executed commands, default is 'false'
+#                                       # Check mode, default is 'whole-history'
+#   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is 'origin/main'
+#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                        # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - No leaks present
 #   1 - Leaks encountered
-#   126 - Unrecognised check mode
+#   126 - The check mode is not recognised
 #
-# The `check` parameter controls what is scanned, so the scope can be limited
-# to what is appropriate at the point the check is being applied:
-#
-#   check=all: staged-changes + working-tree-changes + branch (a full local check)
-#   check=staged-changes: scan changes staged for commit
-#   check=working-tree-changes: scan unstaged working tree changes
-#   check=branch: scan commits made on this branch since $BRANCH_NAME
-#   check=whole-history: scan every commit on every branch. This is the default.
-#   check=last-commit: scan the most recent commit only
+# Check modes:
+#   all                   # staged-changes, working-tree-changes and branch together
+#   staged-changes        # Changes staged for commit
+#   working-tree-changes  # Working tree files, including untracked ones
+#   branch                # Commits on this branch since BRANCH_NAME
+#   whole-history         # Every commit on every branch
+#   last-commit           # The most recent commit only
 
 # ==============================================================================
 
@@ -170,7 +167,8 @@ function run-gitleaks-in-docker() {
   local rc=0
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
-    --volume "$PWD:$dir" \
+    --network none \
+    --volume "$PWD:$dir:ro" \
     --workdir "$dir" \
     "$image" \
       $cmd || rc=$?

@@ -58,7 +58,8 @@ function run-hadolint-in-docker() {
   local rc=0
   # shellcheck disable=SC2001
   docker run --rm --platform linux/amd64 \
-    --volume "$PWD:/workdir" \
+    --network none \
+    --volume "$PWD:/workdir:ro" \
     --workdir /workdir \
     "$image" \
       hadolint \

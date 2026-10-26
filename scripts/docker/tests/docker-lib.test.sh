@@ -59,9 +59,10 @@ function main() {
     test-docker-get-image-version-and-pull-skips-pull-when-tag-exists \
     test-docker-get-image-version-and-pull-fails-when-pull-fails \
     test-docker-get-image-version-and-pull-fails-when-tag-fails \
-    test-docker-get-image-version-and-pull-fails-when-latest-pull-fails \
+    test-docker-get-image-version-and-pull-rejects-missing-pin-in-substitution \
     test-docker-get-image-version-and-pull-ignores-lowercase-container-cli \
-    test-docker-get-image-version-and-pull-pulls-latest-without-pin \
+    test-docker-get-image-version-and-pull-rejects-missing-pin \
+    test-docker-get-image-version-and-pull-rejects-invalid-pins \
     test-docker-get-image-version-and-pull-selects-by-match-version \
     test-docker-pull-pinned-images-pulls-every-docker-pin \
     test-docker-pull-pinned-images-fails-when-pull-fails \
@@ -243,19 +244,23 @@ function test-docker-get-image-version() {
   # Arrange
   MISE_TOML="$FIXTURE_MISE_TOML"
   unset match_version
-  local exact suffix quoted missing filtered
+  local exact suffix quoted
   # Act
   exact="$(name=python _get-docker-image-version)"
   suffix="$(name=cimg/python _get-docker-image-version)"
   quoted="$(name=ghcr.io/org/single-quoted _get-docker-image-version)"
-  missing="$(name=org/not-pinned _get-docker-image-version)"
-  filtered="$(name=python match_version=".*-rt.*" _get-docker-image-version)"
   # Assert
   assert-equal "3.11.4-alpine3.18@sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86" "$exact" "exact name"
   assert-equal "3.12.0@sha256:1111111111111111111111111111111111111111111111111111111111111111" "$suffix" "name with a matching suffix"
   assert-equal "1.0.0@sha256:2222222222222222222222222222222222222222222222222222222222222222" "$quoted" "single-quoted entry"
-  assert-equal "latest" "$missing" "name without a pin"
-  assert-equal "latest" "$filtered" "pin filtered out by match_version"
+  name=org/not-pinned test-capture _get-docker-image-version
+  assert-equal 1 "$TEST_STATUS" "missing pin status"
+  assert-equal "" "$TEST_STDOUT" "missing pin stdout"
+  assert-contains "$TEST_STDERR" "no pinned SHA-256 digest for org/not-pinned"
+  name=python match_version=".*-rt.*" test-capture _get-docker-image-version
+  assert-equal 1 "$TEST_STATUS" "filtered pin status"
+  assert-equal "" "$TEST_STDOUT" "filtered pin stdout"
+  assert-contains "$TEST_STDERR" "no pinned SHA-256 digest for python"
 
   return 0
 }
@@ -515,19 +520,20 @@ function test-docker-get-image-version-and-pull-fails-when-tag-fails() {
   return 0
 }
 
-function test-docker-get-image-version-and-pull-fails-when-latest-pull-fails() {
+function test-docker-get-image-version-and-pull-rejects-missing-pin-in-substitution() {
 
   # Arrange
   write-image-pin
   unset match_version
   test-isolate-path
-  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == "pull" ]]; then echo "pull failed" >&2; exit 25; fi'
+  stub-image-absent docker
   # Act
   name=ghcr.io/org/unpinned test-capture docker-get-image-version-and-pull-in-substitution
   # Assert
-  assert-equal 25 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
-  assert-contains "$TEST_STDERR" "pull failed"
+  assert-contains "$TEST_STDERR" "no pinned SHA-256 digest for ghcr.io/org/unpinned"
+  assert-equal "" "$(test-stub-calls docker)" "no Docker calls"
 
   return 0
 }
@@ -550,7 +556,7 @@ function test-docker-get-image-version-and-pull-ignores-lowercase-container-cli(
   return 0
 }
 
-function test-docker-get-image-version-and-pull-pulls-latest-without-pin() {
+function test-docker-get-image-version-and-pull-rejects-missing-pin() {
 
   # Arrange
   write-image-pin
@@ -560,10 +566,32 @@ function test-docker-get-image-version-and-pull-pulls-latest-without-pin() {
   # Act
   name=ghcr.io/org/unpinned test-capture docker-get-image-version-and-pull
   # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ghcr.io/org/unpinned:latest" "$TEST_STDOUT" "$STDOUT_LABEL"
-  assert-equal "pull --platform linux/amd64 ghcr.io/org/unpinned:latest" \
-    "$(docker-pull-and-tag-calls)" "$PULL_AND_TAG_CALLS_LABEL"
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
+  assert-contains "$TEST_STDERR" "no pinned SHA-256 digest for ghcr.io/org/unpinned"
+  assert-equal "" "$(test-stub-calls docker)" "no Docker calls"
+
+  return 0
+}
+
+function test-docker-get-image-version-and-pull-rejects-invalid-pins() {
+
+  # Arrange
+  MISE_TOML="$TEST_TMP/mise.toml"
+  unset match_version
+  test-isolate-path
+  stub-image-absent docker
+  local version
+  for version in "1.2.3" "1.2.3@sha256:abc" "latest@$DIGEST_A"; do
+    printf '%s\n' "$DOCKER_TABLE_HEADER" "\"ghcr.io/org/image\" = \"$version\"" > "$MISE_TOML"
+    # Act
+    name=ghcr.io/org/image test-capture docker-get-image-version-and-pull
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "exit status for $version"
+    assert-equal "" "$TEST_STDOUT" "stdout for $version"
+    assert-contains "$TEST_STDERR" "no pinned SHA-256 digest for ghcr.io/org/image"
+    assert-equal "" "$(test-stub-calls docker)" "no Docker calls for $version"
+  done
 
   return 0
 }
@@ -593,9 +621,10 @@ EOF
     "pull --platform linux/amd64 ghcr.io/org/rt@$DIGEST_B" \
     "tag ghcr.io/org/rt@$DIGEST_B ghcr.io/org/rt:1.2.3-rt")" \
     "$rt_calls" "pull and tag calls for the matching pin"
-  assert-equal "ghcr.io/org/image:latest" "$TEST_STDOUT" "stdout for the filtered-out pin"
-  assert-equal "pull --platform linux/amd64 ghcr.io/org/image:latest" \
-    "$(docker-pull-and-tag-calls)" "pull and tag calls for the filtered-out pin"
+  assert-equal 1 "$TEST_STATUS" "filtered-out pin status"
+  assert-equal "" "$TEST_STDOUT" "stdout for the filtered-out pin"
+  assert-contains "$TEST_STDERR" "no pinned SHA-256 digest for ghcr.io/org/image"
+  assert-equal "" "$(test-stub-calls docker)" "no Docker calls for the filtered-out pin"
 
   return 0
 }

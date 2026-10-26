@@ -22,6 +22,8 @@ capabilities.
 - Scripts
   - [`check-file-format.sh`](../../scripts/quality/check-file-format.sh)
   - [`check-markdown-format.sh`](../../scripts/quality/check-markdown-format.sh)
+  - [`check-markdown-links.sh`](../../scripts/quality/check-markdown-links.sh)
+  - [`check-workflow-security.sh`](../../scripts/quality/check-workflow-security.sh)
   - [`scan-secrets.sh`](../../scripts/quality/scan-secrets.sh)
 - Configuration
   - [`pre-commit.yaml`](../../scripts/config/pre-commit.yaml)

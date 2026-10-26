@@ -10,13 +10,14 @@ set -euo pipefail
 # Usage:
 #   $ ./scripts/quality/tests/scan-secrets.test.sh
 #
-# Arguments (provided as environment variables):
+# Options:
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
 
+# Set up the suite fixtures and run every test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -243,7 +244,7 @@ function test-scan-secrets-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called gitleaks
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $GITLEAKS_IMAGE $options"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $GITLEAKS_IMAGE $options"
   quality-assert-one-docker-run
 
   return 0
@@ -284,7 +285,7 @@ function test-scan-secrets-uses-docker-with-a-baseline-file() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called gitleaks
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $GITLEAKS_IMAGE $options"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $GITLEAKS_IMAGE $options"
   quality-assert-one-docker-run
 
   return 0
@@ -326,6 +327,9 @@ function expected-gitleaks-calls() {
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

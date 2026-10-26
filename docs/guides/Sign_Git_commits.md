@@ -20,11 +20,12 @@ account. Choose GPG or SSH. See GitHub's
 for account-specific requirements.
 
 > [!WARNING]
+>
 > A batch file containing a passphrase and a private-key export both contain
 > sensitive material. Keep them outside the repository, restrict access, and
 > remove or protect copies after use. `Expire-Date: 0` creates a key without an
-> expiry, and `git config --global` changes signing for all repositories.
-> Choose settings that meet your organisation's policy.
+> expiry, and `git config --global` changes signing for all repositories. Choose
+> settings that meet your organisation's policy.
 
 ## Sign with GPG
 
@@ -44,11 +45,11 @@ gpg --full-generate-key
 ```
 
 To create the original example's ECDSA P-256 primary key and ECDH P-256
-encryption subkey without prompts, use a GnuPG batch parameter file. Replace
-the name, email and passphrase before running this. `Expire-Date: 0` means the
-key does not expire; change it to a duration such as `1y` if you want an expiry.
-The parameter file contains your passphrase in plain text until removed. The
-quoted `'EOF'` keeps the passphrase literal, so the shell does not expand `$`,
+encryption subkey without prompts, use a GnuPG batch parameter file. Replace the
+name, email and passphrase before running this. `Expire-Date: 0` means the key
+does not expire; change it to a duration such as `1y` if you want an expiry. The
+parameter file contains your passphrase in plain text until removed. The quoted
+`'EOF'` keeps the passphrase literal, so the shell does not expand `$`,
 backticks or `$(...)` in it. GnuPG ignores leading and trailing spaces in the
 passphrase:
 
@@ -75,8 +76,8 @@ rm -- "$key_params"
 
 The second curve field is `Subkey-Curve`, not another `Key-Curve`. Do not run
 these commands with a real passphrase where your terminal history or session
-logs might capture it. If generation is interrupted, remove the parameter
-file before leaving the terminal. Check the key ID and fingerprint:
+logs might capture it. If generation is interrupted, remove the parameter file
+before leaving the terminal. Check the key ID and fingerprint:
 
 ```shell
 gpg --list-secret-keys --keyid-format LONG "$USER_EMAIL"
@@ -108,10 +109,10 @@ gpg --armor --export "$KEY_ID" > "$HOME/.gnupg/github-signing-key.pub.asc"
 chmod 600 "$HOME/.gnupg/github-signing-key.private.asc"
 ```
 
-Transfer the private backup through your organisation's approved secure
-process. Keep it outside the repository and remove any temporary copy once the
-backup is verified. To restore it on another machine, import the private backup
-from its secure location and confirm that the secret key appears:
+Transfer the private backup through your organisation's approved secure process.
+Keep it outside the repository and remove any temporary copy once the backup is
+verified. To restore it on another machine, import the private backup from its
+secure location and confirm that the secret key appears:
 
 ```shell
 gpg --import /path/to/secure-backup.asc
@@ -158,9 +159,9 @@ gpg --armor --export YOUR_KEY_ID
 4. Paste the complete public key from the command above into **Key**.
 5. Select **Add GPG key** and confirm your account access if prompted.
 
-Alternatively, use GitHub CLI after signing in with `gh auth login`. The
-default `gh` login scopes do not include `write:gpg_key`, so add it first.
-The CLI reads a public-key file, so export one if you have not already done so:
+Alternatively, use GitHub CLI after signing in with `gh auth login`. The default
+`gh` login scopes do not include `write:gpg_key`, so add it first. The CLI reads
+a public-key file, so export one if you have not already done so:
 
 ```shell
 gh auth refresh -h github.com -s write:gpg_key
@@ -168,7 +169,8 @@ gpg --armor --export YOUR_KEY_ID > "$HOME/.gnupg/github-signing-key.pub.asc"
 gh gpg-key add "$HOME/.gnupg/github-signing-key.pub.asc" --title "My signing key"
 ```
 
-See GitHub's [GPG key instructions](https://docs.github.com/en/authentication/managing-commit-signature-verification/adding-a-gpg-key-to-your-github-account).
+See GitHub's
+[GPG key instructions](https://docs.github.com/en/authentication/managing-commit-signature-verification/adding-a-gpg-key-to-your-github-account).
 
 ### Troubleshoot and configure GPG agent
 
@@ -179,8 +181,8 @@ current terminal:
 export GPG_TTY="$(tty)"
 ```
 
-If it helps, add that export to the shell startup file you actually use so it
-is set for each new terminal. On macOS, if GnuPG needs a graphical passphrase
+If it helps, add that export to the shell startup file you actually use so it is
+set for each new terminal. On macOS, if GnuPG needs a graphical passphrase
 prompt, find an installed pinentry program with `command -v pinentry-mac` and
 set `pinentry-program` to its full path in `$HOME/.gnupg/gpg-agent.conf`.
 
@@ -199,9 +201,8 @@ Stop the agent after changing the file; GnuPG restarts it on the next use:
 gpgconf --kill gpg-agent
 ```
 
-`git config --global credential.helper cache` is a separate optional setting
-for Git authentication credentials. It does not cache your GPG signing
-passphrase.
+`git config --global credential.helper cache` is a separate optional setting for
+Git authentication credentials. It does not cache your GPG signing passphrase.
 
 ## Sign with SSH
 

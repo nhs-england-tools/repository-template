@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "This is the tag that is oging to be deployed"
+        description: "This is the tag that is going to be deployed"
         required: true
-        default: "latest"
+
+permissions: {}
 
 jobs:
   metadata:
@@ -22,10 +23,21 @@ jobs:
       nodejs_version: ${{ steps.variables.outputs.nodejs_version }}
       python_version: ${{ steps.variables.outputs.python_version }}
       version: ${{ steps.variables.outputs.version }}
-      tag: ${{ steps.variables.outputs.tag }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
+      - name: "Validate tag"
+        id: tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          git check-ref-format "refs/tags/$TAG" || { printf 'Invalid tag: %q\n' "$TAG" >&2; exit 1; }
+          [[ "$TAG" != "latest" ]] || { echo "The 'latest' tag cannot be deployed, use a release tag" >&2; exit 1; }
+          printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          persist-credentials: false
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -40,16 +52,16 @@ jobs:
           echo "python_version=${python_version}" >> "$GITHUB_OUTPUT"
           # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
-          echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
       - name: "List variables"
+        env:
+          BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
+          BUILD_TIMESTAMP: ${{ steps.variables.outputs.build_timestamp }}
+          BUILD_EPOCH: ${{ steps.variables.outputs.build_epoch }}
+          NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
+          PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
+          VERSION: ${{ steps.variables.outputs.version }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          export BUILD_DATETIME="${{ steps.variables.outputs.build_datetime }}"
-          export BUILD_TIMESTAMP="${{ steps.variables.outputs.build_timestamp }}"
-          export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
-          export NODEJS_VERSION="${{ steps.variables.outputs.nodejs_version }}"
-          export PYTHON_VERSION="${{ steps.variables.outputs.python_version }}"
-          export VERSION="${{ steps.variables.outputs.version }}"
-          export TAG="${{ steps.variables.outputs.tag }}"
           make list-variables
   deploy:
     name: "Deploy to an environment"
@@ -61,15 +73,23 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ needs.metadata.outputs.tag }}
+          persist-credentials: false
   # Template placeholder: add project-specific deployment jobs and steps here.
   # success:
   #   name: "Success notification"
   #   runs-on: ubuntu-26.04
+  #   permissions:
+  #     contents: read
   #   needs: [deploy]
   #   steps:
   #     - name: "Check prerequisites for notification"
   #       id: check
-  #       run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
+  #       env:
+  #         TEAMS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
+  #       run: |
+  #         printf 'secret_exist=%s\n' "$TEAMS_WEBHOOK_CONFIGURED" >> "$GITHUB_OUTPUT"
   #     - name: "Notify on deployment to an environment"
   #       if: steps.check.outputs.secret_exist == 'true'
   #       uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
@@ -78,4 +98,4 @@ jobs:
   #         teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
   #         message-title: "Notification title"
   #         message-text: "This is a notification body"
-  #         link: ${{ github.event.pull_request.html_url }}
+  #         link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -28,17 +28,20 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   environment-set-up:
     name: "Environment set up"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Create infractructure"
         run: |
           echo "Creating infractructure..."
@@ -51,11 +54,15 @@ jobs:
   test-contract:
     name: "Contract test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run contract test"
         run: |
           echo make test-contract
@@ -65,11 +72,15 @@ jobs:
   test-security:
     name: "Security test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run security test"
         run: |
           echo make test-security # Template placeholder: choose the project test command.
@@ -79,11 +90,15 @@ jobs:
   test-ui:
     name: "UI test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run UI test"
         run: |
           echo make test-ui # Template placeholder: choose the project test command.
@@ -93,11 +108,15 @@ jobs:
   test-ui-performance:
     name: "UI performance test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run UI performance test"
         run: |
           echo make test-ui-performance # Template placeholder: choose the project test command.
@@ -107,11 +126,15 @@ jobs:
   test-integration:
     name: "Integration test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run integration test"
         run: |
           echo make test-integration # Template placeholder: choose the project test command.
@@ -121,11 +144,15 @@ jobs:
   test-accessibility:
     name: "Accessibility test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run accessibility test"
         run: |
           echo make test-accessibility # Template placeholder: choose the project test command.
@@ -135,11 +162,15 @@ jobs:
   test-load:
     name: "Load test"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs: environment-set-up
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run load tests"
         run: |
           echo make test-load # Template placeholder: choose the project test command.
@@ -149,6 +180,8 @@ jobs:
   environment-tear-down:
     name: "Environment tear down"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     needs:
       [
         test-accessibility,
@@ -164,6 +197,8 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Tear down environment"
         run: |
           echo "Tearing down environment..."

@@ -2,26 +2,28 @@
 
 set -euo pipefail
 
-# Pre-commit git hook to check the Markdown file links compliance over changed
-# files. This is a lychee command wrapper. It will run lychee natively if it is
-# installed, otherwise it will run it in a Docker container.
+# Check that links in Markdown files resolve. It runs lychee natively when
+# installed, otherwise in a Docker container.
 #
 # Usage:
-#   $ [options] ./check-markdown-links.sh
+#   $ [options] ./scripts/quality/check-markdown-links.sh
 #
 # Options:
 #   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
-#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is 'origin/main'
 #   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                            # Show all the executed commands, default is `false`
+#   VERBOSE=true                                            # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All links are valid
-#   1 - Invalid links found
+#   1 - The check mode is not recognised, or lychee failed to run
+#   2 - Broken links found
 #
 # Notes:
-#   1) The lychee configuration file is located at './scripts/config/lychee.toml'.
-#   2) For more information, visit https://github.com/lycheeverse/lychee
+#   1) Check modes select existing Markdown files known to Git, as described in
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never checked.
+#   2) The lychee configuration is in './scripts/config/lychee.toml'. For more
+#      information, see https://github.com/lycheeverse/lychee
 
 # ==============================================================================
 
@@ -72,7 +74,8 @@ function run-lychee-in-docker() {
   image=$(name=lycheeverse/lychee docker-get-image-version-and-pull) || return "$?"
 
   docker run --rm --platform linux/amd64 \
-    --volume "$PWD":/workdir \
+    --network none \
+    --volume "$PWD":/workdir:ro \
     --workdir /workdir \
     "$image" \
       --config /workdir/scripts/config/lychee.toml \

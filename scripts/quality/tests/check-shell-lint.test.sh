@@ -11,7 +11,7 @@ set -euo pipefail
 # Usage:
 #   $ ./scripts/quality/tests/check-shell-lint.test.sh
 #
-# Arguments (provided as environment variables):
+# Options:
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 
 # ==============================================================================
@@ -19,6 +19,7 @@ set -euo pipefail
 readonly EXIT_STATUS_LABEL='exit status'
 readonly ONLY_SHELLCHECK_CALL_LABEL='the only shellcheck call'
 
+# Set up the suite fixtures and run every test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -57,19 +58,6 @@ function main() {
     test-check-shell-lint-make-target-uses-docker \
     test-check-shell-lint-make-target-fails-without-success-message \
     test-check-shell-lint-rejects-unknown-mode
-
-  return 0
-}
-
-# Create a scratch repository with the Make modules used by target tests.
-function check-shell-lint-create-make-fixture-repo() {
-
-  quality-create-fixture-repo scripts/x.sh
-  printf 'include scripts/init.mk\n' > "$TEST_TMP/repo/Makefile"
-  cp "$TEST_REPO_ROOT/scripts/init.mk" "$TEST_TMP/repo/scripts/init.mk"
-  cp "$TEST_REPO_ROOT/scripts/docker/docker.mk" "$TEST_TMP/repo/scripts/docker/docker.mk"
-  git -C "$TEST_TMP/repo" add Makefile scripts/init.mk scripts/docker/docker.mk
-  git -C "$TEST_TMP/repo" commit -q -m 'add make lint fixtures'
 
   return 0
 }
@@ -138,7 +126,7 @@ function test-check-shell-lint-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called shellcheck
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
   quality-assert-one-docker-run
 
   return 0
@@ -156,7 +144,7 @@ function test-check-shell-lint-uses-docker-when-shellcheck-is-missing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
   quality-assert-one-docker-run
 
   return 0
@@ -408,8 +396,10 @@ function test-check-shell-lint-all-uses-one-docker-run-when-forced() {
     --rm
     --platform
     linux/amd64
+    --network
+    none
     --volume
-    "$TEST_TMP/repo:/workdir"
+    "$TEST_TMP/repo:/workdir:ro"
     --workdir
     /workdir
     "$SHELLCHECK_IMAGE"
@@ -451,8 +441,10 @@ function test-check-shell-lint-all-uses-one-docker-run-with-awkward-names-when-f
     --rm
     --platform
     linux/amd64
+    --network
+    none
     --volume
-    "$TEST_TMP/repo:/workdir"
+    "$TEST_TMP/repo:/workdir:ro"
     --workdir
     /workdir
     "$SHELLCHECK_IMAGE"
@@ -491,8 +483,10 @@ function test-check-shell-lint-all-uses-docker-when-shellcheck-is-missing() {
     --rm
     --platform
     linux/amd64
+    --network
+    none
     --volume
-    "$TEST_TMP/repo:/workdir"
+    "$TEST_TMP/repo:/workdir:ro"
     --workdir
     /workdir
     "$SHELLCHECK_IMAGE"
@@ -601,8 +595,10 @@ function test-check-shell-lint-make-target-uses-docker() {
     --rm
     --platform
     linux/amd64
+    --network
+    none
     --volume
-    "$TEST_TMP/repo:/workdir"
+    "$TEST_TMP/repo:/workdir:ro"
     --workdir
     /workdir
     "$SHELLCHECK_IMAGE"
@@ -662,6 +658,24 @@ function test-check-shell-lint-rejects-unknown-mode() {
 
 # ==============================================================================
 
+# Create a scratch repository with the Make modules used by target tests.
+function check-shell-lint-create-make-fixture-repo() {
+
+  quality-create-fixture-repo scripts/x.sh
+  printf 'include scripts/init.mk\n' > "$TEST_TMP/repo/Makefile"
+  cp "$TEST_REPO_ROOT/scripts/init.mk" "$TEST_TMP/repo/scripts/init.mk"
+  cp "$TEST_REPO_ROOT/scripts/docker/docker.mk" "$TEST_TMP/repo/scripts/docker/docker.mk"
+  git -C "$TEST_TMP/repo" add Makefile scripts/init.mk scripts/docker/docker.mk
+  git -C "$TEST_TMP/repo" commit -q -m 'add make lint fixtures'
+
+  return 0
+}
+
+# ==============================================================================
+
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

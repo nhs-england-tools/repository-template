@@ -2,14 +2,25 @@
 
 set -euo pipefail
 
-# Collect existing Git paths for a quality check. Source this from the repository root.
+# Collect existing Git paths for a quality check. Source this file from the
+# repository root.
 #
 # Usage:
 #   $ source ./scripts/quality/git-files.lib.sh
+#
+# Check modes:
+#   all                   # Every tracked file
+#   staged-changes        # Files added or changed in the index
+#   working-tree-changes  # Files changed in the working tree but not yet staged
+#   branch                # Files added or changed since BRANCH_NAME, default 'origin/main', including uncommitted changes
+#
+# Notes:
+#   1) Only paths that exist as regular files are returned. Untracked files are
+#      never returned.
 
 # ==============================================================================
 
-# Run Git without caller pathspec overrides; the collector requests NUL output.
+# Run Git without caller pathspec overrides. The collector requests NUL output.
 # Arguments:
 #   $@=[Git subcommand and arguments]
 function quality-git-paths() {

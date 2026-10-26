@@ -24,11 +24,15 @@ lint-markdown-links: # Check markdown links @Quality
 lint-shell: # Lint all tracked shell scripts @Quality
 	$(MAKE) check-shell-lint
 
+lint-workflow-security: # Check GitHub Actions workflow security policy @Quality
+	$(MAKE) check-workflow-security
+
 lint: # Run linter to check code style and errors @Quality
 	$(MAKE) lint-file-format
 	$(MAKE) lint-markdown-format
 	$(MAKE) lint-markdown-links
 	$(MAKE) lint-shell
+	$(MAKE) lint-workflow-security
 
 typecheck: # Run type checker @Quality
 	# TODO: Implement type checking required for this repository
@@ -66,6 +70,7 @@ ${VERBOSE}.SILENT: \
 	lint-markdown-format \
 	lint-markdown-links \
 	lint-shell \
+	lint-workflow-security \
 	publish \
 	test \
 	typecheck \

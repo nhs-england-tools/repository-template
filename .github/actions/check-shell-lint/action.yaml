@@ -5,5 +5,7 @@ runs:
   steps:
     - name: "Check shell scripts"
       shell: bash
+      env:
+        FORCE_USE_DOCKER: "true"
       run: |
         make check-shell-lint

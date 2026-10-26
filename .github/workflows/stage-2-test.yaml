@@ -32,17 +32,20 @@ on:
         description: "SonarQube Cloud token for static analysis"
         required: false
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   test-unit:
     name: "Unit tests"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Run unit test suite"
         run: |
           make toolchain-verify-gnu
@@ -65,6 +68,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Full history is needed to improve the relevancy of reporting
+          persist-credentials: false
       - name: "Perform static analysis"
         if: env.HAS_SONAR_CONFIGURATION == 'true'
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0

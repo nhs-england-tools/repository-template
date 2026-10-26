@@ -2,32 +2,33 @@
 
 set -euo pipefail
 
-# Pre-commit git hook to check the Markdown file formatting rules compliance
-# over changed files. This is a markdownlint command wrapper. It will run
-# markdownlint natively if it is installed, otherwise it will run it in a Docker
-# container.
+# Check that Markdown files follow the markdownlint rules and that YAML
+# frontmatter is followed by a blank line. It runs markdownlint natively when
+# installed, otherwise in a Docker container.
 #
 # Usage:
-#   $ [options] ./check-markdown-format.sh
+#   $ [options] ./scripts/quality/check-markdown-format.sh
 #
 # Options:
 #   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
-#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is 'origin/main'
 #   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                            # Show all the executed commands, default is `false`
+#   VERBOSE=true                                            # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All files are formatted correctly
-#   1 - Files are not formatted correctly
+#   1 - Files are not formatted correctly, or the check mode is not recognised
 #
 # Notes:
-#   1) Please make sure to enable Markdown linting in your IDE. For the Visual
-#   Studio Code editor it is `davidanson.vscode-markdownlint` that is already
-#   specified in the `./.vscode/extensions.json` file.
-#   2) To see the full list of the rules, please visit
-#   https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
-#   3) The frontmatter blank-line check requires `python3` on the host; it is not
-#   run through Docker. `python3` is present wherever `pre-commit` runs.
+#   1) Check modes select existing Markdown files known to Git, as described in
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never checked.
+#   2) Enable markdownlint in your IDE. For Visual Studio Code, the
+#      'davidanson.vscode-markdownlint' extension is listed in
+#      './.vscode/extensions.json'.
+#   3) The full list of rules is at
+#      https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+#   4) The frontmatter check runs python3 on the host, never in Docker.
+#      python3 is available wherever pre-commit runs.
 
 # ==============================================================================
 
@@ -78,7 +79,8 @@ function run-markdownlint-in-docker() {
   image=$(name=ghcr.io/igorshubovych/markdownlint-cli docker-get-image-version-and-pull) || return "$?"
 
   docker run --rm --platform linux/amd64 \
-    --volume "$PWD":/workdir \
+    --network none \
+    --volume "$PWD":/workdir:ro \
     --workdir /workdir \
     "$image" \
       "$@" \
@@ -88,14 +90,13 @@ function run-markdownlint-in-docker() {
   return 0
 }
 
-# Enforce a blank line between the YAML frontmatter closing `---` and the
-# following content. `markdownlint` does not provide a built-in rule for this
-# (MD022 ignores frontmatter delimiters), so we enforce it here.
+# Check that a blank line follows the closing '---' of YAML frontmatter.
+# markdownlint has no rule for this, because MD022 ignores frontmatter.
 # Arguments:
 #   $@=[files to check]
 function check-frontmatter-blank-line() {
 
-  python3 - "$@" <<'PY'
+  python3 - "$@" <<'PY' || return "$?"
 import sys
 files = sys.argv[1:]
 violations = []
@@ -127,6 +128,8 @@ if violations:
     sys.stderr.write("\n".join(violations) + "\n")
     sys.exit(1)
 PY
+
+  return 0
 }
 
 # ==============================================================================

@@ -11,7 +11,7 @@ set -euo pipefail
 # Usage:
 #   $ ./scripts/quality/tests/check-markdown-format.test.sh
 #
-# Arguments (provided as environment variables):
+# Options:
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 
 # ==============================================================================
@@ -20,6 +20,7 @@ readonly MARKDOWN_HEADING='# Heading'
 readonly EXIT_STATUS_LABEL='exit status'
 readonly FRONTMATTER_TITLE='title: x'
 
+# Set up the suite fixtures and run every test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -221,7 +222,7 @@ function test-check-markdown-format-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called markdownlint
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $MARKDOWNLINT_IMAGE README.md --config /workdir/scripts/config/markdownlint.yaml --ignore-path /workdir/scripts/config/.markdownlintignore"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $MARKDOWNLINT_IMAGE README.md --config /workdir/scripts/config/markdownlint.yaml --ignore-path /workdir/scripts/config/.markdownlintignore"
   quality-assert-one-docker-run
 
   return 0
@@ -302,6 +303,9 @@ function test-check-markdown-format-stops-when-the-image-pull-fails() {
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

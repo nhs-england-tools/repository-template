@@ -10,13 +10,14 @@ set -euo pipefail
 # Usage:
 #   $ ./scripts/quality/tests/check-markdown-links.test.sh
 #
-# Arguments (provided as environment variables):
+# Options:
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
 
+# Set up the suite fixtures and run every test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -241,7 +242,7 @@ function test-check-markdown-links-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called lychee
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
   quality-assert-one-docker-run
 
   return 0
@@ -259,7 +260,7 @@ function test-check-markdown-links-uses-docker-when-lychee-is-missing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
   quality-assert-one-docker-run
 
   return 0
@@ -284,7 +285,7 @@ function test-check-markdown-links-keeps-paths-with-spaces-intact() {
   assert-equal 0 "$TEST_STATUS" "exit status of the Docker run"
   assert-equal "$options docs/my\\ doc.md" "$(test-stub-calls lychee)" "the only lychee call"
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS docs/my\\ doc.md"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS docs/my\\ doc.md"
   quality-assert-one-docker-run
 
   return 0
@@ -311,6 +312,9 @@ function test-check-markdown-links-stops-when-the-image-pull-fails() {
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

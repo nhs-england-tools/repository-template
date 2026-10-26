@@ -10,7 +10,7 @@ set -euo pipefail
 # Usage:
 #   $ ./scripts/quality/tests/check-file-format.test.sh
 #
-# Arguments (provided as environment variables):
+# Options:
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 
 # ==============================================================================
@@ -19,6 +19,7 @@ readonly A_TXT_ARGUMENT=' a.txt '
 readonly EXIT_STATUS_LABEL='exit status'
 readonly EC=editorconfig-checker
 
+# Set up the suite fixtures and run every test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -314,11 +315,14 @@ function test-check-file-format-stops-when-the-image-pull-fails() {
 # Print the Docker arguments expected when the fixture checks every tracked file.
 function expected-docker-run() {
 
-  echo "run --rm --platform linux/amd64 --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json --exclude .git/ a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh /dev/null"
+  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json --exclude .git/ a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh /dev/null"
 
   return 0
 }
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

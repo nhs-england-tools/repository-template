@@ -2,30 +2,29 @@
 
 set -euo pipefail
 
-# Format Markdown files with Prettier, including aligned tables. It runs
-# Prettier natively via npx if Node.js is available, otherwise in Docker.
+# Format Markdown files with Prettier, including table alignment. It runs
+# Prettier natively when installed, otherwise in a Docker container.
 #
 # Usage:
-#   $ [options] ./format-markdown.sh
+#   $ [options] ./scripts/quality/format-markdown.sh
 #
 # Options:
 #   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
-#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
-#   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true            # Show all the executed commands, default is `false`
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is 'origin/main'
+#   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
+#   VERBOSE=true                                            # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All files formatted successfully
-#   1 - Formatting failed
-
-# The `check` parameter controls which files are formatted.
+#   1 - Formatting failed, the check mode is not recognised, or Docker mode has no exact Prettier pin
 #
-#   check=all: format all existing tracked Markdown files
-#   check=staged-changes: format Markdown files staged for commit
-#   check=working-tree-changes: format modified, unstaged Markdown files. This is the default.
-#   check=branch: format all changes since branching from $BRANCH_NAME
-#
-# Untracked files are not included in any mode.
+# Notes:
+#   1) Check modes select existing Markdown files known to Git, as described in
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never formatted.
+#   2) Prettier rewrites the files in place. Its exact version is the
+#      'npm:prettier' entry in the '[tools]' table of 'mise.toml', which
+#      'make config' installs. In Docker, npx downloads that version at run
+#      time, so the container needs network access.
 
 # ==============================================================================
 
@@ -44,7 +43,7 @@ function main() {
     return 0
   fi
 
-  if command -v npx > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  if command -v prettier > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     run-prettier-natively "${files[@]}" || return "$?"
   else
     run-prettier-in-docker "${files[@]}" || return "$?"
@@ -53,13 +52,13 @@ function main() {
   return 0
 }
 
-# Run prettier natively via npx.
+# Run Prettier natively.
 # Arguments:
 #   $@=[Markdown file paths to format, relative to the project's top-level directory]
 function run-prettier-natively() {
 
   local rc=0
-  npx --yes prettier@3 \
+  prettier \
     --config "$PWD/scripts/config/prettierrc.yaml" \
     --ignore-path "$PWD/scripts/config/.prettierignore" \
     --write \
@@ -68,7 +67,7 @@ function run-prettier-natively() {
   return "$rc"
 }
 
-# Run prettier in a Docker container.
+# Run Prettier in a Docker container, at the version pinned in 'mise.toml'.
 # Arguments:
 #   $@=[Markdown file paths to format, relative to the project's top-level directory]
 function run-prettier-in-docker() {
@@ -76,15 +75,22 @@ function run-prettier-in-docker() {
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
 
+  local config_file="${MISE_TOML:-$PWD/mise.toml}" version
+  if ! version="$(_toml-table-entry tools npm:prettier "$config_file")" \
+    || [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "ERROR: no exact 'npm:prettier' version in the [tools] table of $config_file" >&2
+    return 1
+  fi
   local image
   image=$(name=node docker-get-image-version-and-pull) || return "$?"
 
   local rc=0
+  # No '--network none' or read-only mount: npx downloads Prettier at run time, which then rewrites files
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
     "$image" \
-    npx --yes prettier@3 \
+    npx --yes "prettier@$version" \
       --config /workdir/scripts/config/prettierrc.yaml \
       --ignore-path /workdir/scripts/config/.prettierignore \
       --write \

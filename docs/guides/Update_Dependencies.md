@@ -149,9 +149,11 @@ previous version. See Docker's
 
 The `node` and `python` tools are in the template because Python and npm
 (TypeScript) are the supported and approved language ecosystems, so projects
-built from this template are expected to use them. The `node` image is also the
-Prettier runtime for the formatting checks, so keep it on the same version as
-the `node` tool.
+built from this template are expected to use them. The `node` image also runs
+Prettier when `make format` uses Docker, so keep it on the same version as the
+`node` tool. Prettier has no image of its own. The formatter reads its version
+from the `npm:prettier` entry in `[tools]`, so a Prettier update needs no
+`[_.docker]` change.
 
 Pull the revised pins and run the checks that use them:
 

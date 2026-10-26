@@ -106,7 +106,7 @@ function test-dockerfile-linter-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called hadolint
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $HADOLINT_IMAGE hadolint $options"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $HADOLINT_IMAGE hadolint $options"
   quality-assert-one-docker-run
 
   return 0

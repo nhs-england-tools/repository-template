@@ -44,7 +44,8 @@ branch instead.
   pipeline, providing additional protection against hard-coded secrets that
   might have been included prior to the rule additions or by bypassing the
   scanner
-- The [NHS Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets)
+- The
+  [NHS Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets)
   shows an alternative tool
 
 ## Testing

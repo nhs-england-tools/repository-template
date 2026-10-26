@@ -32,100 +32,97 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   scan-secrets:
     name: "Scan secrets"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Full history is needed to scan all commits
-      - name: "Set up mise"
-        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
-        with:
-          version: ${{ inputs.mise_version }}
-          install: true
-          install_args: "gitleaks"
-          cache: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - name: "Scan secrets"
         uses: ./.github/actions/scan-secrets
   check-file-format:
     name: "Check file format"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Full history is needed to compare branches
-      - name: "Set up mise"
-        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
-        with:
-          version: ${{ inputs.mise_version }}
-          install: true
-          install_args: "editorconfig-checker"
-          cache: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - name: "Check file format"
         uses: ./.github/actions/check-file-format
   check-markdown-format:
     name: "Check Markdown format"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Full history is needed to compare branches
-      - name: "Set up mise"
-        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
-        with:
-          version: ${{ inputs.mise_version }}
-          install: true
-          install_args: "node npm:markdownlint-cli"
-          cache: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - name: "Check Markdown format"
         uses: ./.github/actions/check-markdown-format
   check-markdown-links:
     name: "Check Markdown links"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Full history is needed to compare branches
-      - name: "Set up mise"
-        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
-        with:
-          version: ${{ inputs.mise_version }}
-          install: true
-          install_args: "lychee"
-          cache: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - name: "Check Markdown links"
         uses: ./.github/actions/check-markdown-links
   check-shell-lint:
     name: "Check shell scripts"
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     timeout-minutes: 2
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: "Check shell scripts"
+        uses: ./.github/actions/check-shell-lint
+  check-workflow-security:
+    name: "Check workflow security"
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    timeout-minutes: 2
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Set up mise"
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
         with:
           version: ${{ inputs.mise_version }}
           install: true
-          install_args: "shellcheck"
+          install_args: "yq jq"
+          persist_github_token: false
           cache: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Check shell scripts"
-        uses: ./.github/actions/check-shell-lint
+      - name: "Check workflow security"
+        run: make check-workflow-security

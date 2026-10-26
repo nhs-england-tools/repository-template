@@ -2,45 +2,34 @@
 
 set -euo pipefail
 
-# Pre-commit git hook to check the EditorConfig rules compliance over changed
-# files. It ensures all non-binary files across the codebase are formatted
-# according to the style defined in the `.editorconfig` file. This is an
-# `editorconfig-checker` command wrapper. It will run it natively if it is
-# installed, otherwise it will run it in a Docker container.
+# Check that files follow the EditorConfig rules defined in '.editorconfig'. It
+# runs editorconfig-checker natively when installed, otherwise in a Docker
+# container.
 #
 # Usage:
-#   $ [options] ./check-file-format.sh
+#   $ [options] ./scripts/quality/check-file-format.sh
 #
 # Options:
 #   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
-#   dry_run=true                                            # Do not check, run dry run only, default is 'false'
-#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is `origin/main`
+#   dry_run=true                                            # List the files to check without checking them, default is 'false'
+#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is 'origin/main'
 #   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                            # Show all the executed commands, default is `false`
+#   VERBOSE=true                                            # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All files are formatted correctly
-#   1 - Files are not formatted correctly
-#
-# The `check` parameter controls which files are checked, so you can
-# limit the scope of the check according to what is appropriate at the
-# point the check is being applied.
-#
-#   check=all: check all files in the repository
-#   check=staged-changes: check only files staged for commit.
-#   check=working-tree-changes: check modified, unstaged files. This is the default.
-#   check=branch: check for all changes since branching from $BRANCH_NAME
-#
-# Note: All modes operate on files known to Git. Untracked files (never
-# added with `git add`) are invisible to every mode, including `all`.
+#   1 - Files are not formatted correctly, or the check mode is not recognised
 #
 # Notes:
-#   Please make sure to enable EditorConfig linting in your IDE. For the
-#   Visual Studio Code editor it is `editorconfig.editorconfig` that is already
-#   specified in the `./.vscode/extensions.json` file.
+#   1) Check modes select existing files known to Git, as described in
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never checked.
+#   2) Enable EditorConfig in your IDE. For Visual Studio Code, the
+#      'editorconfig.editorconfig' extension is listed in
+#      './.vscode/extensions.json'.
 
 # ==============================================================================
 
+# Check file format in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
@@ -64,7 +53,7 @@ function main() {
   return 0
 }
 
-# Run editorconfig natively.
+# Run editorconfig-checker natively.
 # Arguments:
 #   $@=[optional dry-run flag, paths to check and /dev/null backstop]
 function run-editorconfig-natively() {
@@ -76,7 +65,7 @@ function run-editorconfig-natively() {
   return 0
 }
 
-# Run editorconfig in a Docker container.
+# Run editorconfig-checker in a Docker container.
 # Arguments:
 #   $@=[optional dry-run flag, paths to check and /dev/null backstop]
 function run-editorconfig-in-docker() {
@@ -88,9 +77,10 @@ function run-editorconfig-in-docker() {
   image=$(name=mstruebing/editorconfig-checker docker-get-image-version-and-pull) || return "$?"
   # Forward the variables that select the output format and colour natively
   docker run --rm --platform linux/amd64 \
+    --network none \
     --env GITHUB_ACTIONS \
     --env NO_COLOR \
-    --volume "$PWD":/check \
+    --volume "$PWD":/check:ro \
     "$image" \
       editorconfig-checker -config /check/scripts/config/editorconfig-checker.json --exclude '.git/' "$@" || return "$?"
 
@@ -99,6 +89,9 @@ function run-editorconfig-in-docker() {
 
 # ==============================================================================
 
+# Check whether the supplied argument represents a true boolean value.
+# Arguments:
+#   $1=[value to evaluate]
 function is-arg-true() {
 
   local value="$1"

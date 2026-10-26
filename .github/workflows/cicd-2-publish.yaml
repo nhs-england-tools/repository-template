@@ -6,6 +6,8 @@ on:
     branches:
       - main
 
+permissions: {}
+
 jobs:
   metadata:
     name: "Set CI/CD metadata"
@@ -24,6 +26,8 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: "Set CI/CD variables"
         id: variables
         run: |
@@ -39,13 +43,14 @@ jobs:
           # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
       - name: "List variables"
+        env:
+          BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
+          BUILD_TIMESTAMP: ${{ steps.variables.outputs.build_timestamp }}
+          BUILD_EPOCH: ${{ steps.variables.outputs.build_epoch }}
+          NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
+          PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
+          VERSION: ${{ steps.variables.outputs.version }}
         run: |
-          export BUILD_DATETIME="${{ steps.variables.outputs.build_datetime }}"
-          export BUILD_TIMESTAMP="${{ steps.variables.outputs.build_timestamp }}"
-          export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
-          export NODEJS_VERSION="${{ steps.variables.outputs.nodejs_version }}"
-          export PYTHON_VERSION="${{ steps.variables.outputs.python_version }}"
-          export VERSION="${{ steps.variables.outputs.version }}"
           make list-variables
   publish:
     name: "Publish packages"
@@ -56,8 +61,6 @@ jobs:
     if: github.event.pull_request.merged == true
     timeout-minutes: 3
     steps:
-      - name: "Checkout code"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: "Get the artefacts"
         run: |
           echo "Getting the artefacts created by the build stage ..."
@@ -68,6 +71,7 @@ jobs:
           VERSION: ${{ needs.metadata.outputs.version }}
         run: |
           gh release create "$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Release $VERSION" \
             --notes "Release of $VERSION"
@@ -85,7 +89,10 @@ jobs:
     steps:
       - name: "Check prerequisites for notification"
         id: check
-        run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
+        env:
+          TEAMS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
+        run: |
+          printf 'secret_exist=%s\n' "$TEAMS_WEBHOOK_CONFIGURED" >> "$GITHUB_OUTPUT"
       - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
         uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
