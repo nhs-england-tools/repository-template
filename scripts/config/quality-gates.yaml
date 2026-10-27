@@ -1,0 +1,61 @@
+# Quality gates run by scripts/quality/quality-gate.sh when a Copilot agent
+# finishes a turn and on demand with 'make quality-gate'. A gate is a Make
+# target. Exit status 0 passes it.
+#
+# The Stop hook reads this file and the drop-in files from the commit at the
+# start of the turn, so a change made during a turn applies from the next one.
+# 'make quality-gate' reads the working tree. Put project gates in
+# scripts/config/quality-gates.d/*.yaml so template updates do not conflict with
+# them. Drop-in files are read in byte order of their names, dot files are
+# ignored, and a name may use only ASCII letters, digits, '.', '_' and '-'. A
+# drop-in gate with the name of a gate here overrides the fields it sets, for
+# example '{name: test, enabled: false}'.
+#
+# Fields of a gate:
+#   name         Unique, lower case, shown in reports
+#   target       Make target to run
+#   paths        Patterns: '**/' is any number of directories, '*' and '**' are
+#                any characters including '/', '?' is one character, and every
+#                other character stands for itself. When set, the gate runs only
+#                if a changed file matches. Default is every turn
+#   mode         'block' makes the agent continue until it passes, 'warn' only
+#                reports. Default is 'block'
+#   timeout      Seconds the gate may run, default is 120
+#   enabled      Set false to switch a gate off
+#   description  Free text for 'make quality-gate-list'
+#
+# A gate can read the changed paths from the NUL-separated file named by
+# QUALITY_GATE_CHANGED_FILES, when it is set. A gate that cannot run, for
+# example because Docker is stopped, should print a line starting with
+# 'PREREQUISITE:' that says how to fix it. The hook then tells the user instead
+# of making the agent continue.
+version: 1
+
+# Times the Stop hook may block one turn, from 1 to 5. Each block starts another
+# agent turn that costs AI credits.
+max_blocks: 1
+
+defaults:
+  mode: block
+  timeout: 120
+
+gates:
+  - name: lint
+    target: lint
+    description: Formatting, links, shell lint and workflow security
+  - name: test
+    target: test
+    timeout: 240
+    description: Every test suite
+
+# Examples for scripts/config/quality-gates.d/architecture.yaml
+#
+#   version: 1
+#   gates:
+#     - name: architecture
+#       target: check-architecture
+#       paths: ["src/*"]
+#       mode: warn
+#     - name: adr-for-dependencies
+#       target: check-adr-for-dependency-change
+#       paths: ["mise.toml", "*pyproject.toml","*package.json"]

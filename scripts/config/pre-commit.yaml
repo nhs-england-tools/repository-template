@@ -34,3 +34,11 @@ repos:
         entry: make check-workflow-security
         language: system
         pass_filenames: false
+  - repo: local
+    hooks:
+      - id: test
+        name: Run tests
+        entry: make test
+        language: system
+        pass_filenames: false
+        always_run: true

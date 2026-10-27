@@ -84,7 +84,8 @@ function test-run-suite() {
     # unsupervised until it ends on its own. Accepted for now as the window is tiny and the test is short-lived.
     # If that starts to matter, have the INT and TERM traps only set a flag while launching and exit once registered.
     set -m
-    ( _test-run-isolated "${tests[$i]}" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null &
+    # The parent also sets the group, so hide the child's setpgid warning
+    { ( _test-run-isolated "${tests[$i]}" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null & } 2> /dev/null
     _TEST_PIDS[i]=$!
     set +m
   done

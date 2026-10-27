@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "./scripts/quality/quality-gate.sh hook",
+        "timeoutSec": 15
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "./scripts/quality/quality-gate.sh hook",
+        "timeoutSec": 300
+      }
+    ]
+  }
+}

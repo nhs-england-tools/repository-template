@@ -222,7 +222,9 @@ follow [Update Dependencies](docs/guides/Update_Dependencies.md).
 
 ### Examples
 
-- Guides live in [docs/guides](docs/guides).
+- Guides live in [docs/guides](docs/guides). The agent quality gate is described
+  in
+  [Run the quality gate when the agent stops](docs/guides/Run_quality_gate_on_agent_stop.md).
 - ADR templates are stored in [docs/adr](docs/adr).
 
 ## Design notes

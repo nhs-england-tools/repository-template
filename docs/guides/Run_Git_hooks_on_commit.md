@@ -43,3 +43,7 @@ make githooks-run
 
 `githooks-run` executes the entries in `pre-commit.yaml` against all files.
 Secret scanning uses `check=whole-history`, as it does on each commit.
+
+The last hook, `test`, runs `make test`. It needs the same prerequisites as the
+tests, for example a running Docker. The agent quality gate is separate, see
+[Run the quality gate when the agent stops](Run_quality_gate_on_agent_stop.md).
