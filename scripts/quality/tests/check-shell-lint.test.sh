@@ -66,6 +66,14 @@ function main() {
   return 0
 }
 
+# Build the fixture repository once, every test starts from a copy.
+function test-suite-setup() {
+
+  quality-build-fixture-base
+
+  return 0
+}
+
 # ==============================================================================
 
 function test-check-shell-lint-defaults-to-itself() {

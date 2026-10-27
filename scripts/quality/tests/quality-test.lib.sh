@@ -4,7 +4,8 @@ set -euo pipefail
 
 # Shared fixture functions for the quality check test suites, also used by the
 # Dockerfile linter suite in scripts/docker/tests. Source it after the test
-# harness, scripts/tests/test.lib.sh.
+# harness, scripts/tests/test.lib.sh, and call quality-build-fixture-base from
+# the suite's test-suite-setup.
 #
 # Usage:
 #   $ source ./scripts/quality/tests/quality-test.lib.sh
@@ -15,15 +16,24 @@ set -euo pipefail
 
 # ==============================================================================
 
-# Create the scratch repository "$TEST_TMP/repo" with QUALITY_FIXTURE_PATHS and
-# the fixture mise.toml, add the given files, each containing its own name in
+# Build the repository every scratch repository starts from, with
+# QUALITY_FIXTURE_PATHS committed on main, once for the suite.
+function quality-build-fixture-base() {
+
+  test-create-repo "$SUITE_TMP/quality-fixture-base" "${QUALITY_FIXTURE_PATHS[@]}"
+
+  return 0
+}
+
+# Create the scratch repository "$TEST_TMP/repo" from the fixture base, add the
+# fixture mise.toml and the given files, each containing its own name in
 # QUALITY_FIXTURE_FORMAT, and commit them on main with origin/main pointing at that commit.
 # Arguments:
 #   $@=[content files to create, relative to the repository]
 function quality-create-fixture-repo() {
 
   local repo="$TEST_TMP/repo" file
-  test-create-repo "$repo" "${QUALITY_FIXTURE_PATHS[@]}"
+  cp -Rp "$SUITE_TMP/quality-fixture-base" "$repo"
   cp "$TEST_REPO_ROOT/scripts/quality/tests/mise.toml.test" "$repo/mise.toml"
   for file in "$@"; do
     mkdir -p "$repo/$(dirname "$file")"

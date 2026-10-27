@@ -44,12 +44,13 @@ TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find gi
 # Suite runner
 
 # Run the given tests in parallel, print a PASS or FAIL line for each in the
-# given order and a summary. Fail without running anything when no test is given.
+# given order and a summary. A new test starts as soon as any running test ends.
+# Fail without running anything when no test is given.
 # Arguments:
 #   $@=[names of the test functions to run, in order]
 function test-run-suite() {
 
-  local jobs i=0 next=0 failed=0
+  local jobs i=0 next=0 failed=0 running=0
   local -a tests=("$@")
 
   if [[ $# -eq 0 ]]; then
@@ -72,24 +73,40 @@ function test-run-suite() {
 
   jobs="${TEST_JOBS:-$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)}"
   [[ "$jobs" =~ ^[1-9][0-9]*$ ]] || jobs=4
+  # Each test writes its index to this pipe when it ends, so a slow test does not hold up the next ones
+  if ! mkfifo "$SUITE_TMP/.ended"; then
+    echo "ERROR: cannot create the pipe that reports ended tests" >&2
+    return 1
+  fi
+  exec 3<> "$SUITE_TMP/.ended"
   _TEST_PIDS=()
+  _TEST_ENDED=()
   for i in "${!tests[@]}"; do
-    # Report the oldest running test first, which also keeps the output in order
-    if [[ $((i - next)) -ge $jobs ]]; then
-      _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
-      next=$((next + 1))
-    fi
+    while [[ $running -ge $jobs ]]; do
+      _test-await-end
+      running=$((running - 1))
+    done
     # Job control gives the test its own process group, whose ID is its PID
     # Known gap: a signal between the launch and the PID registration below leaves that one test running
     # unsupervised until it ends on its own. Accepted for now as the window is tiny and the test is short-lived.
     # If that starts to matter, have the INT and TERM traps only set a flag while launching and exit once registered.
     set -m
     # The parent also sets the group, so hide the child's setpgid warning
-    { ( _test-run-isolated "${tests[$i]}" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null & } 2> /dev/null
+    { _test-run-job "$i" "${tests[$i]}" & } 2> /dev/null
     _TEST_PIDS[i]=$!
     set +m
+    running=$((running + 1))
+    # Report the tests that have ended, in the given order
+    while [[ -n "${_TEST_ENDED[next]:-}" ]]; do
+      _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
+      next=$((next + 1))
+    done
   done
   while [[ $next -lt ${#tests[@]} ]]; do
+    if [[ -z "${_TEST_ENDED[next]:-}" ]]; then
+      _test-await-end
+      continue
+    fi
     _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
     next=$((next + 1))
   done
@@ -125,6 +142,47 @@ function _test-report() {
   _test-indent "$log"
 
   return 1
+}
+
+# Run a test as the background job started by test-run-suite, with its output in
+# its log, then write its index to the pipe on file descriptor 3, which the test
+# itself does not inherit. Exit with the test's status.
+# Arguments:
+#   $1=[index of the test in the suite]
+#   $2=[name of the test function]
+function _test-run-job() {
+
+  local i="$1" rc
+  # A plain statement, as errexit is ignored inside a command that is part of a '||' list
+  set +e
+  ( _test-run-isolated "$2" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null 3>&-
+  rc=$?
+  echo "$i" >&3
+  exit "$rc"
+}
+
+# Wait until one more test has ended and mark it in _TEST_ENDED. A test killed
+# together with its job never writes its index, so every second without news,
+# look for a job that is gone.
+function _test-await-end() {
+
+  local i
+  while true; do
+    # In a subshell, as a signal trap that exits during 'read -t' leaves its timer to break the exit trap
+    if i="$(read -r -t 1 -u 3 i && printf '%s' "$i")"; then
+      if [[ -z "${_TEST_ENDED[i]:-}" ]]; then
+        _TEST_ENDED[i]=true
+        return 0
+      fi
+      continue
+    fi
+    for i in "${!_TEST_PIDS[@]}"; do
+      if [[ -z "${_TEST_ENDED[i]:-}" ]] && ! kill -0 "${_TEST_PIDS[$i]}" 2> /dev/null; then
+        _TEST_ENDED[i]=true
+        return 0
+      fi
+    done
+  done
 }
 
 # Run one test in an isolated subshell with errexit, nounset and pipefail on.
@@ -180,6 +238,7 @@ function _test-isolated-exit() {
 
 # Point git at an empty global config and a fixed identity, and drop the
 # variables that could point it at another repository, such as a git hook's GIT_DIR.
+# Turn off the automatic maintenance that each commit would otherwise start as another git process.
 function _test-isolate-git() {
 
   local vars var
@@ -189,9 +248,10 @@ function _test-isolate-git() {
   done <<< "$vars"
   GIT_CONFIG_GLOBAL=/dev/null
   GIT_CONFIG_NOSYSTEM=1
+  GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=maintenance.auto GIT_CONFIG_VALUE_0=false
   GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com
   GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
-  export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM \
+  export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 \
     GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 
   return 0

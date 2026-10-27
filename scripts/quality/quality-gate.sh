@@ -153,18 +153,20 @@ function is-github-actions() {
 # program called 'yq' cannot read YAML the way mikefarah yq 4 does.
 function prepare-tools() {
 
-  local shims tool
+  local shims version
   if command -v mise > /dev/null 2>&1 && shims="$(mise activate bash --shims 2> /dev/null | sed -n 's/^export PATH="\([^:]*\):.*/\1/p')" && [[ -n $shims ]]; then
     PATH="$shims:$PATH"
     export PATH
   fi
-  for tool in jq yq; do
-    if ! "$tool" --version > /dev/null 2>&1; then
-      echo "ERROR: the quality gate cannot run $tool, run 'mise trust' and 'make config'" >&2
-      return 1
-    fi
-  done
-  if [[ $(yq --version 2>&1) != *mikefarah/yq*'version v4.'* ]]; then
+  if ! jq --version > /dev/null 2>&1; then
+    echo "ERROR: the quality gate cannot run jq, run 'mise trust' and 'make config'" >&2
+    return 1
+  fi
+  if ! version="$(yq --version 2>&1)"; then
+    echo "ERROR: the quality gate cannot run yq, run 'mise trust' and 'make config'" >&2
+    return 1
+  fi
+  if [[ $version != *mikefarah/yq*'version v4.'* ]]; then
     echo "ERROR: the quality gate needs mikefarah yq version 4, run 'mise trust' and 'make config'" >&2
     return 1
   fi
@@ -469,8 +471,8 @@ function describe-source() {
 #   $4=[what the hook did]
 function note-hook() {
 
-  if ! jq -nc --arg time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg event "$2" --arg session "$3" --arg action "$4" \
-    '{time: $time, event: $event, session: $session, action: $action}' > "$1/last-hook.json"; then
+  if ! jq -nc --arg event "$2" --arg session "$3" --arg action "$4" \
+    '{time: (now | floor | todate), event: $event, session: $session, action: $action}' > "$1/last-hook.json"; then
     echo "Quality gate: cannot write $1/last-hook.json" >&2
   fi
 
@@ -698,7 +700,7 @@ function list-drop-ins() {
 # Print the directory that holds the hook's state, creating it when needed.
 function state-dir() {
 
-  mkdir -p "$STATE_DIR/logs" || return "$?"
+  [[ -d $STATE_DIR/logs ]] || mkdir -p "$STATE_DIR/logs" || return "$?"
   printf '%s\n' "$STATE_DIR"
 
   return 0
@@ -1066,13 +1068,17 @@ function run-with-limit() {
   RUNNING_GATE=$pid
   set +m
   deadline=$(( SECONDS + seconds ))
+  # Poll quickly at first so short gates finish promptly, then back off to 0.2 seconds
+  local -a naps=(0.01 0.02 0.05 0.1 0.2)
+  local nap=0
   while kill -0 "$pid" 2> /dev/null; do
     if (( SECONDS >= deadline )); then
       timed_out=true
       stop-group "$pid"
       break
     fi
-    sleep 0.2
+    sleep "${naps[nap]}"
+    (( nap >= ${#naps[@]} - 1 )) || nap=$((nap + 1))
   done
   wait "$pid" 2> /dev/null || rc=$?
   RUNNING_GATE=""
@@ -1259,8 +1265,8 @@ function write-last-run() {
   local i
   for i in "${!RESULT_STATE[@]}"; do
     printf '%s\t%s\t%s\t%s\n' "${RESULT_NAME[$i]}" "${RESULT_STATE[$i]}" "${RESULT_RC[$i]}" "${RESULT_SECONDS[$i]}"
-  done | jq -R -s -c --arg time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg event "$2" --arg session "$3" \
-    '{time: $time, event: $event, session: $session, gates: (split("\n") | map(select(length > 0) | split("\t") | {name: .[0], state: .[1], status: (.[2] | tonumber), seconds: (.[3] | tonumber)}))}' \
+  done | jq -R -s -c --arg event "$2" --arg session "$3" \
+    '{time: (now | floor | todate), event: $event, session: $session, gates: (split("\n") | map(select(length > 0) | split("\t") | {name: .[0], state: .[1], status: (.[2] | tonumber), seconds: (.[3] | tonumber)}))}' \
     > "$1/last-run.json" || echo "Quality gate: cannot write $1/last-run.json" >&2
 
   return 0

@@ -26,11 +26,19 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
 
+  # A harness that ignores errexit in tests also ignores failed assertions here, so check it from outside first
+  if "$BASH" -c 'source ./scripts/tests/test.lib.sh; function t() { false; true; }; test-run-suite t' > /dev/null 2>&1; then
+    echo "ERROR: the harness passed a test whose command failed" >&2
+    return 1
+  fi
+
   test-run-suite \
     test-harness-fails-test-when-a-middle-command-fails \
     test-harness-fails-test-when-a-called-function-fails \
     test-harness-fails-test-when-a-command-substitution-fails \
     test-harness-reports-summary-and-passes \
+    test-harness-starts-the-next-test-when-any-test-ends \
+    test-harness-reports-a-test-that-kills-its-own-job \
     test-harness-fails-a-suite-with-no-tests \
     test-harness-isolates-variables-between-tests \
     test-harness-isolates-working-directory-between-tests \
@@ -129,6 +137,45 @@ function b() { return 0; }' a b
   assert-contains "$TEST_STDOUT" "b PASS"
   assert-contains "$TEST_STDOUT" "Total: 2, Passed: 2, Failed: 0"
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+
+  return 0
+}
+
+function test-harness-starts-the-next-test-when-any-test-ends() {
+
+  # Arrange
+  # Test a passes only once c has run, which needs a free slot while a is still running.
+  write-mini-suite 'function a() {
+  local i
+  for ((i = 0; i < 100; i++)); do
+    [[ ! -f "$OUT/c-ran" ]] || return 0
+    sleep 0.1
+  done
+  return 1
+}
+function b() { return 0; }
+function c() { touch "$OUT/c-ran"; }' a b c
+  export OUT="$TEST_TMP"
+  # Act
+  test-capture env TEST_JOBS=2 "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-contains "$TEST_STDOUT" $'a PASS\nb PASS\nc PASS\nTotal: 3, Passed: 3, Failed: 0'
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+
+  return 0
+}
+
+function test-harness-reports-a-test-that-kills-its-own-job() {
+
+  # Arrange
+  write-mini-suite 'function a() { kill -KILL 0; }
+function b() { return 0; }' a b
+  export TEST_JOBS=1
+  # Act
+  run-mini-suite-with-limit
+  # Assert
+  assert-equal 1 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(cat "$TEST_TMP/mini.out")" $'a FAIL\nb PASS\nTotal: 2, Passed: 1, Failed: 1'
 
   return 0
 }
@@ -893,6 +940,27 @@ function term-blocked-mini-suite() {
     read -r test_pid command_pid < "$TEST_TMP/pids"
     kill -KILL "$test_pid" "$command_pid" 2> /dev/null || true
   fi
+
+  return 0
+}
+
+# Run the mini suite in the background and kill it if it has not exited 10
+# seconds later, so a harness that hangs fails the test. Its output goes to
+# "$TEST_TMP/mini.out" and "$TEST_TMP/mini.err", and its temporary files under
+# "$TEST_TMP/tmp". Sets SUITE_STATUS to the suite's exit status.
+function run-mini-suite-with-limit() {
+
+  local suite_pid ticks=0
+  mkdir "$TEST_TMP/tmp"
+  TMPDIR="$TEST_TMP/tmp" "$BASH" "$TEST_TMP/mini.test.sh" > "$TEST_TMP/mini.out" 2> "$TEST_TMP/mini.err" &
+  suite_pid=$!
+  while [[ $ticks -lt 100 ]] && kill -0 "$suite_pid" 2> /dev/null; do
+    sleep 0.1
+    ticks=$((ticks + 1))
+  done
+  kill -KILL "$suite_pid" 2> /dev/null || true
+  SUITE_STATUS=0
+  wait "$suite_pid" || SUITE_STATUS=$?
 
   return 0
 }
