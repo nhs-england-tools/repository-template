@@ -21,10 +21,15 @@ set -euo pipefail
 #
 # Notes:
 #   1) 'file' mode lints one script. 'all' mode lints every existing tracked
-#      '*.sh' file in one ShellCheck call or Docker container, and ignores 'file'.
+#      '*.sh' file, see note 4, and ignores 'file'.
 #   2) Untracked scripts, including ignored ones, are never linted.
 #   3) In 'all' mode, sourced tracked libraries are ShellCheck inputs too. Their
 #      assignments can change diagnostics compared with 'file' mode.
+#   4) 'all' mode first runs ShellCheck in parallel, quietly, natively or in one
+#      container each, over groups of each script and the tracked scripts it
+#      names, directly or not. When every group passes, so does one call over
+#      all the files, since ShellCheck follows only sourced files that are
+#      inputs. Otherwise that one call runs and gives the report and exit status.
 
 # ==============================================================================
 
@@ -113,9 +118,111 @@ function run-shellcheck-natively() {
 function run-shellcheck-natively-all() {
 
   local rc=0
-  shellcheck -- "$@" || rc=$?
+  run-shellcheck-all shellcheck "$@" || rc=$?
 
   return "$rc"
+}
+
+# Run ShellCheck over tracked files in parallel groups first, then in one call
+# over all of them if a group fails, to give the report and exit status.
+# Arguments:
+#   $1=[command that takes ShellCheck options, then '--' and the paths]
+#   $@=[tracked shell-script paths, relative to the repository root]
+function run-shellcheck-all() {
+
+  local runner="$1"
+  shift
+  run-shellcheck-groups-in-parallel "$runner" "$@" && return 0
+  local rc=0
+  "$runner" -- "$@" || rc=$?
+
+  return "$rc"
+}
+
+# Run quiet ShellCheck calls in parallel, one for each group of scripts. The
+# calls stop starting after the first failure. It fails unless the groups cover
+# every path.
+# Arguments:
+#   $1=[command that takes ShellCheck options, then '--' and the paths]
+#   $@=[tracked shell-script paths, relative to the repository root]
+function run-shellcheck-groups-in-parallel() {
+
+  local runner="$1"
+  shift
+  local -a files=("$@") inputs=() pids=() covered=()
+  local group k pid limit rc=0
+  limit="$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)"
+  while read -r group; do
+    ((rc == 0)) || break
+    [[ "$group" =~ ^[0-9]+( [0-9]+)*$ ]] || { rc=1; break; }
+    inputs=()
+    for k in $group; do
+      ((10#$k < $#)) || { rc=1; break 2; }
+      covered[10#$k]=1
+      inputs+=("${files[10#$k]}")
+    done
+    if ((${#pids[@]} >= limit)); then
+      wait "${pids[0]}" || rc=1
+      pids=("${pids[@]:1}")
+    fi
+    "$runner" -f quiet -- "${inputs[@]}" > /dev/null 2>&1 &
+    pids+=("$!")
+  done < <(print-shell-script-groups "$@")
+  for pid in "${pids[@]}"; do
+    wait "$pid" || rc=1
+  done
+  # A failed group plan leaves paths out, which must not pass
+  ((${#covered[@]} == $#)) || rc=1
+
+  return "$rc"
+}
+
+# Print groups of indexes into the paths, one group per line, largest first. A
+# group holds a script and every script it names, directly or not, in path
+# order. A script already in a printed group starts no group of its own.
+# Arguments:
+#   $@=[shell-script paths]
+function print-shell-script-groups() {
+
+  local -a files=("$@") named=() groups=() sizes=() queue=() seen=() grouped=()
+  local -A index=()
+  local count=$# i j k path
+  for ((i = 0; i < count; i++)); do
+    index["${files[i]}"]=$i
+  done
+  for ((j = 0; j < count; j++)); do
+    # grep would split a name with a newline into several patterns
+    [[ "${files[j]}" == *$'\n'* ]] && continue
+    while IFS= read -r -d '' path; do
+      i="${index["$path"]:-}"
+      [[ -n "$i" && "$i" -ne "$j" ]] && named[i]+=" $j"
+    done < <(grep -lF --null -e "${files[j]##*/}" -- "${files[@]}" 2> /dev/null)
+  done
+  for ((i = 0; i < count; i++)); do
+    seen=([i]=1)
+    queue=("$i")
+    while ((${#queue[@]} > 0)); do
+      k=${queue[0]}
+      queue=("${queue[@]:1}")
+      for j in ${named[k]:-}; do
+        [[ -n "${seen[j]:-}" ]] || { seen[j]=1; queue+=("$j"); }
+      done
+    done
+    # Indexed array keys expand in ascending order, which is path order
+    groups[i]="${!seen[*]}"
+    sizes[i]=${#seen[@]}
+  done
+  while read -r _ i; do
+    [[ -n "${grouped[i]:-}" ]] && continue
+    for k in ${groups[i]}; do
+      grouped[k]=1
+    done
+    echo "${groups[i]}"
+  done < <(for ((i = 0; i < count; i++)); do
+    echo "${sizes[i]} $i"
+  done | sort -k1,1nr -k2,2n)
+
+  return 0
 }
 
 # Run ShellCheck in a Docker container.
@@ -140,7 +247,7 @@ function run-shellcheck-in-docker() {
   return "$rc"
 }
 
-# Run ShellCheck in one Docker container over tracked files.
+# Run ShellCheck in Docker over tracked files.
 # Arguments:
 #   $@=[tracked shell-script paths, relative to the repository root]
 function run-shellcheck-in-docker-all() {
@@ -150,10 +257,30 @@ function run-shellcheck-in-docker-all() {
 
   local image
   image=$(name=koalaman/shellcheck docker-get-image-version-and-pull) || return "$?"
-  local -a container_files=()
+  local rc=0
+  run-shellcheck-all run-shellcheck-container "$@" || rc=$?
+
+  return "$rc"
+}
+
+# Run ShellCheck in one Docker container.
+# Arguments (provided as environment variables):
+#   image=[pulled ShellCheck image]
+# Arguments:
+#   $@=[ShellCheck options, then '--' and the shell-script paths, relative to the repository root]
+# shellcheck disable=SC2329
+function run-shellcheck-container() {
+
+  local -a args=()
+  while [[ "$1" != -- ]]; do
+    args+=("$1")
+    shift
+  done
+  shift
+  args+=(--)
   local file
   for file in "$@"; do
-    container_files+=("/workdir/$file")
+    args+=("/workdir/$file")
   done
   local rc=0
   docker run --rm --platform linux/amd64 \
@@ -161,7 +288,7 @@ function run-shellcheck-in-docker-all() {
     --volume "$PWD:/workdir:ro" \
     --workdir /workdir \
     "$image" \
-    -- "${container_files[@]}" || rc=$?
+    "${args[@]}" || rc=$?
 
   return "$rc"
 }

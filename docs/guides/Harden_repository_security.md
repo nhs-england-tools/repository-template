@@ -215,11 +215,12 @@ repository, on an Apple silicon workstation with the images already pulled.
 | File format, `all`           | 0.10 s | 0.45 s | 0.35 s |
 | Markdown format, `all`       | 0.38 s | 1.40 s | 1.02 s |
 | Markdown links, `all`        | 0.08 s | 0.49 s | 0.41 s |
-| Shell lint, `all`            | 7.65 s | 9.31 s | 1.66 s |
+| Shell lint, `all`            | 2.09 s | 3.33 s | 1.24 s |
 
-In total, the checks took 8.72 s natively and 12.64 s in Docker. ShellCheck
-takes the most time in both modes. A first image pull adds time, and x64 CI
-runners have no emulation cost.
+In total, the checks took 3.16 s natively and 6.65 s in Docker. ShellCheck
+takes the most time in both modes, though it runs in parallel, one container
+for each group of related scripts in Docker. A first image pull adds time, and
+x64 CI runners have no emulation cost.
 
 ## Making a security-sensitive change
 
