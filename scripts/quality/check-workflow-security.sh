@@ -9,33 +9,54 @@ set -euo pipefail
 #   $ [options] ./scripts/quality/check-workflow-security.sh
 #
 # Options:
-#   dir=path          # Directory of workflow files, default is
-#                     # '.github/workflows'
-#   actions_dir=path  # Directory of local actions, default is '.github/actions'
-#   allowlist=path    # Approved write permissions, default is
-#                     # 'scripts/config/workflow-security.yaml'
-#   VERBOSE=true      # Show all the executed commands, default is 'false'
+#   check={all,staged-changes,working-tree-changes,branch}
+#       Check mode, default is 'all'
+#   BRANCH_NAME=base-branch
+#       Local base for branch mode, chosen automatically when unset, as
+#       './scripts/quality/git-base.lib.sh' describes
+#   dir=path
+#       Directory of workflow files, relative to the repository root, default
+#       is '.github/workflows'
+#   actions_dir=path
+#       Directory of local actions, relative to the repository root, default
+#       is '.github/actions'
+#   allowlist=path
+#       Approved write permissions, relative to the repository root, default
+#       is 'scripts/config/workflow-security.yaml'
+#   VERBOSE=true
+#       Show all the executed commands, default is 'false'
 #
 # Exit codes:
-#   0 - All files meet the security baseline
-#   1 - A file violates the security baseline or cannot be checked
+#   0 - All selected files meet the security baseline, or a scoped mode
+#       selected no files
+#   1 - A file violates the security baseline or cannot be checked, 'all'
+#       mode finds no tracked workflow files, or the branch to compare with is
+#       not found
+#   126 - The check mode is not recognised
 #
 # Notes:
-#   1) Each rule is a 'rule_*' function in check-workflow-security.jq, with a
+#   1) Check modes select existing files known to Git, as described in
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never checked.
+#   2) A scoped mode that changes or deletes the allowlist, the rules in
+#      check-workflow-security.jq or this script checks every workflow and
+#      local action, since they apply to all of them.
+#   3) Each rule is a 'rule_*' function in check-workflow-security.jq, with a
 #      plain-language summary and an example of passing and failing YAML.
-#   2) The check needs yq and jq from 'make config'. It has no Docker fallback.
+#   4) The check needs yq and jq from 'make config'. It has no Docker fallback.
 
 # ==============================================================================
 
-# Check every workflow and local action against the security baseline.
+# Check the selected workflows and local actions against the security baseline.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
+  local check_mode=${check:-all}
   local dir=${dir:-.github/workflows}
   local actions_dir=${actions_dir:-.github/actions}
   local allowlist=${allowlist:-scripts/config/workflow-security.yaml}
-  local approved file tool failed=0 checked=0
+  local approved file tool failed=0
+  local -a workflows=() actions=()
 
   for tool in yq jq; do
     command -v "$tool" > /dev/null 2>&1 || {
@@ -43,30 +64,83 @@ function main() {
       return 1
     }
   done
-  dir="${dir%/}"
-  actions_dir="${actions_dir%/}"
+  dir="$(workflow-security-relative-path "$dir")"
+  actions_dir="$(workflow-security-relative-path "$actions_dir")"
+  allowlist="$(workflow-security-relative-path "$allowlist")"
   [[ -d "$dir" ]] || {
     echo "ERROR: workflow directory does not exist: $dir" >&2
     return 1
   }
-  approved="$(workflow-security-approved-writes "$allowlist")" || return 1
 
-  while IFS= read -r -d '' file; do
-    workflow-security-check "$file" workflow "${file#"$dir"/}" "$approved" || failed=1
-    checked=$((checked + 1))
-  done < <(find "$dir" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 | sort -z)
-  [[ $checked -gt 0 ]] || {
-    echo "ERROR: no workflow files found under $dir" >&2
+  # shellcheck disable=SC1091
+  source ./scripts/quality/git-files.lib.sh
+  collect-workflow-security-files workflows actions "$check_mode" "$dir" "$actions_dir" "$allowlist" || return "$?"
+  [[ "$check_mode" != all || ${#workflows[@]} -gt 0 ]] || {
+    echo "ERROR: no tracked workflow files found under $dir" >&2
     return 1
   }
+  approved="$(workflow-security-approved-writes "$allowlist")" || return 1
 
-  if [[ -d "$actions_dir" ]]; then
-    while IFS= read -r -d '' file; do
-      workflow-security-check "$file" action "${file#"$actions_dir"/}" "[]" || failed=1
-    done < <(find "$actions_dir" -type f \( -name 'action.yaml' -o -name 'action.yml' \) -print0 | sort -z)
-  fi
+  for file in "${workflows[@]}"; do
+    workflow-security-check "$file" workflow "${file#"$dir"/}" "$approved" || failed=1
+  done
+  for file in "${actions[@]}"; do
+    workflow-security-check "$file" action "${file#"$actions_dir"/}" "[]" || failed=1
+  done
 
   [[ $failed -eq 0 ]] || return 1
+
+  return 0
+}
+
+# Print a path relative to the repository root, the current directory.
+# Arguments:
+#   $1=[path, relative or absolute]
+function workflow-security-relative-path() {
+
+  local path="${1%/}"
+  path="${path#"$PWD"/}"
+  printf '%s\n' "${path#./}"
+
+  return 0
+}
+
+# Collect the workflow and local action files that a check mode selects.
+# Arguments:
+#   $1=[name reference of the output workflow files]
+#   $2=[name reference of the output local action files]
+#   $3=[check mode]
+#   $4=[workflow directory]
+#   $5=[local actions directory]
+#   $6=[allowlist file]
+function collect-workflow-security-files() {
+
+  # shellcheck disable=SC2178
+  local -n workflow_files="$1" action_files="$2" || return "$?"
+  local check_mode="$3" dir="$4" actions_dir="$5" allowlist="$6" path
+  local -a selected=() deleted=()
+  # One call without a pathspec, so branch mode resolves its base only once
+  quality-collect-git-files selected "$check_mode" '' deleted || return "$?"
+  if [[ "$check_mode" != all ]]; then
+    for path in "${selected[@]}" "${deleted[@]}"; do
+      case $path in
+        "$allowlist" | scripts/quality/check-workflow-security.jq | scripts/quality/check-workflow-security.sh) ;;
+        *) continue ;;
+      esac
+      selected=()
+      quality-collect-git-files selected all '' || return "$?"
+      break
+    done
+  fi
+  for path in "${selected[@]}"; do
+    case $path in
+      "$dir"/*.yaml|"$dir"/*.yml) workflow_files+=("$path") ;;
+      "$actions_dir"/action.yaml|"$actions_dir"/action.yml|"$actions_dir"/*/action.yaml|"$actions_dir"/*/action.yml)
+        action_files+=("$path")
+        ;;
+      *) ;;
+    esac
+  done
 
   return 0
 }

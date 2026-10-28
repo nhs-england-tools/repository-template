@@ -47,14 +47,6 @@ _docker: # Docker command wrapper - mandatory: cmd=[command to execute]; optiona
 	docker-${cmd} # 'dir' is accessible by the function as environment variable
 
 # ==============================================================================
-# Quality checks - please DO NOT edit this section!
-
-docker-shellscript-lint: # Lint all Docker module shell scripts @Quality
-	for file in $$(find scripts/docker -type f -name "*.sh"); do
-		check=file file=$${file} scripts/quality/check-shell-lint.sh
-	done
-
-# ==============================================================================
 # Module tests and examples - please DO NOT edit this section!
 
 docker-test-suite-run: # Run Docker test suite @ExamplesAndTests
@@ -71,5 +63,4 @@ ${VERBOSE}.SILENT: \
 	docker-pull-pinned-images \
 	docker-push \
 	docker-run \
-	docker-shellscript-lint \
 	docker-test-suite-run \

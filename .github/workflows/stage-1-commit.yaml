@@ -125,4 +125,4 @@ jobs:
           cache: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: "Check workflow security"
-        run: make lint-workflow-security
+        run: make lint-workflow-security check=all

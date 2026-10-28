@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# Lint shell scripts with ShellCheck. It runs ShellCheck natively when
-# installed, otherwise in a Docker container. It also fails any full-line
+# Lint repository shell scripts with ShellCheck. It runs ShellCheck natively
+# when installed, otherwise in a Docker container. It also fails any full-line
 # comment longer than 80 characters in a shell script or a '*.mk' file, except
 # a line with a URL and the shebang.
 #
@@ -11,122 +11,248 @@ set -euo pipefail
 #   $ [options] ./scripts/quality/check-shell-lint.sh
 #
 # Options:
-#   check={file,all}       # Check mode, default is 'file'
-#   file=path              # Script to lint in 'file' mode, default is itself
-#   FORCE_USE_DOCKER=true  # Run in a Docker container, default is 'false'
-#   VERBOSE=true           # Show all the executed commands, default is 'false'
+#   check={all,staged-changes,working-tree-changes,branch}
+#       Check mode, default is 'all'
+#   BRANCH_NAME=base-branch
+#       Local base for branch mode, chosen automatically when unset, as
+#       './scripts/quality/git-base.lib.sh' describes
+#   FORCE_USE_DOCKER=true
+#       Run in a Docker container, default is 'false'
+#   VERBOSE=true
+#       Show all the executed commands, default is 'false'
 #
 # Exit codes:
-#   0 - All files passed, or no tracked files were found
-#   1 - ShellCheck or comment length findings, an unsupported check mode, or a
-#       local setup failure
+#   0 - All selected files passed, or no files were selected
+#   1 - ShellCheck or comment length findings, the branch to compare with is
+#       not found, or a local setup failure
+#   126 - The check mode is not recognised
 #   Other - Non-zero statuses from Git, Bash, ShellCheck, image pulls or Docker
 #           are passed through, even when comment length findings are also
 #           reported
 #
 # Notes:
-#   1) 'file' mode lints one script, or checks only the comments of a '*.mk'
-#      file. 'all' mode lints every existing tracked '*.sh' file, see note 4,
-#      and ignores 'file'.
-#   2) Untracked scripts, including ignored ones, are never linted.
-#   3) In 'all' mode, sourced tracked libraries are ShellCheck inputs too. Their
-#      assignments can change diagnostics compared with 'file' mode.
-#   4) 'all' mode first runs ShellCheck in parallel, quietly, natively or in one
-#      container each, over groups of each script and the tracked scripts it
-#      names, directly or not. When every group passes, so does one call over
-#      all the files, since ShellCheck follows only sourced files that are
-#      inputs. Otherwise that one call runs and gives the report and exit
-#      status.
-#   5) The comment length check needs no ShellCheck or Docker. It runs in both
-#      modes and counts bytes in the C locale, so a non-ASCII character counts
-#      as more than one. 'all' mode also checks every existing tracked '*.mk'
-#      file, which ShellCheck never sees. Unreadable files are left to
-#      ShellCheck to report.
-#   6) A line counts as a comment when its first non-blank character is '#',
+#   1) Check modes select existing shell scripts known to Git, as described in
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never linted.
+#   2) Scoped modes also lint the scripts that name a changed, deleted or
+#      renamed script, directly or not, and the scripts those name. ShellCheck
+#      then sees the same source context as in 'all' mode. A script names
+#      another when it contains the other's file name with no letter, digit,
+#      '_', '.' or '-' either side. A scoped mode that changes a '.shellcheckrc'
+#      or 'shellcheckrc' file, or 'mise.toml', which pins ShellCheck, lints
+#      every script.
+#   3) Every mode first runs ShellCheck in parallel, quietly, natively or in
+#      one container each, over groups of each script and the scripts it names,
+#      directly or not. If a group fails, one full call gives the report and
+#      exit status.
+#   4) The comment length check needs no ShellCheck or Docker and counts bytes
+#      in the C locale, so a non-ASCII character counts as more than one. It
+#      checks the selected '*.sh' and tracked '*.mk' files, all of them in
+#      'all' mode and only the changed ones in scoped modes, since it does not
+#      depend on other files. Unreadable files are left to ShellCheck to
+#      report.
+#   5) A line counts as a comment when its first non-blank character is '#',
 #      including such lines in heredocs and embedded awk or Python code. A
 #      comment line containing '://' is exempt, so a long URL never fails.
 
 # ==============================================================================
 
-# Lint the shell script natively or in Docker.
+# Lint the selected shell scripts natively or in Docker.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  local check_mode=${check:-file}
-  local rc=0
-  if [[ "$check_mode" == all ]]; then
-    local -a files=() make_files=() tracked=()
-    local tracked_path
-    collect-tracked-files tracked || return "$?"
-    for tracked_path in "${tracked[@]}"; do
-      if [[ "$tracked_path" == *.mk ]]; then
-        make_files+=("$tracked_path")
-      else
-        files+=("$tracked_path")
-      fi
-    done
+  local check_mode=${check:-all}
 
-    [[ ${#files[@]} -eq 0 && ${#make_files[@]} -eq 0 ]] && return 0
-    if [[ ${#files[@]} -gt 0 ]]; then
-      if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-        run-shellcheck-natively-all "${files[@]}" || rc=$?
-      else
-        run-shellcheck-in-docker-all "${files[@]}" || rc=$?
-      fi
-    fi
-    check-comment-length "${files[@]}" "${make_files[@]}" || [[ $rc -ne 0 ]] || rc=1
-  elif [[ "$check_mode" == file ]]; then
-    [[ -z "${file:-}" ]] && echo "WARNING: 'file' variable not set, defaulting to itself"
-    local file=${file:-scripts/quality/check-shell-lint.sh}
-    if [[ "$file" == *.mk ]]; then
-      :
-    elif command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-      file="$file" run-shellcheck-natively || rc=$?
-    else
-      file="$file" run-shellcheck-in-docker || rc=$?
-    fi
-    # shellcheck disable=SC2001
-    check-comment-length "$(echo "$file" | sed "s#$PWD#.#")" || [[ $rc -ne 0 ]] || rc=1
+  # shellcheck disable=SC1091
+  source ./scripts/quality/git-files.lib.sh
+  local rc=0
+  local -a files=() graph_files=() make_files=() changed=() deleted=()
+  # shellcheck disable=SC2034
+  local -a dependencies=() callers=()
+  local tracked_count settings_changed=false
+  quality-collect-git-files graph_files all '*.sh' || return "$?"
+  tracked_count=${#graph_files[@]}
+  if [[ "$check_mode" == all ]]; then
+    changed=("${graph_files[@]}")
+    quality-collect-git-files make_files all '*.mk' || return "$?"
   else
-    echo "ERROR: unsupported check mode '$check_mode'. Use check=file or check=all." >&2
-    return 1
+    collect-changed-paths changed make_files deleted settings_changed "$check_mode" || return "$?"
+    # Deleted scripts join the graph only to select the scripts that name them
+    graph_files+=("${deleted[@]}")
   fi
+
+  build-shell-script-name-graph dependencies callers "$tracked_count" "${graph_files[@]}" || return "$?"
+  if [[ "$check_mode" == all || "$settings_changed" == true ]]; then
+    files=("${graph_files[@]:0:tracked_count}")
+  else
+    collect-shell-script-context files graph_files dependencies callers "$tracked_count" "${changed[@]}" "${deleted[@]}" || return "$?"
+  fi
+
+  if [[ ${#files[@]} -gt 0 ]]; then
+    if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+      run-shellcheck-natively-all graph_files dependencies "${files[@]}" || rc=$?
+    else
+      run-shellcheck-in-docker-all graph_files dependencies "${files[@]}" || rc=$?
+    fi
+  fi
+  check-comment-length "${changed[@]}" "${make_files[@]}" || [[ $rc -ne 0 ]] || rc=1
 
   return "$rc"
 }
 
-# Collect tracked shell scripts and '*.mk' files that still exist in the
-# working tree.
+# Collect the changed shell scripts and Make files of a scoped check mode, the
+# shell scripts it deletes, and whether it changes a ShellCheck setting.
 # Arguments:
-#   $1=[name reference of the output array]
-function collect-tracked-files() {
+#   $1=[name reference of the changed shell scripts]
+#   $2=[name reference of the changed Make files]
+#   $3=[name reference of the deleted shell scripts]
+#   $4=[name reference of a flag, set to 'true' when a ShellCheck setting
+#     changes]
+#   $5=[check mode]
+function collect-changed-paths() {
 
-  local -n tracked_files="$1" || return "$?"
-  local path previous_path='' rc tracked_list_file
-  tracked_list_file="$(mktemp)" || { echo "ERROR: cannot create a temporary file for tracked shell scripts" >&2; return 1; }
-  # Git pathspec mode variables can change the meaning of the patterns.
-  if env -u GIT_GLOB_PATHSPECS -u GIT_NOGLOB_PATHSPECS \
-    -u GIT_LITERAL_PATHSPECS -u GIT_ICASE_PATHSPECS \
-    git ls-files -z -- '*.sh' '*.mk' > "$tracked_list_file"; then
-    :
-  else
-    rc=$?
-    rm -f "$tracked_list_file"
-    return "$rc"
-  fi
-  while IFS= read -r -d '' path; do
-    # Git can list a conflicted index path once for each stage.
-    if [[ "$path" != "$previous_path" && -f "$path" ]]; then
-      tracked_files+=("$path")
-    fi
-    previous_path="$path"
-  done < "$tracked_list_file" || {
-    rc=$?
-    rm -f "$tracked_list_file"
-    return "$rc"
-  }
-  rm -f "$tracked_list_file"
+  # shellcheck disable=SC2178
+  local -n changed_scripts="$1" changed_make_files="$2" deleted_scripts="$3" shellcheck_settings_changed="$4" || return "$?"
+  local check_mode="$5" path
+  local -a selected=() gone=()
+  # One call without a pathspec, so branch mode resolves its base only once
+  quality-collect-git-files selected "$check_mode" '' gone || return "$?"
+  for path in "${selected[@]}"; do
+    case $path in
+      *.sh) changed_scripts+=("$path") ;;
+      *.mk) changed_make_files+=("$path") ;;
+    esac
+  done
+  for path in "${gone[@]}"; do
+    [[ "$path" != *.sh ]] || deleted_scripts+=("$path")
+  done
+  for path in "${selected[@]}" "${gone[@]}"; do
+    case $path in
+      .shellcheckrc | */.shellcheckrc | shellcheckrc | */shellcheckrc | mise.toml)
+        # shellcheck disable=SC2034
+        shellcheck_settings_changed=true
+        ;;
+    esac
+  done
+
+  return 0
+}
+
+# Build the script-name graph used for scoped context and parallel groups.
+# Arguments:
+#   $1=[name reference of dependency graph]
+#   $2=[name reference of caller graph]
+#   $3=[number of leading paths to read, the rest are only searched for]
+#   $@=[shell-script paths, relative to the repository root]
+function build-shell-script-name-graph() {
+
+  # shellcheck disable=SC2178
+  local -n dependency_graph="$1" caller_graph="$2" || return "$?"
+  local readable_count="$3"
+  shift 3
+  local -a files=("$@")
+  local -A index=()
+  local i j path pattern
+  dependency_graph=()
+  caller_graph=()
+  for ((i = 0; i < ${#files[@]}; i++)); do
+    index["${files[i]}"]=$i
+  done
+  # grep without file operands would read stdin
+  ((readable_count > 0)) || return 0
+  for ((j = 0; j < ${#files[@]}; j++)); do
+    # grep treats a newline in a pattern as multiple patterns
+    [[ "${files[j]}" == *$'\n'* ]] && continue
+    shell-script-name-pattern pattern "${files[j]##*/}"
+    while IFS= read -r -d '' path; do
+      i="${index["$path"]:-}"
+      if [[ -n "$i" && "$i" -ne "$j" ]]; then
+        dependency_graph[i]+="$j "
+        caller_graph[j]+="$i "
+      fi
+    done < <(grep -lE --null -e "$pattern" -- "${files[@]:0:readable_count}" 2> /dev/null)
+  done
+
+  return 0
+}
+
+# Set an extended regular expression that matches a file name, but not as part
+# of a longer file name.
+# Arguments:
+#   $1=[name of the output variable]
+#   $2=[file name]
+function shell-script-name-pattern() {
+
+  local -n name_pattern="$1" || return "$?"
+  local name="$2" escaped='' char i
+  for ((i = 0; i < ${#name}; i++)); do
+    char="${name:i:1}"
+    case $char in
+      '^') escaped+='\^' ;;
+      '.' | '[' | ']' | \\ | '*' | '$' | '(' | ')' | '+' | '?' | '{' | '}' | '|') escaped+="[$char]" ;;
+      *) escaped+="$char" ;;
+    esac
+  done
+  # shellcheck disable=SC2034
+  name_pattern="(^|[^[:alnum:]_.-])${escaped}(\$|[^[:alnum:]_.-])"
+
+  return 0
+}
+
+# Select changed scripts, their callers and those callers' dependencies. Deleted
+# seeds select their callers but are not returned.
+# Arguments:
+#   $1=[name reference of output paths]
+#   $2=[name reference of graph paths]
+#   $3=[name reference of dependency graph]
+#   $4=[name reference of caller graph]
+#   $5=[number of leading graph paths that are tracked, the rest are deleted]
+#   $@=[changed and deleted shell-script paths]
+function collect-shell-script-context() {
+
+  # shellcheck disable=SC2178
+  local -n result="$1" graph_paths="$2" dependency_graph="$3" caller_graph="$4" || return "$?"
+  local tracked_count="$5"
+  shift 5
+  local -a included=()
+  local -A index=()
+  local i path
+  result=()
+  for ((i = 0; i < ${#graph_paths[@]}; i++)); do
+    index["${graph_paths[i]}"]=$i
+  done
+  for path in "$@"; do
+    i="${index["$path"]:-}"
+    [[ -z "$i" ]] || included[i]=1
+  done
+  add-reachable-nodes included caller_graph || return "$?"
+  add-reachable-nodes included dependency_graph || return "$?"
+  for ((i = 0; i < tracked_count; i++)); do
+    [[ -n "${included[i]:-}" ]] && result+=("${graph_paths[i]}")
+  done
+
+  return 0
+}
+
+# Add to a set of graph nodes every node reachable from them.
+# Arguments:
+#   $1=[name reference of the set, an indexed array keyed by node index]
+#   $2=[name reference of the graph, space-separated node indexes per node]
+function add-reachable-nodes() {
+
+  local -n reachable="$1" edges="$2" || return "$?"
+  local -a queue=("${!reachable[@]}")
+  local node related
+  while ((${#queue[@]} > 0)); do
+    node=${queue[0]}
+    queue=("${queue[@]:1}")
+    for related in ${edges[node]:-}; do
+      if [[ -z "${reachable[$related]:-}" ]]; then
+        reachable[related]=1
+        queue+=("$related")
+      fi
+    done
+  done
 
   return 0
 }
@@ -160,55 +286,49 @@ function check-comment-length() {
   return "$rc"
 }
 
-# Run ShellCheck natively.
-# Arguments (provided as environment variables):
-#   file=[path to the shell script to lint, relative to the repository root]
-function run-shellcheck-natively() {
-
-  local rc=0
-  # shellcheck disable=SC2001
-  shellcheck "$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
-
-  return "$rc"
-}
-
-# Run ShellCheck natively over tracked files.
+# Run ShellCheck natively over the selected files.
 # Arguments:
-#   $@=[tracked shell-script paths, relative to the repository root]
+#   $1=[name reference of graph paths]
+#   $2=[name reference of dependency graph]
+#   $@=[shell-script paths]
 function run-shellcheck-natively-all() {
 
-  local rc=0
-  run-shellcheck-all shellcheck "$@" || rc=$?
+  local graph_paths_name="$1" dependency_graph_name="$2" rc=0
+  shift 2
+  run-shellcheck-all shellcheck "$graph_paths_name" "$dependency_graph_name" "$@" || rc=$?
 
   return "$rc"
 }
 
-# Run ShellCheck over tracked files in parallel groups first, then in one call
-# over all of them if a group fails, to give the report and exit status.
+# Run ShellCheck over parallel groups first, then once over all files if a group
+# fails, to provide the complete report and exit status.
 # Arguments:
-#   $1=[command that takes ShellCheck options, then '--' and the paths]
-#   $@=[tracked shell-script paths, relative to the repository root]
+#   $1=[command that accepts ShellCheck options, then '--' and paths]
+#   $2=[name reference of graph paths]
+#   $3=[name reference of dependency graph]
+#   $@=[shell-script paths]
 function run-shellcheck-all() {
 
-  local runner="$1"
-  shift
-  run-shellcheck-groups-in-parallel "$runner" "$@" && return 0
+  local runner="$1" graph_paths_name="$2" dependency_graph_name="$3"
+  shift 3
+  run-shellcheck-groups-in-parallel "$runner" "$graph_paths_name" "$dependency_graph_name" "$@" && return 0
   local rc=0
   "$runner" -- "$@" || rc=$?
 
   return "$rc"
 }
 
-# Run quiet ShellCheck calls in parallel, one for each group of scripts. The
-# calls stop starting after the first failure. It fails unless the groups cover
-# every path.
+# Run quiet ShellCheck calls in parallel, one for each group. It fails unless
+# the groups cover every selected path.
 # Arguments:
-#   $1=[command that takes ShellCheck options, then '--' and the paths]
-#   $@=[tracked shell-script paths, relative to the repository root]
+#   $1=[command that accepts ShellCheck options, then '--' and paths]
+#   $2=[name reference of graph paths]
+#   $3=[name reference of dependency graph]
+#   $@=[shell-script paths]
 function run-shellcheck-groups-in-parallel() {
 
-  local runner="$1"
-  shift
+  local runner="$1" graph_paths_name="$2" dependency_graph_name="$3"
+  shift 3
   local -a files=("$@") inputs=() pids=() covered=()
   local group k pid limit rc=0
   limit="$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)"
@@ -217,7 +337,7 @@ function run-shellcheck-groups-in-parallel() {
     [[ "$group" =~ ^[0-9]+( [0-9]+)*$ ]] || { rc=1; break; }
     inputs=()
     for k in $group; do
-      ((10#$k < $#)) || { rc=1; break 2; }
+      ((10#$k < ${#files[@]})) || { rc=1; break 2; }
       covered[10#$k]=1
       inputs+=("${files[10#$k]}")
     done
@@ -227,48 +347,47 @@ function run-shellcheck-groups-in-parallel() {
     fi
     "$runner" -f quiet -- "${inputs[@]}" > /dev/null 2>&1 &
     pids+=("$!")
-  done < <(print-shell-script-groups "$@")
+  done < <(print-shell-script-groups "$graph_paths_name" "$dependency_graph_name" "${files[@]}")
   for pid in "${pids[@]}"; do
     wait "$pid" || rc=1
   done
-  # A failed group plan leaves paths out, which must not pass
-  ((${#covered[@]} == $#)) || rc=1
+  ((${#covered[@]} == ${#files[@]})) || rc=1
 
   return "$rc"
 }
 
-# Print groups of indexes into the paths, one group per line, largest first. A
-# group holds a script and every script it names, directly or not, in path
-# order. A script already in a printed group starts no group of its own.
+# Print groups of selected-path indexes, largest first, using the shared graph.
 # Arguments:
-#   $@=[shell-script paths]
+#   $1=[name reference of graph paths]
+#   $2=[name reference of dependency graph]
+#   $@=[selected shell-script paths]
 function print-shell-script-groups() {
 
-  local -a files=("$@") named=() groups=() sizes=() queue=() seen=() grouped=()
-  local -A index=()
-  local count=$# i j k path
-  for ((i = 0; i < count; i++)); do
-    index["${files[i]}"]=$i
+  # shellcheck disable=SC2178
+  local -n graph_paths="$1" dependency_graph="$2" || return "$?"
+  shift 2
+  local -a files=("$@") named=() groups=() sizes=() seen=() grouped=()
+  local -A graph_index=() selected_index=()
+  local count=$# i j k graph_node dependency
+  for ((i = 0; i < ${#graph_paths[@]}; i++)); do
+    graph_index["${graph_paths[i]}"]=$i
   done
-  for ((j = 0; j < count; j++)); do
-    # grep would split a name with a newline into several patterns
-    [[ "${files[j]}" == *$'\n'* ]] && continue
-    while IFS= read -r -d '' path; do
-      i="${index["$path"]:-}"
-      [[ -n "$i" && "$i" -ne "$j" ]] && named[i]+=" $j"
-    done < <(grep -lF --null -e "${files[j]##*/}" -- "${files[@]}" 2> /dev/null)
+  for ((i = 0; i < count; i++)); do
+    graph_node="${graph_index["${files[i]}"]:-}"
+    [[ -n "$graph_node" ]] && selected_index[$graph_node]=$i
+  done
+  for ((i = 0; i < count; i++)); do
+    graph_node="${graph_index["${files[i]}"]:-}"
+    # An empty subscript would read node 0
+    [[ -n "$graph_node" ]] || continue
+    for dependency in ${dependency_graph[graph_node]:-}; do
+      j="${selected_index[$dependency]:-}"
+      [[ -n "$j" && "$j" -ne "$i" ]] && named[i]+="$j "
+    done
   done
   for ((i = 0; i < count; i++)); do
     seen=([i]=1)
-    queue=("$i")
-    while ((${#queue[@]} > 0)); do
-      k=${queue[0]}
-      queue=("${queue[@]:1}")
-      for j in ${named[k]:-}; do
-        [[ -n "${seen[j]:-}" ]] || { seen[j]=1; queue+=("$j"); }
-      done
-    done
-    # Indexed array keys expand in ascending order, which is path order
+    add-reachable-nodes seen named || return "$?"
     groups[i]="${!seen[*]}"
     sizes[i]=${#seen[@]}
   done
@@ -285,40 +404,19 @@ function print-shell-script-groups() {
   return 0
 }
 
-# Run ShellCheck in a Docker container.
-# Arguments (provided as environment variables):
-#   file=[path to the shell script to lint, relative to the repository root]
-function run-shellcheck-in-docker() {
-
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
-
-  local image
-  image=$(name=koalaman/shellcheck docker-get-image-version-and-pull) || return "$?"
-  local rc=0
-  # shellcheck disable=SC2001
-  docker run --rm --platform linux/amd64 \
-    --network none \
-    --volume "$PWD:/workdir:ro" \
-    --workdir /workdir \
-    "$image" \
-      "/workdir/$(echo "$file" | sed "s#$PWD#.#")" || rc=$?
-
-  return "$rc"
-}
-
-# Run ShellCheck in Docker over tracked files.
+# Run ShellCheck in Docker over the selected files.
 # Arguments:
-#   $@=[tracked shell-script paths, relative to the repository root]
+#   $1=[name reference of graph paths]
+#   $2=[name reference of dependency graph]
+#   $@=[shell-script paths]
 function run-shellcheck-in-docker-all() {
 
+  local graph_paths_name="$1" dependency_graph_name="$2" image rc=0
+  shift 2
   # shellcheck disable=SC1091
   source ./scripts/docker/docker.lib.sh
-
-  local image
-  image=$(name=koalaman/shellcheck docker-get-image-version-and-pull) || return "$?"
-  local rc=0
-  run-shellcheck-all run-shellcheck-container "$@" || rc=$?
+  image="$(name=koalaman/shellcheck docker-get-image-version-and-pull)" || return "$?"
+  run-shellcheck-all run-shellcheck-container "$graph_paths_name" "$dependency_graph_name" "$@" || rc=$?
 
   return "$rc"
 }
@@ -327,8 +425,7 @@ function run-shellcheck-in-docker-all() {
 # Arguments (provided as environment variables):
 #   image=[pulled ShellCheck image]
 # Arguments:
-#   $@=[ShellCheck options, then '--' and the shell-script paths, relative to
-#     the repository root]
+#   $@=[ShellCheck options, then '--' and the shell-script paths]
 # shellcheck disable=SC2329
 function run-shellcheck-container() {
 

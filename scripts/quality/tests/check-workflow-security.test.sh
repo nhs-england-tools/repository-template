@@ -4,8 +4,8 @@
 set -euo pipefail
 
 # Test suite for the workflow security check script. Each test writes workflow,
-# local action and allowlist fixtures to a scratch directory and runs the check
-# against them with the real yq and jq.
+# local action and allowlist fixtures, commits them to a scratch repository and
+# runs the check there with the real yq and jq.
 #
 # Usage:
 #   $ ./scripts/quality/tests/check-workflow-security.test.sh
@@ -31,6 +31,7 @@ jobs:
 readonly SAFE_JOB=$'name: test\non:\n  push:\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest\n'
 readonly EXIT_STATUS_LABEL='exit status'
 readonly PRIVILEGED_TRIGGER_ERROR='privileged triggers pull_request_target and workflow_run are prohibited'
+readonly PRIVILEGED_WORKFLOW=$'name: test\non: pull_request_target\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest'
 readonly SECRET_SCOPE_ERROR='secret values must not be set in workflow, job, container, or service environment'
 
 # Set up the suite fixtures and run every test.
@@ -38,9 +39,23 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
-  unset -v dir actions_dir allowlist
+  source ./scripts/quality/tests/quality-test.lib.sh
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-workflow-security.sh scripts/quality/check-workflow-security.jq scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh)
+  QUALITY_FIXTURE_FORMAT='# %s\n'
+
+  # The caller's options must not reach the script under test
+  unset -v check dir actions_dir allowlist BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE
 
   test-run-suite \
+    test-workflow-security-rejects-unknown-mode \
+    test-workflow-security-skips-untracked-files \
+    test-workflow-security-fails-without-tracked-workflows \
+    test-workflow-security-scoped-mode-checks-only-changed-files \
+    test-workflow-security-scoped-mode-without-changes-passes \
+    test-workflow-security-scoped-mode-checks-every-file-when-the-allowlist-changes \
+    test-workflow-security-scoped-mode-checks-every-file-when-the-rules-change \
+    test-workflow-security-branch-checks-changed-files \
+    test-workflow-security-reports-a-missing-base \
     test-workflow-security-accepts-safe-workflow \
     test-workflow-security-rejects-inherited-workflow-permissions \
     test-workflow-security-rejects-job-without-permissions \
@@ -79,7 +94,173 @@ function main() {
   return 0
 }
 
+# Build the fixture repository once, every test starts from a copy.
+function test-suite-setup() {
+
+  quality-build-fixture-base
+
+  return 0
+}
+
 # ==============================================================================
+
+function test-workflow-security-rejects-unknown-mode() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/test.yaml "$SAFE_WORKFLOW"
+  workflow-security-create-repo
+  # Act
+  workflow-security-run-check check=bogus
+  # Assert
+  assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "accepted modes"
+
+  return 0
+}
+
+function test-workflow-security-skips-untracked-files() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/test.yaml "$SAFE_WORKFLOW"
+  workflow-security-create-repo
+  printf '%s\n' "$PRIVILEGED_WORKFLOW" > "$TEST_TMP/repo/.github/workflows/untracked.yaml"
+  mkdir -p "$TEST_TMP/repo/.github/actions/untracked"
+  printf 'name: untracked\nruns:\n  using: composite\n  steps:\n    - uses: example/action@v1\n' > "$TEST_TMP/repo/.github/actions/untracked/action.yaml"
+  # Act
+  workflow-security-run-check
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-equal "" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-workflow-security-fails-without-tracked-workflows() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/test.yaml "$SAFE_WORKFLOW"
+  workflow-security-create-repo
+  git -C "$TEST_TMP/repo" rm -q --cached .github/workflows/test.yaml
+  # Act
+  workflow-security-run-check
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "no tracked workflow files found under .github/workflows" "no workflows diagnostic"
+
+  return 0
+}
+
+function test-workflow-security-scoped-mode-checks-only-changed-files() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/existing.yaml "$PRIVILEGED_WORKFLOW"
+  workflow-security-write-fixture workflows/test.yaml "$SAFE_WORKFLOW"
+  workflow-security-create-repo
+  printf '%s\n' "${SAFE_WORKFLOW/name: test/name: changed}" > "$TEST_TMP/repo/.github/workflows/test.yaml"
+  workflow-security-write-fixture repo/.github/workflows/new.yaml "$PRIVILEGED_WORKFLOW"
+  git -C "$TEST_TMP/repo" add .github/workflows/new.yaml
+  # Act
+  workflow-security-run-check check=staged-changes
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "staged-changes $EXIT_STATUS_LABEL"
+  assert-equal "ERROR: .github/workflows/new.yaml: $PRIVILEGED_TRIGGER_ERROR" "$TEST_STDERR" "only the staged workflow"
+  # Act
+  workflow-security-run-check check=working-tree-changes
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "working-tree-changes $EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-equal "" "$TEST_STDERR" "only the unstaged safe workflow"
+
+  return 0
+}
+
+function test-workflow-security-scoped-mode-without-changes-passes() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/test.yaml "$PRIVILEGED_WORKFLOW"
+  workflow-security-create-repo
+  # Act
+  workflow-security-run-check check=staged-changes
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-workflow-security-scoped-mode-checks-every-file-when-the-allowlist-changes() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/test.yaml "${SAFE_JOB/contents: read/contents: write}"
+  workflow-security-write-fixture allowlist.yaml $'approved_write_permissions:\n  - workflow: test.yaml\n    job: check\n    permission: contents'
+  workflow-security-create-repo
+  printf 'approved_write_permissions: []\n' > "$TEST_TMP/repo/scripts/config/workflow-security.yaml"
+  git -C "$TEST_TMP/repo" add scripts/config/workflow-security.yaml
+  # Act
+  workflow-security-run-check check=staged-changes
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" ".github/workflows/test.yaml: write permission is not approved for job 'check'" "the unchanged workflow"
+
+  return 0
+}
+
+function test-workflow-security-scoped-mode-checks-every-file-when-the-rules-change() {
+
+  # Arrange
+  local rule_file content
+  workflow-security-write-fixture workflows/test.yaml "$PRIVILEGED_WORKFLOW"
+  workflow-security-create-repo
+  for rule_file in scripts/quality/check-workflow-security.jq scripts/quality/check-workflow-security.sh; do
+    # Replace the file, as an executable fixture links to the real script
+    content="$(cat "$TEST_TMP/repo/$rule_file")"
+    rm "$TEST_TMP/repo/$rule_file"
+    printf '%s\n# changed\n' "$content" > "$TEST_TMP/repo/$rule_file"
+    chmod 755 "$TEST_TMP/repo/$rule_file"
+    git -C "$TEST_TMP/repo" add "$rule_file"
+    # Act
+    workflow-security-run-check check=staged-changes
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$rule_file $EXIT_STATUS_LABEL"
+    assert-equal "ERROR: .github/workflows/test.yaml: $PRIVILEGED_TRIGGER_ERROR" "$TEST_STDERR" "$rule_file: the unchanged workflow"
+    git -C "$TEST_TMP/repo" checkout -q HEAD -- "$rule_file"
+  done
+
+  return 0
+}
+
+function test-workflow-security-branch-checks-changed-files() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/existing.yaml "$PRIVILEGED_WORKFLOW"
+  workflow-security-write-fixture workflows/test.yaml "$SAFE_WORKFLOW"
+  workflow-security-create-repo
+  git -C "$TEST_TMP/repo" switch -q -c feature
+  printf '%s\n' "$PRIVILEGED_WORKFLOW" > "$TEST_TMP/repo/.github/workflows/test.yaml"
+  git -C "$TEST_TMP/repo" commit -q -am 'privileged trigger'
+  # Act
+  workflow-security-run-check check=branch BRANCH_NAME=main
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" ".github/workflows/test.yaml: $PRIVILEGED_TRIGGER_ERROR" "the changed workflow"
+  assert-not-contains "$TEST_STDERR" "existing.yaml" "the unchanged workflow"
+
+  return 0
+}
+
+function test-workflow-security-reports-a-missing-base() {
+
+  # Arrange
+  workflow-security-write-fixture workflows/test.yaml "$SAFE_WORKFLOW"
+  workflow-security-create-repo
+  git -C "$TEST_TMP/repo" switch -q -c feature
+  # Act
+  workflow-security-run-check check=branch BRANCH_NAME=missing
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "Branch to compare with not found: missing" "missing base diagnostic"
+
+  return 0
+}
 
 function test-workflow-security-accepts-safe-workflow() {
 
@@ -430,15 +611,42 @@ function workflow-security-write-fixture() {
 }
 
 # Run the policy checker against the fixture workflows, actions and allowlist.
-# The isolated PATH links the real yq and jq, as a mise shim is slow to start.
 function workflow-security-run-fixture() {
 
+  workflow-security-create-repo
+  workflow-security-run-check
+
+  return 0
+}
+
+# Create the scratch repository "$TEST_TMP/repo" with the fixture workflows,
+# actions and allowlist in their default places, committed on main with
+# origin/main pointing at that commit.
+function workflow-security-create-repo() {
+
+  local repo="$TEST_TMP/repo"
+  # shellcheck disable=SC2119
+  quality-create-fixture-repo
+  mkdir -p "$repo/.github" "$repo/scripts/config"
+  [[ ! -d "$TEST_TMP/workflows" ]] || cp -R "$TEST_TMP/workflows" "$repo/.github/workflows"
+  [[ ! -d "$TEST_TMP/actions" ]] || cp -R "$TEST_TMP/actions" "$repo/.github/actions"
+  [[ ! -f "$TEST_TMP/allowlist.yaml" ]] || cp "$TEST_TMP/allowlist.yaml" "$repo/scripts/config/workflow-security.yaml"
+  git -C "$repo" add -A
+  git -C "$repo" commit -q -m workflows
+  git -C "$repo" update-ref refs/remotes/origin/main HEAD
+
+  return 0
+}
+
+# Run the policy checker in the scratch repository. The isolated PATH links the
+# real yq and jq, as a mise shim is slow to start.
+# Arguments:
+#   $@=[optional environment assignments for the checker]
+function workflow-security-run-check() {
+
   test-isolate-path yq jq
-  test-capture env \
-    dir="$TEST_TMP/workflows" \
-    actions_dir="$TEST_TMP/actions" \
-    allowlist="$TEST_TMP/allowlist.yaml" \
-    ./scripts/quality/check-workflow-security.sh
+  cd "$TEST_TMP/repo"
+  test-capture env "$@" ./scripts/quality/check-workflow-security.sh
 
   return 0
 }

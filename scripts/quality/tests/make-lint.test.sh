@@ -34,7 +34,8 @@ function main() {
     test-make-lint-checks-every-tracked-file-by-default \
     test-make-lint-passes-a-check-mode-to-the-file-checks \
     test-make-lint-targets-run-their-check-directly \
-    test-make-lint-shell-honours-a-file-mode
+    test-make-lint-shell-honours-a-scoped-mode \
+    test-make-lint-workflow-security-honours-a-scoped-mode
 
   return 0
 }
@@ -69,8 +70,8 @@ function test-make-lint-checks-every-tracked-file-by-default() {
   assert-equal "check-file-format.sh check=all pr=unset
 check-markdown-format.sh check=all pr=unset
 check-markdown-links.sh check=all pr=unset
-check-shell-lint.sh check=all pr=unset" "$(sed -n 1,4p "$TEST_TMP/checks.log")" "check modes"
-  assert-equal 5 "$(awk 'END { print NR }' "$TEST_TMP/checks.log")" "number of checks run"
+check-shell-lint.sh check=all pr=unset
+check-workflow-security.sh check=all pr=unset" "$(cat "$TEST_TMP/checks.log")" "check modes"
   assert-stub-not-called gh
 
   return 0
@@ -88,7 +89,8 @@ function test-make-lint-passes-a-check-mode-to-the-file-checks() {
   assert-equal "check-file-format.sh check=branch pr=v2
 check-markdown-format.sh check=branch pr=v2
 check-markdown-links.sh check=branch pr=v2
-check-shell-lint.sh check=all pr=v2" "$(sed -n 1,4p "$TEST_TMP/checks.log")" "check modes"
+check-shell-lint.sh check=all pr=v2
+check-workflow-security.sh check=branch pr=v2" "$(cat "$TEST_TMP/checks.log")" "check modes"
   assert-equal 1 "$(test-stub-calls gh | awk 'END { print NR }')" "number of GitHub CLI calls"
 
   return 0
@@ -110,22 +112,36 @@ function test-make-lint-targets-run-their-check-directly() {
 check-markdown-format.sh check=all pr=unset
 check-markdown-links.sh check=all pr=unset
 check-shell-lint.sh check=all pr=unset
-check-workflow-security.sh check= pr=unset" "$(cat "$TEST_TMP/checks.log")" "check run by each target"
+check-workflow-security.sh check=all pr=unset" "$(cat "$TEST_TMP/checks.log")" "check run by each target"
   assert-equal 0 "$(make-lint-target-count 'lint-*')" "lint-* targets defined in the root Makefile"
 
   return 0
 }
 
-function test-make-lint-shell-honours-a-file-mode() {
+function test-make-lint-shell-honours-a-scoped-mode() {
 
   # Arrange
   make-lint-create-fixture-repo
   cd "$TEST_TMP/repo"
   # Act
-  make-lint-run lint-shell check=file
+  make-lint-run lint-shell check=staged-changes
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "check-shell-lint.sh check=file pr=unset" "$(cat "$TEST_TMP/checks.log")" "shell lint mode"
+  assert-equal "check-shell-lint.sh check=staged-changes pr=unset" "$(cat "$TEST_TMP/checks.log")" "shell lint mode"
+
+  return 0
+}
+
+function test-make-lint-workflow-security-honours-a-scoped-mode() {
+
+  # Arrange
+  make-lint-create-fixture-repo
+  cd "$TEST_TMP/repo"
+  # Act
+  make-lint-run lint-workflow-security check=staged-changes
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "check-workflow-security.sh check=staged-changes pr=unset" "$(cat "$TEST_TMP/checks.log")" "workflow security mode"
 
   return 0
 }

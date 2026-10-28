@@ -29,9 +29,16 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: check-shell-lint
+        name: Check shell scripts
+        entry: make lint-shell check=all
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: check-workflow-security
         name: Check workflow security
-        entry: make lint-workflow-security
+        entry: make lint-workflow-security check=all
         language: system
         pass_filenames: false
   - repo: local

@@ -29,11 +29,12 @@ lint-markdown-links: # Check markdown links (set check=all|staged-changes|workin
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
 lint-shell: check ?= all
-lint-shell: # Lint tracked shell scripts and check shell and Make comment line length (set check=all|file, with file=[path] for file) @Quality
+lint-shell: # Lint shell scripts and check shell and Make comment line length (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	check=$(check) ./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"
 
-lint-workflow-security: # Check GitHub Actions workflow security policy @Quality
-	./scripts/quality/check-workflow-security.sh && echo "workflow security checks: ok"
+lint-workflow-security: check ?= all
+lint-workflow-security: # Check GitHub Actions workflow security policy (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	check=$(check) ./scripts/quality/check-workflow-security.sh && echo "workflow security checks: ok"
 
 quality-gate: scope ?= changed
 quality-gate: # Run the gates in scripts/config/quality-gates.yaml, as the agent Stop hook does (set scope=changed|all) @Quality

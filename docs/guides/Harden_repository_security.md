@@ -56,8 +56,12 @@ does not check out the repository, so no repository code runs with that token.
 ### Workflow security check
 
 [check-workflow-security.sh](../../scripts/quality/check-workflow-security.sh)
-checks every workflow file and every local `action.yaml` or `action.yml` under
-[.github/actions](../../.github/actions). It converts each file to JSON with
+checks every tracked workflow file and every tracked local `action.yaml` or
+`action.yml` under [.github/actions](../../.github/actions). Like the other
+checks, `check=staged-changes`, `check=working-tree-changes` or `check=branch`
+limits it to the changed files, and untracked files are never checked. A change
+to the allowlist, the rules or the check script checks every file. It converts
+each file to JSON with
 `yq`, applies the rules in
 [check-workflow-security.jq](../../scripts/quality/check-workflow-security.jq)
 with `jq`, and fails when a file breaks a rule or cannot be parsed. The rules
@@ -206,18 +210,19 @@ Git hook started by an editor sees the variable only if the editor inherits your
 shell environment. Docker must be running. The images are `linux/amd64`, so
 Apple silicon runs them under emulation.
 
-The table shows the median of three runs of each `make` target over the whole
-repository, on an Apple silicon workstation with the images already pulled.
+The table shows the median of five warm runs of each `make` target over the
+whole repository, with 36 tracked shell scripts, on an Apple silicon workstation
+with the images already pulled.
 
 | Check, mode                  | Native | Docker | Added  |
 | ---------------------------- | ------ | ------ | ------ |
-| Secret scan, `whole-history` | 0.51 s | 0.98 s | 0.47 s |
-| File format, `all`           | 0.10 s | 0.45 s | 0.35 s |
-| Markdown format, `all`       | 0.38 s | 1.40 s | 1.02 s |
-| Markdown links, `all`        | 0.08 s | 0.49 s | 0.41 s |
-| Shell lint, `all`            | 2.09 s | 3.33 s | 1.24 s |
+| Secret scan, `whole-history` | 0.58 s | 1.31 s | 0.73 s |
+| File format, `all`           | 0.12 s | 0.52 s | 0.40 s |
+| Markdown format, `all`       | 0.37 s | 1.40 s | 1.03 s |
+| Markdown links, `all`        | 0.09 s | 0.52 s | 0.43 s |
+| Shell lint, `all`            | 3.76 s | 5.88 s | 2.12 s |
 
-In total, the checks took 3.16 s natively and 6.65 s in Docker. ShellCheck takes
+In total, the checks took 4.92 s natively and 9.63 s in Docker. ShellCheck takes
 the most time in both modes, though it runs in parallel, one container for each
 group of related scripts in Docker. A first image pull adds time, and x64 CI
 runners have no emulation cost.

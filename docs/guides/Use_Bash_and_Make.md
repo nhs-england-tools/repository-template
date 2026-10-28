@@ -8,7 +8,7 @@
   - [Conventions](#conventions)
     - [Debugging](#debugging)
     - [Scripts](#scripts)
-    - [Comment line length](#comment-line-length)
+    - [Shell lint](#shell-lint)
 
 ## Using Make
 
@@ -245,13 +245,24 @@ flow:
 VERBOSE=1 FORCE_USE_DOCKER=1 scripts/quality/check-shell-lint.sh
 ```
 
-### Comment line length
+### Shell lint
 
-`make lint-shell` fails any full-line comment longer than 80 characters in a
-tracked `*.sh` or `*.mk` file. It counts bytes, so a non-ASCII character counts
-as more than one. The shebang and comment lines that contain a URL are exempt.
-Code lines are not limited. To check a single file, run:
+`make lint-shell` runs ShellCheck over every shell script known to Git, like the
+other checks. Set `check=staged-changes`, `check=working-tree-changes` or
+`check=branch` to lint only the changed scripts. Each changed, deleted or
+renamed script also brings in the scripts that name it and the scripts those
+name, so ShellCheck sees the same source context as a full run. A change to a
+`.shellcheckrc` file or to `mise.toml`, which pins ShellCheck, lints every
+script.
+
+The target also fails any full-line comment longer than 80 characters in those
+`*.sh` files and the tracked `*.mk` files, or only the changed ones in a scoped
+mode. It counts bytes, so a non-ASCII character counts as more than one. The
+shebang and comment lines that contain a URL are exempt. Code lines are not
+limited.
+
+For a one-file diagnostic, run ShellCheck directly:
 
 ```shell
-file=scripts/init.mk make lint-shell check=file
+shellcheck -- scripts/quality/check-shell-lint.sh
 ```

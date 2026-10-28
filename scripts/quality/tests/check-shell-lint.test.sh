@@ -6,7 +6,8 @@ set -euo pipefail
 # Test suite for the ShellCheck wrapper script. Tests use scratch repositories,
 # real Git for file-listing and conflict-index cases, and GNU Make for target
 # cases. GNU Make and Git are required. ShellCheck and Docker calls are
-# stubbed, so no ShellCheck binary or Docker daemon is needed.
+# stubbed, so neither tool nor a Docker daemon is needed. One test runs the
+# real ShellCheck when it is installed and is skipped otherwise.
 #
 # Usage:
 #   $ ./scripts/quality/tests/check-shell-lint.test.sh
@@ -17,7 +18,6 @@ set -euo pipefail
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
-readonly ONLY_SHELLCHECK_CALL_LABEL='the only shellcheck call'
 
 # Set up the suite fixtures and run every test.
 function main() {
@@ -25,23 +25,37 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-shell-lint.sh scripts/docker/docker.lib.sh)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-shell-lint.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML check match_version file FORCE_USE_DOCKER CONTAINER_CLI GNUMAKEFLAGS MAKEFILES
+  unset -v MISE_TOML check match_version file BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER CONTAINER_CLI GNUMAKEFLAGS MAKEFILES
 
   SHELLCHECK_IMAGE=koalaman/shellcheck:v4.0.0@sha256:4444444444444444444444444444444444444444444444444444444444444444
 
   test-run-suite \
-    test-check-shell-lint-defaults-to-itself \
-    test-check-shell-lint-makes-an-absolute-path-relative \
-    test-check-shell-lint-propagates-shellcheck-failure \
-    test-check-shell-lint-uses-docker-when-forced \
-    test-check-shell-lint-uses-docker-when-shellcheck-is-missing \
-    test-check-shell-lint-stops-when-the-image-pull-fails \
+    test-check-shell-lint-defaults-to-all-tracked-scripts \
+    test-check-shell-lint-empty-mode-defaults-to-all \
+    test-check-shell-lint-selects-staged-shell-scripts \
+    test-check-shell-lint-selects-working-tree-shell-scripts \
+    test-check-shell-lint-selects-branch-shell-scripts \
+    test-check-shell-lint-reports-a-missing-base \
+    test-check-shell-lint-without-selected-files-does-not-run-shellcheck \
+    test-check-shell-lint-scoped-mode-adds-callers-and-dependencies \
+    test-check-shell-lint-scoped-mode-adds-only-relevant-context \
+    test-check-shell-lint-scoped-mode-ignores-a-name-inside-a-longer-name \
+    test-check-shell-lint-scoped-mode-lints-every-script-when-a-shellcheckrc-changes \
+    test-check-shell-lint-scoped-mode-lints-every-script-when-mise-toml-changes \
+    test-check-shell-lint-scoped-mode-falls-back-over-context \
+    test-check-shell-lint-scoped-mode-lints-callers-of-a-deleted-script \
+    test-check-shell-lint-scoped-mode-lints-callers-of-a-renamed-script \
+    test-check-shell-lint-scoped-mode-skips-a-script-deleted-only-from-the-index \
+    test-check-shell-lint-scoped-modes-skip-untracked-scripts \
+    test-check-shell-lint-scoped-mode-checks-changed-make-comments \
+    test-check-shell-lint-scoped-mode-checks-only-changed-script-comments \
+    test-check-shell-lint-scoped-mode-includes-library-for-real-shellcheck \
     test-check-shell-lint-all-passes-awkward-names-intact \
-    test-check-shell-lint-all-skips-deleted-and-untracked-files \
+    test-check-shell-lint-all-skips-deleted-untracked-and-ignored-files \
     test-check-shell-lint-all-fails-when-git-ls-files-fails \
     test-check-shell-lint-all-deduplicates-tracked-paths \
     test-check-shell-lint-all-groups-scripts-with-the-tracked-files-they-name \
@@ -57,16 +71,17 @@ function main() {
     test-check-shell-lint-all-uses-docker-when-shellcheck-is-missing \
     test-check-shell-lint-all-stops-when-the-image-pull-fails \
     test-check-shell-lint-all-propagates-docker-failure-status \
-    test-check-shell-lint-docker-target-ignores-exported-mode \
+    test-check-shell-lint-docker-target-is-removed \
     test-check-shell-lint-make-target-reports-success \
     test-check-shell-lint-make-target-uses-docker \
     test-check-shell-lint-make-target-fails-without-success-message \
     test-check-shell-lint-rejects-unknown-mode \
+    test-check-shell-lint-pre-commit-and-ci-wiring \
     test-check-shell-lint-fails-a-comment-over-80-characters \
+    test-check-shell-lint-make-target-forwards-check-mode \
     test-check-shell-lint-all-fails-a-comment-over-80-characters \
     test-check-shell-lint-accepts-long-code-urls-and-shebangs \
     test-check-shell-lint-all-fails-a-make-comment-over-80-characters \
-    test-check-shell-lint-checks-only-comments-of-a-make-file \
     test-check-shell-lint-all-keeps-the-shellcheck-status-with-a-long-comment \
     test-check-shell-lint-all-checks-comments-in-docker-mode \
     test-check-shell-lint-all-reads-a-file-named-like-an-awk-assignment \
@@ -85,55 +100,123 @@ function test-suite-setup() {
 
 # ==============================================================================
 
-function test-check-shell-lint-defaults-to-itself() {
+function test-check-shell-lint-defaults-to-all-tracked-scripts() {
 
   # Arrange
   quality-create-fixture-repo scripts/x.sh
   test-isolate-path
   test-stub shellcheck
   cd "$TEST_TMP/repo"
+  printf 'generated/\n' > .gitignore
+  mkdir -p generated scripts/new
+  printf '# generated\n' > generated/ignored.sh
+  printf '# untracked\n' > scripts/new/untracked.sh
   # Act
   test-capture ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "WARNING: 'file' variable not set, defaulting to itself" "$TEST_STDOUT" "stdout"
-  assert-equal "scripts/quality/check-shell-lint.sh" "$(test-stub-calls shellcheck)" "$ONLY_SHELLCHECK_CALL_LABEL"
+  check-shell-lint-assert-group-calls \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)"
 
   return 0
 }
 
-function test-check-shell-lint-makes-an-absolute-path-relative() {
+function test-check-shell-lint-empty-mode-defaults-to-all() {
 
   # Arrange
   quality-create-fixture-repo scripts/x.sh
   test-isolate-path
   test-stub shellcheck
   cd "$TEST_TMP/repo"
+  printf '# untracked\n' > scripts/untracked.sh
   # Act
-  test-capture env file="$TEST_TMP/repo/scripts/x.sh" ./scripts/quality/check-shell-lint.sh
+  test-capture env check= ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "./scripts/x.sh" "$(test-stub-calls shellcheck)" "$ONLY_SHELLCHECK_CALL_LABEL"
+  assert-contains "$(test-stub-calls shellcheck)" "scripts/x.sh" "empty mode lints tracked scripts"
+  assert-not-contains "$(test-stub-calls shellcheck)" "scripts/untracked.sh" "empty mode skips untracked scripts"
 
   return 0
 }
 
-function test-check-shell-lint-propagates-shellcheck-failure() {
+function test-check-shell-lint-selects-staged-shell-scripts() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh scripts/unchanged.sh scripts/note.txt
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# staged change\n' > scripts/x.sh
+  git add scripts/x.sh
+  printf 'staged non-shell file\n' > scripts/note.txt
+  git add scripts/note.txt
+  printf '# unstaged change\n' > scripts/unchanged.sh
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)" "$(test-stub-calls shellcheck)" "staged shell script only"
+
+  return 0
+}
+
+function test-check-shell-lint-selects-working-tree-shell-scripts() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh scripts/unchanged.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# working tree change\n' > scripts/x.sh
+  # Act
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)" "$(test-stub-calls shellcheck)" "working-tree shell script only"
+
+  return 0
+}
+
+function test-check-shell-lint-selects-branch-shell-scripts() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh scripts/unchanged.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  git switch -q -c feature
+  printf '# branch change\n' > scripts/x.sh
+  git add scripts/x.sh
+  git commit -q -m change
+  # Act
+  test-capture env check=branch BRANCH_NAME=main ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)" "$(test-stub-calls shellcheck)" "branch shell script only"
+
+  return 0
+}
+
+function test-check-shell-lint-reports-a-missing-base() {
 
   # Arrange
   quality-create-fixture-repo scripts/x.sh
   test-isolate-path
-  test-stub shellcheck 'exit 1'
+  test-stub shellcheck
   cd "$TEST_TMP/repo"
+  git switch -q -c feature
   # Act
-  test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=branch BRANCH_NAME=missing ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "Branch to compare with not found: missing" "missing base diagnostic"
+  assert-stub-not-called shellcheck
 
   return 0
 }
 
-function test-check-shell-lint-uses-docker-when-forced() {
+function test-check-shell-lint-without-selected-files-does-not-run-shellcheck() {
 
   # Arrange
   quality-create-fixture-repo scripts/x.sh
@@ -142,51 +225,296 @@ function test-check-shell-lint-uses-docker-when-forced() {
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env FORCE_USE_DOCKER=true file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called shellcheck
-  assert-stub-called docker \
-    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
-  quality-assert-one-docker-run
+  assert-stub-not-called docker
 
   return 0
 }
 
-function test-check-shell-lint-uses-docker-when-shellcheck-is-missing() {
+function test-check-shell-lint-scoped-mode-adds-callers-and-dependencies() {
 
   # Arrange
-  quality-create-fixture-repo scripts/x.sh
+  quality-create-fixture-repo scripts/library.sh scripts/helper.sh scripts/caller.sh scripts/outer.sh
   test-isolate-path
-  test-stub docker
+  test-stub shellcheck
   cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n' > scripts/helper.sh
+  printf 'source ./helper.sh\n' > scripts/caller.sh
+  printf 'source ./caller.sh\n' > scripts/outer.sh
+  printf '# changed library\n' > scripts/library.sh
   # Act
-  test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-stub-called docker \
-    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $SHELLCHECK_IMAGE /workdir/scripts/x.sh"
-  quality-assert-one-docker-run
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/caller.sh scripts/helper.sh scripts/library.sh scripts/outer.sh)" \
+    "$(test-stub-calls shellcheck)" "changed library callers and their dependencies"
 
   return 0
 }
 
-function test-check-shell-lint-stops-when-the-image-pull-fails() {
+function test-check-shell-lint-scoped-mode-adds-only-relevant-context() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/library.sh scripts/caller.sh scripts/solo.sh scripts/unrelated.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n' > scripts/caller.sh
+  printf '# changed\n' > scripts/solo.sh
+  # Act
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  check-shell-lint-assert-group-calls \
+    "$(check-shell-lint-call-line -f quiet -- scripts/caller.sh scripts/library.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/solo.sh)"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-ignores-a-name-inside-a-longer-name() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/core.sh scripts/caller.sh scripts/user.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'source ./libcore.sh\nsource ./my-core.sh\nsource ./core.sh.bak\nsource ./core_sh/core.shx\n' > scripts/caller.sh
+  printf '. "core.sh"\n' > scripts/user.sh
+  git commit -q -am 'callers name longer names and the script itself'
+  printf '# changed\n' > scripts/core.sh
+  # Act
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/core.sh scripts/user.sh)" "$(test-stub-calls shellcheck)" \
+    "only the script that names the changed one"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-lints-every-script-when-a-shellcheckrc-changes() {
 
   # Arrange
   quality-create-fixture-repo scripts/x.sh
   test-isolate-path
   test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'disable=SC1091\n' > scripts/.shellcheckrc
+  git add scripts/.shellcheckrc
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  check-shell-lint-assert-group-calls \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-lints-every-script-when-mise-toml-changes() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.sh
+  git commit -q -am 'existing long comment'
+  printf '# changed\n' >> mise.toml
+  # Act
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "comments of unchanged scripts are not checked"
+  check-shell-lint-assert-group-calls \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-falls-back-over-context() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/library.sh scripts/caller.sh scripts/solo.sh
+  test-isolate-path
   # shellcheck disable=SC2016
-  test-stub docker 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi; if [[ "${1:-}" == pull ]]; then echo "docker: pull access denied" >&2; exit 23; fi'
+  test-stub shellcheck 'if [[ "${1:-}" == "-f" ]]; then exit 1; fi; echo "scoped fallback report"; exit 7'
   cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n' > scripts/caller.sh
+  printf '# changed library\n' > scripts/library.sh
   # Act
-  test-capture env FORCE_USE_DOCKER=true file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 23 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "docker: pull access denied" "pull error on stderr"
-  assert-equal "" "$(test-stub-calls docker | grep '^run ' || true)" "no docker run call"
+  assert-equal 7 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scoped fallback report" "$TEST_STDOUT" "scoped full-call report"
+  check-shell-lint-assert-full-call-last scripts/caller.sh scripts/library.sh
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-lints-callers-of-a-deleted-script() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/library.sh scripts/caller.sh scripts/solo.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n' > scripts/caller.sh
+  git commit -q -am 'caller sources the library'
+  git update-ref refs/remotes/origin/main HEAD
+  git switch -q -c feature
+  git rm -q scripts/library.sh
+  git commit -q -m 'delete the library'
+  # Act
+  test-capture env check=branch ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/caller.sh)" "$(test-stub-calls shellcheck)" \
+    "the caller of the deleted library"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-lints-callers-of-a-renamed-script() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/library.sh scripts/caller.sh scripts/solo.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n' > scripts/caller.sh
+  git commit -q -am 'caller sources the library'
+  git mv scripts/library.sh scripts/renamed.sh
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  check-shell-lint-assert-group-calls \
+    "$(check-shell-lint-call-line -f quiet -- scripts/caller.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/renamed.sh)"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-skips-a-script-deleted-only-from-the-index() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/library.sh scripts/caller.sh scripts/solo.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n' > scripts/caller.sh
+  git commit -q -am 'caller sources the library'
+  printf 'source ./solo.sh\n' > scripts/library.sh
+  git rm -q --cached scripts/library.sh
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/caller.sh)" "$(test-stub-calls shellcheck)" \
+    "only the caller of the now untracked library"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-modes-skip-untracked-scripts() {
+
+  # Arrange
+  local mode
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  git switch -q -c feature
+  printf '# untracked\n' > scripts/new.sh
+  # Act
+  for mode in staged-changes working-tree-changes branch; do
+    test-capture env "check=$mode" ./scripts/quality/check-shell-lint.sh
+    assert-equal 0 "$TEST_STATUS" "$mode $EXIT_STATUS_LABEL"
+  done
+  # Assert
   assert-stub-not-called shellcheck
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-checks-changed-make-comments() {
+
+  # Arrange
+  local long_comment
+  long_comment="# $(printf 'a%.0s' {1..79})"
+  quality-create-fixture-repo scripts/changed.mk scripts/unchanged.mk
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '%s\n' "$long_comment" > scripts/unchanged.mk
+  git commit -q -am 'existing long comment'
+  printf '%s\n' "$long_comment" > scripts/changed.mk
+  git add scripts/changed.mk
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/changed.mk:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "only the changed Make file"
+  assert-stub-not-called shellcheck
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-checks-only-changed-script-comments() {
+
+  # Arrange
+  local long_comment
+  long_comment="# $(printf 'a%.0s' {1..79})"
+  quality-create-fixture-repo scripts/library.sh scripts/caller.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'source ./library.sh\n%s\n' "$long_comment" > scripts/caller.sh
+  git commit -q -am 'existing long comment in the caller'
+  printf '%s\n' "$long_comment" > scripts/library.sh
+  # Act
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/library.sh:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "only the changed script"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/caller.sh scripts/library.sh)" "$(test-stub-calls shellcheck)" \
+    "ShellCheck still sees the caller"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-includes-library-for-real-shellcheck() {
+
+  # Arrange
+  if ! (cd "$TEST_REPO_ROOT" && shellcheck --version) > /dev/null 2>&1; then
+    echo "skipped: shellcheck is not installed"
+    return 0
+  fi
+  quality-create-fixture-repo scripts/test-lib.sh scripts/check.sh
+  test-isolate-path shellcheck
+  cd "$TEST_TMP/repo"
+  printf '#!/usr/bin/env bash\n# shellcheck disable=SC2034\nSHARED_VALUE=ready\n' > scripts/test-lib.sh
+  printf 'true\n' > scripts/check.sh
+  git add scripts/test-lib.sh scripts/check.sh
+  git commit --amend -q --no-edit
+  # shellcheck disable=SC2016
+  printf '#!/usr/bin/env bash\nsource ./scripts/test-lib.sh\nprintf "%%s\\n" "$SHARED_VALUE"\n' > scripts/check.sh
+  # Act and assert that ShellCheck reports the source was not followed alone.
+  test-capture shellcheck -- scripts/check.sh
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL without following the source"
+  assert-contains "$TEST_STDOUT$TEST_STDERR" "SC1091" "source was not followed without its library input"
+  # Act: the wrapper includes the source library in its selected input set.
+  test-capture env check=working-tree-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal "" "$TEST_STDOUT$TEST_STDERR" "no ShellCheck diagnostics with source context"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL with source context"
 
   return 0
 }
@@ -205,13 +533,13 @@ function test-check-shell-lint-all-passes-awkward-names-intact() {
   test-stub shellcheck
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=all file=scripts/space\ name.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   check-shell-lint-assert-group-calls \
-    "$(check-shell-lint-call-line -f quiet -- -dash.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- ./-dash.sh)" \
     "$(check-shell-lint-call-line -f quiet -- scripts/café.sh)" \
-    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-call-line -f quiet -- $'scripts/new\nline.sh')" \
     "$(check-shell-lint-call-line -f quiet -- "scripts/notes[draft].sh")" \
     "$(check-shell-lint-call-line -f quiet -- scripts/notesd.sh)" \
@@ -220,7 +548,7 @@ function test-check-shell-lint-all-passes-awkward-names-intact() {
   return 0
 }
 
-function test-check-shell-lint-all-skips-deleted-and-untracked-files() {
+function test-check-shell-lint-all-skips-deleted-untracked-and-ignored-files() {
 
   # Arrange
   quality-create-fixture-repo scripts/keep.sh a-deleted.sh zz-deleted.sh
@@ -248,7 +576,7 @@ function test-check-shell-lint-all-fails-when-git-ls-files-fails() {
   test-stub shellcheck
   test-stub docker
   # shellcheck disable=SC2016
-  test-stub git 'if [[ "${1:-} ${2:-}" == "rev-parse --show-toplevel" ]]; then printf "%s\n" "$TEST_TMP/repo"; elif [[ "${1:-} ${2:-} ${3:-} ${4:-}" == "ls-files -z -- *.sh" ]]; then echo "git: ls-files failed" >&2; exit 23; else echo "unexpected git call: $*" >&2; exit 1; fi'
+  test-stub git 'if [[ "${1:-} ${2:-}" == "rev-parse --show-toplevel" ]]; then printf "%s\n" "$TEST_TMP/repo"; elif [[ " $* " == *" ls-files "* ]]; then echo "git: ls-files failed" >&2; exit 23; else echo "unexpected git call: $*" >&2; exit 1; fi'
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-shell-lint.sh
@@ -305,7 +633,7 @@ function test-check-shell-lint-all-groups-scripts-with-the-tracked-files-they-na
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   check-shell-lint-assert-group-calls \
     "$(check-shell-lint-call-line -f quiet -- scripts/app.sh scripts/base.sh scripts/mid.sh)" \
-    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-call-line -f quiet -- scripts/solo.sh)"
 
   return 0
@@ -326,7 +654,7 @@ function test-check-shell-lint-all-reports-findings-once-from-the-full-call() {
   assert-equal "deliberate ShellCheck finding" "$TEST_STDOUT" "stdout of the full call only"
   assert-equal "deliberate ShellCheck error" "$TEST_STDERR" "stderr of the full call only"
   check-shell-lint-assert-full-call-last \
-    scripts/bad.sh scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh
+    scripts/bad.sh scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh
 
   return 0
 }
@@ -336,15 +664,15 @@ function test-check-shell-lint-all-runs-the-full-call-when-grouping-fails() {
   # Arrange
   quality-create-fixture-repo scripts/keep.sh
   test-isolate-path
-  test-stub shellcheck
-  test-stub sort 'exit 2'
+  # shellcheck disable=SC2016
+  test-stub shellcheck 'if [[ "${1:-}" == "-f" ]]; then exit 1; fi'
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   check-shell-lint-assert-full-call-last \
-    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh
+    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh
 
   return 0
 }
@@ -375,7 +703,7 @@ function test-check-shell-lint-all-without-scripts-does-not-call-shellcheck() {
   test-stub shellcheck
   test-stub docker
   # shellcheck disable=SC2016
-  test-stub git 'if [[ "${1:-} ${2:-}" == "rev-parse --show-toplevel" ]]; then printf "%s\n" "$TEST_TMP/repo"; elif [[ "${1:-} ${2:-} ${3:-} ${4:-}" == "ls-files -z -- *.sh" ]]; then :; else echo "unexpected git call: $*" >&2; exit 1; fi'
+  test-stub git 'if [[ "${1:-} ${2:-}" == "rev-parse --show-toplevel" ]]; then printf "%s\n" "$TEST_TMP/repo"; elif [[ " $* " == *" ls-files "* ]]; then :; else echo "unexpected git call: $*" >&2; exit 1; fi'
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-shell-lint.sh
@@ -399,7 +727,7 @@ function test-check-shell-lint-all-propagates-shellcheck-failure-status-1() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   check-shell-lint-assert-full-call-last \
-    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh
+    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh
 
   return 0
 }
@@ -416,7 +744,7 @@ function test-check-shell-lint-all-propagates-shellcheck-failure-status-2() {
   # Assert
   assert-equal 2 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   check-shell-lint-assert-full-call-last \
-    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh
+    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh
 
   return 0
 }
@@ -451,7 +779,7 @@ function test-check-shell-lint-all-uses-parallel-docker-runs-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called shellcheck
   check-shell-lint-assert-docker-group-runs \
-    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh /workdir/scripts/quality/git-base.lib.sh /workdir/scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/keep.sh)"
 
   return 0
@@ -477,9 +805,9 @@ function test-check-shell-lint-all-uses-parallel-docker-runs-with-awkward-names-
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called shellcheck
   check-shell-lint-assert-docker-group-runs \
-    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/-dash.sh)" \
+    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/./-dash.sh)" \
     "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/café.sh)" \
-    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh /workdir/scripts/quality/git-base.lib.sh /workdir/scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-docker-run-line -f quiet -- $'/workdir/scripts/new\nline.sh')" \
     "$(check-shell-lint-docker-run-line -f quiet -- "/workdir/scripts/notes[draft].sh")" \
     "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/notesd.sh)" \
@@ -500,7 +828,7 @@ function test-check-shell-lint-all-uses-docker-when-shellcheck-is-missing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   check-shell-lint-assert-docker-group-runs \
-    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh /workdir/scripts/quality/git-base.lib.sh /workdir/scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/keep.sh)"
 
   return 0
@@ -543,23 +871,22 @@ function test-check-shell-lint-all-propagates-docker-failure-status() {
   assert-equal "deliberate Docker error" "$TEST_STDERR" "stderr of the full run only"
   assert-stub-not-called shellcheck
   check-shell-lint-assert-docker-full-run-last \
-    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh
+    scripts/docker/docker.lib.sh scripts/keep.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh
 
   return 0
 }
 
-function test-check-shell-lint-docker-target-ignores-exported-mode() {
+function test-check-shell-lint-docker-target-is-removed() {
 
   # Arrange
   check-shell-lint-create-make-fixture-repo
   test-isolate-path make
-  test-stub shellcheck
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES check=branch make MISE_SHIMS= docker-shellscript-lint
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES make MISE_SHIMS= docker-shellscript-lint
   # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "scripts/docker/docker.lib.sh" "$(test-stub-calls shellcheck)" "Docker lint stays in single-file mode"
+  assert-equal 2 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "No rule to make target 'docker-shellscript-lint'" "Docker-only lint target was removed"
 
   return 0
 }
@@ -577,8 +904,26 @@ function test-check-shell-lint-make-target-reports-success() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "shell lint: ok" "success message"
   check-shell-lint-assert-group-calls \
-    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)"
+
+  return 0
+}
+
+function test-check-shell-lint-make-target-forwards-check-mode() {
+
+  # Arrange
+  check-shell-lint-create-make-fixture-repo
+  test-isolate-path make
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# staged change\n' > scripts/x.sh
+  git add scripts/x.sh
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER make MISE_SHIMS= lint-shell check=staged-changes
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(check-shell-lint-call-line -f quiet -- scripts/x.sh)" "$(test-stub-calls shellcheck)" "Make forwards staged-changes"
 
   return 0
 }
@@ -598,7 +943,7 @@ function test-check-shell-lint-make-target-uses-docker() {
   assert-contains "$TEST_STDOUT" "shell lint: ok" "success message"
   assert-equal "image inspect koalaman/shellcheck:v4.0.0" "$(test-stub-calls docker | head -n 1)" "Make checks the image first"
   check-shell-lint-assert-docker-group-runs \
-    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/docker/docker.lib.sh /workdir/scripts/quality/check-shell-lint.sh /workdir/scripts/quality/git-base.lib.sh /workdir/scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-docker-run-line -f quiet -- /workdir/scripts/x.sh)"
   assert-equal 3 "$(test-stub-calls docker | awk 'END { print NR }')" "number of docker calls"
   assert-stub-not-called shellcheck
@@ -620,7 +965,7 @@ function test-check-shell-lint-make-target-fails-without-success-message() {
   assert-contains "$TEST_STDERR" "deliberate ShellCheck finding" "finding on stderr"
   assert-not-contains "$TEST_STDOUT" "shell lint: ok" "no success message"
   check-shell-lint-assert-full-call-last \
-    scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/x.sh
+    scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh scripts/x.sh
 
   return 0
 }
@@ -636,10 +981,35 @@ function test-check-shell-lint-rejects-unknown-mode() {
   # Act
   test-capture env check=bogus ./scripts/quality/check-shell-lint.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Use check=file or check=all" "unknown mode guidance on stderr"
+  assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "check=all, check=staged-changes, check=working-tree-changes, check=branch" "unknown mode guidance on stderr"
   assert-stub-not-called shellcheck
   assert-stub-not-called docker
+
+  return 0
+}
+
+function test-check-shell-lint-pre-commit-and-ci-wiring() {
+
+  # Arrange
+  local hook_ids lint_hook_ids shell_hook workflow_jobs jobs_with_needs pre_commit workflow
+  local lint_jobs='^(scan-secrets|check-file-format|check-markdown-format|check-markdown-links|check-shell-lint|check-workflow-security)$'
+  local lint_order='scan-secrets check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security '
+  pre_commit="$TEST_REPO_ROOT/scripts/config/pre-commit.yaml"
+  workflow="$TEST_REPO_ROOT/.github/workflows/stage-1-commit.yaml"
+  hook_ids="$(sed -En 's/^[[:space:]]*-[[:space:]]+id:[[:space:]]*([^[:space:]]+).*/\1/p' "$pre_commit")"
+  lint_hook_ids="$(printf '%s\n' "$hook_ids" | grep -E "$lint_jobs" || true)"
+  shell_hook="$(awk '/^[[:space:]]*-[[:space:]]+id:/ { in_hook = ($NF == "check-shell-lint") } in_hook' "$pre_commit")"
+  workflow_jobs="$(sed -En 's/^  ([a-z-]+):[[:space:]]*$/\1/p' "$workflow" | grep -E "$lint_jobs" || true)"
+  jobs_with_needs="$(awk '/^  [a-z-]+:[[:space:]]*$/ { job = $1; sub(/:$/, "", job) } /^    needs:/ { print job }' "$workflow" | grep -E "$lint_jobs" || true)"
+  # Assert
+  assert-equal "$lint_order" "$(printf '%s\n' "$lint_hook_ids" | tr '\n' ' ')" "pre-commit lint hook order"
+  assert-equal "test" "$(printf '%s\n' "$hook_ids" | tail -n 1)" "the test hook runs last"
+  assert-equal "$lint_order" "$(printf '%s\n' "$workflow_jobs" | tr '\n' ' ')" "workflow lint job order"
+  assert-contains "$shell_hook" "entry: make lint-shell check=all"$'\n' "pre-commit uses all mode like the other checks"
+  assert-contains "$shell_hook" "pass_filenames: false" "pre-commit passes no file names"
+  assert-contains "$(cat "$TEST_REPO_ROOT/.github/actions/check-shell-lint/action.yaml")" "make lint-shell check=all" "composite action uses all mode"
+  assert-equal "" "$jobs_with_needs" "lint jobs run in parallel"
 
   return 0
 }
@@ -653,7 +1023,7 @@ function test-check-shell-lint-fails-a-comment-over-80-characters() {
   cd "$TEST_TMP/repo"
   printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.sh
   # Act
-  test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "scripts/x.sh:1: comment is 81 characters, the limit is 80" "finding on stderr"
@@ -689,7 +1059,7 @@ function test-check-shell-lint-accepts-long-code-urls-and-shebangs() {
   long="$(printf 'a%.0s' {1..90})"
   printf '#!/usr/bin/env %s\n# https://example.com/%s\necho %s\n# %s\n' "$long" "$long" "$long" "$(printf 'a%.0s' {1..78})" > scripts/x.sh
   # Act
-  test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "" "$TEST_STDERR" "stderr"
@@ -711,27 +1081,7 @@ function test-check-shell-lint-all-fails-a-make-comment-over-80-characters() {
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "scripts/x.mk:2: comment is 82 characters, the limit is 80" "$TEST_STDERR" "stderr"
   check-shell-lint-assert-group-calls \
-    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh)"
-
-  return 0
-}
-
-function test-check-shell-lint-checks-only-comments-of-a-make-file() {
-
-  # Arrange
-  quality-create-fixture-repo scripts/x.mk
-  test-isolate-path
-  test-stub shellcheck
-  test-stub docker
-  cd "$TEST_TMP/repo"
-  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.mk
-  # Act
-  test-capture env file=scripts/x.mk ./scripts/quality/check-shell-lint.sh
-  # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "scripts/x.mk:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "stderr"
-  assert-stub-not-called shellcheck
-  assert-stub-not-called docker
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)"
 
   return 0
 }
@@ -798,7 +1148,7 @@ function test-check-shell-lint-counts-bytes-in-comments() {
   cd "$TEST_TMP/repo"
   printf '# %s\n' "$(printf '\303\251%.0s' {1..40})" > scripts/x.sh
   # Act
-  test-capture env LC_ALL=en_US.UTF-8 file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  test-capture env LC_ALL=en_US.UTF-8 check=all ./scripts/quality/check-shell-lint.sh
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "scripts/x.sh:1: comment is 82 characters, the limit is 80" "$TEST_STDERR" "stderr"
@@ -850,7 +1200,7 @@ function check-shell-lint-assert-group-calls() {
 function check-shell-lint-assert-default-group-calls() {
 
   check-shell-lint-assert-group-calls \
-    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh)" \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh)" \
     "$(check-shell-lint-call-line -f quiet -- scripts/keep.sh)"
 
   return 0

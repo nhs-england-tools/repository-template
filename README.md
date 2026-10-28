@@ -187,8 +187,7 @@ make format-markdown
 `make lint` checks every tracked file, as the pre-commit hook and CI do, so a
 local pass predicts theirs. In a large repository, or one with existing
 findings, limit the file checks to the changes on your branch with
-`make lint check=branch`. Shell lint and the workflow security check always
-cover the whole repository.
+`make lint check=branch`. Shell lint always covers the whole repository.
 
 The branch-scoped mode resolves its base automatically. In GitHub Actions,
 `GITHUB_BASE_REF` selects the pull request target. Locally, the base of the
