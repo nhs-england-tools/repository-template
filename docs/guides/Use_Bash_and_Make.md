@@ -253,5 +253,5 @@ as more than one. The shebang and comment lines that contain a URL are exempt.
 Code lines are not limited. To check a single file, run:
 
 ```shell
-file=scripts/init.mk make check-shell-lint check=file
+file=scripts/init.mk make lint-shell check=file
 ```

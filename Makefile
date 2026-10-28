@@ -12,26 +12,16 @@ deps: # Install dependencies needed to build and test the project @Build
 format: # Auto-format code @Quality
 	$(MAKE) format-markdown
 
-lint-file-format: # Check file formats @Quality
-	$(MAKE) check-file-format check=branch
-
-lint-markdown-format: # Check markdown formatting @Quality
-	$(MAKE) check-markdown-format check=branch
-
-lint-markdown-links: # Check markdown links @Quality
-	$(MAKE) check-markdown-links check=branch
-
-lint-shell: # Lint all tracked shell scripts and check shell and Make comment line length @Quality
-	$(MAKE) check-shell-lint
-
-lint-workflow-security: # Check GitHub Actions workflow security policy @Quality
-	$(MAKE) check-workflow-security
-
-lint: # Run linter to check code style and errors @Quality
+lint: check ?= all
+lint: # Run linter to check code style and errors (set check=all|staged-changes|working-tree-changes|branch for the file checks) @Quality
+	if [[ "$(check)" == branch ]]; then
+		source scripts/quality/git-base.lib.sh
+		quality-export-pr-base
+	fi
 	$(MAKE) lint-file-format
 	$(MAKE) lint-markdown-format
 	$(MAKE) lint-markdown-links
-	$(MAKE) lint-shell
+	$(MAKE) lint-shell check=all
 	$(MAKE) lint-workflow-security
 
 typecheck: # Run type checker @Quality
@@ -66,11 +56,6 @@ ${VERBOSE}.SILENT: \
 	env \
 	format \
 	lint \
-	lint-file-format \
-	lint-markdown-format \
-	lint-markdown-links \
-	lint-shell \
-	lint-workflow-security \
 	publish \
 	test \
 	typecheck \

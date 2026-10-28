@@ -5,7 +5,8 @@ set -euo pipefail
 
 # Test suite for the Markdown links check script. Each test runs the script in
 # a scratch repository with 'lychee' and 'docker' stubbed, so the suite needs
-# neither tool nor a Docker daemon.
+# neither tool nor a Docker daemon. One test runs the real lychee when it is
+# installed and is skipped otherwise.
 #
 # Usage:
 #   $ ./scripts/quality/tests/check-markdown-links.test.sh
@@ -23,11 +24,11 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-links.sh scripts/quality/git-files.lib.sh scripts/docker/docker.lib.sh scripts/config/lychee.toml)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-links.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/lychee.toml)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check files BRANCH_NAME FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check files BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
 
   LYCHEE_IMAGE=lycheeverse/lychee:5.0.0@sha256:5555555555555555555555555555555555555555555555555555555555555555
   DOCKER_OPTIONS="--config /workdir/scripts/config/lychee.toml --no-progress --quiet"
@@ -154,6 +155,10 @@ function test-check-markdown-links-passes-glob-path-literally-to-pinned-lychee()
   # Arrange
   local target='docs/notes[draft]*?.md' sibling='docs/notesd-other.md'
   local newline_target=$'docs/line\nbreak.md'
+  if ! command -v lychee > /dev/null 2>&1; then
+    echo "skipped: lychee is not installed"
+    return 0
+  fi
   quality-create-fixture-repo "$target" "$newline_target"
   printf '[broken](missing-target.md)\n' > "$TEST_TMP/repo/$target"
   printf '[broken](missing-newline-target.md)\n' > "$TEST_TMP/repo/$newline_target"

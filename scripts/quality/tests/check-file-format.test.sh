@@ -25,21 +25,23 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh scripts/docker/docker.lib.sh scripts/config/editorconfig-checker.json)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/editorconfig-checker.json)
   QUALITY_FIXTURE_FORMAT='%s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check dry_run BRANCH_NAME FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check dry_run BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
 
   EC_IMAGE=mstruebing/editorconfig-checker:6.0.0@sha256:6666666666666666666666666666666666666666666666666666666666666666
   test-run-suite \
     test-check-file-format-rejects-unknown-mode \
     test-check-file-format-all-checks-every-tracked-file \
+    test-check-file-format-all-does-not-need-the-base-resolver \
     test-check-file-format-preserves-unusual-paths-in-native-and-docker \
     test-check-file-format-working-tree-changes-checks-modified-files-only \
     test-check-file-format-staged-changes-checks-staged-files-only \
     test-check-file-format-staged-rename-checks-new-path-once \
     test-check-file-format-branch-checks-changes-since-branch \
+    test-check-file-format-branch-ignores-changes-made-on-base-after-fork \
     test-check-file-format-fails-when-the-base-branch-is-missing \
     test-check-file-format-dry-run-passes-flag \
     test-check-file-format-skips-empty-selection \
@@ -102,6 +104,23 @@ function test-check-file-format-all-checks-every-tracked-file() {
   assert-equal "$prefix" "${calls:0:${#prefix}}" "start of the checker call"
   assert-contains "$calls " "$A_TXT_ARGUMENT"
   assert-contains "$calls " " b.txt "
+
+  return 0
+}
+
+function test-check-file-format-all-does-not-need-the-base-resolver() {
+
+  # Arrange
+  quality-create-fixture-repo a.txt
+  test-isolate-path
+  test-stub "$EC"
+  rm "$TEST_TMP/repo/scripts/quality/git-base.lib.sh"
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=all ./scripts/quality/check-file-format.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(test-stub-calls "$EC") " "$A_TXT_ARGUMENT"
 
   return 0
 }
@@ -240,6 +259,32 @@ function test-check-file-format-fails-when-the-base-branch-is-missing() {
   assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Branch to compare with not found: origin/main"
   assert-stub-not-called "$EC"
+
+  return 0
+}
+
+function test-check-file-format-branch-ignores-changes-made-on-base-after-fork() {
+
+  # Arrange
+  quality-create-fixture-repo a.txt b.txt
+  test-isolate-path
+  test-stub "$EC"
+  test-stub docker
+  git -C "$TEST_TMP/repo" switch -q -c feature
+  echo feature-change >> "$TEST_TMP/repo/a.txt"
+  git -C "$TEST_TMP/repo" commit -q -am feature
+  git -C "$TEST_TMP/repo" switch -q main
+  echo base-change >> "$TEST_TMP/repo/b.txt"
+  git -C "$TEST_TMP/repo" commit -q -am base-change
+  git -C "$TEST_TMP/repo" update-ref refs/remotes/origin/main HEAD
+  git -C "$TEST_TMP/repo" switch -q feature
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=branch ./scripts/quality/check-file-format.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(test-stub-calls "$EC") " "$A_TXT_ARGUMENT"
+  assert-not-contains "$(test-stub-calls "$EC")" "b.txt"
 
   return 0
 }
@@ -394,7 +439,7 @@ function test-check-file-format-stops-when-the-image-pull-fails() {
 # file.
 function expected-docker-run() {
 
-  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro --workdir /check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json -- a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh"
+  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro --workdir /check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json -- a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh"
 
   return 0
 }

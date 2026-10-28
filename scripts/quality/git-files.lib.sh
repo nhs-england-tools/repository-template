@@ -12,8 +12,8 @@ set -euo pipefail
 #   all                   # Every tracked file
 #   staged-changes        # Files added or changed in the index
 #   working-tree-changes  # Files changed in the working tree but not yet staged
-#   branch                # Files added or changed since BRANCH_NAME (default
-#                         # 'origin/main'), including uncommitted changes
+#   branch                # Files added or changed since the resolved branch
+#                         # fork point, including staged and unstaged changes
 #
 # Notes:
 #   1) Only paths that exist as regular files are returned. Untracked files are
@@ -40,8 +40,9 @@ function quality-git-paths() {
 function quality-collect-git-files() {
 
   local -n result="$1" || return "$?"
-  local check_mode="$2" base_branch=${BRANCH_NAME:-origin/main}
-  local file list_file rc
+  local check_mode="$2"
+  # shellcheck disable=SC2034
+  local file list_file rc=0 base_ref fork_point
   local -a pathspec=()
   local -A seen=()
   if [[ $# -ge 3 ]]; then
@@ -51,49 +52,32 @@ function quality-collect-git-files() {
 
   case $check_mode in
     all)
-      if quality-git-paths ls-files -z "${pathspec[@]}" > "$list_file"; then :; else
-        rc=$?
-        rm -f "$list_file"
-        return "$rc"
-      fi
+      quality-git-paths ls-files -z "${pathspec[@]}" > "$list_file" || rc=$?
       ;;
     staged-changes)
-      if quality-git-paths diff --diff-filter=ACMRT --name-only -z --cached "${pathspec[@]}" > "$list_file"; then :; else
-        rc=$?
-        rm -f "$list_file"
-        return "$rc"
-      fi
+      quality-git-paths diff --diff-filter=ACMRT --name-only -z --cached "${pathspec[@]}" > "$list_file" || rc=$?
       ;;
     working-tree-changes)
-      if quality-git-paths diff --diff-filter=ACMRT --name-only -z "${pathspec[@]}" > "$list_file"; then :; else
-        rc=$?
-        rm -f "$list_file"
-        return "$rc"
-      fi
+      quality-git-paths diff --diff-filter=ACMRT --name-only -z "${pathspec[@]}" > "$list_file" || rc=$?
       ;;
     branch)
-      if ! git rev-parse --verify --quiet "${base_branch}^{commit}" > /dev/null; then
-        echo "Branch to compare with not found: $base_branch" >&2
-        rm -f "$list_file"
-        return 1
-      fi
-      if quality-git-paths diff --diff-filter=ACMRT --name-only -z "$base_branch" "${pathspec[@]}" > "$list_file"; then :; else
+      # Sourced only here, so the other modes work without the base resolver
+      # shellcheck disable=SC1091
+      if source ./scripts/quality/git-base.lib.sh && quality-resolve-base base_ref fork_point; then
+        quality-git-paths diff --diff-filter=ACMRT --name-only -z "$fork_point" "${pathspec[@]}" > "$list_file" || rc=$?
+      else
         rc=$?
-        rm -f "$list_file"
-        return "$rc"
-      fi
-      if quality-git-paths diff --diff-filter=ACMRT --name-only -z "${pathspec[@]}" >> "$list_file"; then :; else
-        rc=$?
-        rm -f "$list_file"
-        return "$rc"
       fi
       ;;
     *)
       echo "Unrecognised check mode: '$check_mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" >&2
-      rm -f "$list_file"
-      return 126
+      rc=126
       ;;
   esac
+  if [[ $rc -ne 0 ]]; then
+    rm -f "$list_file"
+    return "$rc"
+  fi
 
   while IFS= read -r -d '' file; do
     if [[ -f "$file" && -z "${seen[$file]:-}" ]]; then

@@ -224,8 +224,8 @@ function handle-hook() {
 #   $1=[session identifier, empty when unknown]
 function record-baseline() {
 
-  local session="$1" state action=baseline-recorded
-  if ! state="$(state-dir)"; then
+  local session="$1" state="$STATE_DIR" action=baseline-recorded
+  if ! create-state-dir; then
     emit-allow "Quality gate: cannot create its state directory, so no baseline was recorded."
     return 0
   fi
@@ -272,7 +272,8 @@ function write-baseline() {
 #   $1=[state directory]
 function remove-old-state() {
 
-  if ! find "$1" -type f -mtime +7 -delete || ! find "$1" -mindepth 1 -type d -empty -mtime +7 -delete; then
+  # '-delete' visits a directory after its files, so '-empty' sees them gone
+  if ! find "$1" -mindepth 1 \( -type f -mtime +7 -delete \) -o \( -type d -empty -mtime +7 -delete \); then
     echo "Quality gate: cannot remove old state files from $1" >&2
   fi
 
@@ -304,21 +305,23 @@ function handle-stop() {
 #   $1=[session identifier] $2=[stop_hook_active] $3=[scratch directory]
 function decide-stop() {
 
-  local session="$1" active="$2" scratch="$3" state baseline="" pause config source start="" max_blocks blocks=0 budget="${QUALITY_GATE_BUDGET:-}"
+  local session="$1" active="$2" scratch="$3" state="$STATE_DIR" baseline="" pause=none config source start="" max_blocks blocks=0 budget="${QUALITY_GATE_BUDGET:-}"
   local current="$scratch/current" changes="$scratch/changes" known=true guard_note="" notes message
   if [[ $budget =~ ^[0-9]{1,6}$ ]] && (( 10#$budget > 0 )); then
     budget=$((10#$budget))
   else
     budget=240
   fi
-  if ! state="$(state-dir)"; then
+  if ! create-state-dir; then
     emit-allow "Quality gate: cannot create its state directory, so no gate ran."
     return 0
   fi
   if [[ -n $session ]]; then
     baseline="$state/$session.baseline"
   fi
-  pause="$(pause-state "$state" "$baseline")"
+  if [[ -f $state/paused ]]; then
+    pause="$(pause-state "$state" "$baseline")"
+  fi
   case $pause in
     until:*)
       finish-turn "$state" "$session"
@@ -335,7 +338,7 @@ function decide-stop() {
   fi
   source="$(config-source "$start")"
   # Errors go to their own file, as a warning on stderr would corrupt the JSON
-  if ! config="$(load-config "$source" 2> "$scratch/config-errors")"; then
+  if ! config="$(read-config "$source" "$scratch" 2> "$scratch/config-errors")"; then
     finish-turn "$state" "$session"
     note-hook "$state" Stop "$session" invalid-configuration
     emit-allow "Quality gate: no gate ran. $(< "$scratch/config-errors")"
@@ -523,11 +526,11 @@ function run-command() {
 #   $1=[scope] $2=[scratch directory]
 function run-gates() {
 
-  local scope="$1" changes="$2/changes" config state
+  local scope="$1" changes="$2/changes" config state="$STATE_DIR"
   if ! config="$(load-config working-tree)"; then
     return 2
   fi
-  state="$(state-dir)" || return "$?"
+  create-state-dir || return "$?"
   collect-changed-paths "$changes" || return "$?"
   execute-gates "$config" "$changes" "$scope" 0 true "$state/logs/run"
   write-last-run "$state" run ""
@@ -558,12 +561,12 @@ function list-command() {
 #   $1=[hours from 1 to 8]
 function pause-command() {
 
-  local hours="$1" state expiry
+  local hours="$1" state="$STATE_DIR" expiry
   if [[ ! $hours =~ ^[1-8]$ ]]; then
     echo "ERROR: hours must be a whole number from 1 to 8, for example: make quality-gate-pause hours=2" >&2
     return 1
   fi
-  state="$(state-dir)" || return "$?"
+  create-state-dir || return "$?"
   expiry=$(( $(date +%s) + hours * 3600 ))
   printf '%s\n' "$expiry" > "$state/paused"
   echo "Quality gate paused from the next prompt until $(format-time "$expiry"). Resume it with: make quality-gate-resume"
@@ -574,9 +577,8 @@ function pause-command() {
 # Remove a pause.
 function resume-command() {
 
-  local state
-  state="$(state-dir)" || return "$?"
-  rm -f "$state/paused"
+  create-state-dir || return "$?"
+  rm -f "$STATE_DIR/paused"
   echo "Quality gate resumed"
 
   return 0
@@ -711,11 +713,10 @@ function list-drop-ins() {
 # ==============================================================================
 # Working tree state
 
-# Print the directory that holds the hook's state, creating it when needed.
-function state-dir() {
+# Create STATE_DIR, the directory that holds the hook's state, when needed.
+function create-state-dir() {
 
   [[ -d $STATE_DIR/logs ]] || mkdir -p "$STATE_DIR/logs" || return "$?"
-  printf '%s\n' "$STATE_DIR"
 
   return 0
 }
@@ -726,9 +727,8 @@ function state-dir() {
 #   $1=[-d for a directory, optional]
 function make-temp() {
 
-  local state
-  state="$(state-dir)" || return "$?"
-  mktemp "$@" "$state/tmp.XXXXXX" || return "$?"
+  create-state-dir || return "$?"
+  mktemp "$@" "$STATE_DIR/tmp.XXXXXX" || return "$?"
 
   return 0
 }
@@ -738,29 +738,28 @@ function make-temp() {
 # sorted.
 # Arguments:
 #   $1=[output file]
+#   $2=[commit at HEAD, 'none' before the first commit, looked up when empty]
 function collect-changed-paths() {
 
-  local out="$1" tmp err rc=0
-  tmp="$(make-temp)" || return "$?"
-  if ! err="$(make-temp)"; then
-    rm -f "$tmp"
-    return 1
+  local out="$1" head="${2:-}" err="$1.err" rc=0
+  if [[ -z $head ]]; then
+    head="$(git rev-parse --verify --quiet HEAD)" || head=none
   fi
-  if git rev-parse --verify --quiet HEAD > /dev/null; then
-    git diff -z --name-only --no-renames HEAD >> "$tmp" || rc=$?
+  if [[ $head != none ]]; then
+    git diff -z --name-only --no-renames "$head" > "$out" || rc=$?
   else
-    git ls-files -z --cached >> "$tmp" || rc=$?
+    git ls-files -z --cached > "$out" || rc=$?
   fi
   # Git only warns about a directory it cannot read, which would hide its files
-  git ls-files -z --others --exclude-standard >> "$tmp" 2> "$err" || rc=$?
+  git ls-files -z --others --exclude-standard >> "$out" 2> "$err" || rc=$?
   if [[ -s $err ]]; then
     cat "$err" >&2
     rc=1
   fi
   if [[ $rc -eq 0 ]]; then
-    LC_ALL=C sort -z -u "$tmp" > "$out" || rc=$?
+    LC_ALL=C sort -z -u -o "$out" "$out" || rc=$?
   fi
-  rm -f "$tmp" "$err"
+  rm -f "$err"
 
   return "$rc"
 }
@@ -773,14 +772,13 @@ function collect-changed-paths() {
 #   $1=[output file]
 function snapshot-tree() {
 
-  local out="$1" paths head file hash mode i j hashes readable=true
+  local out="$1" paths="$1.paths" head file hash mode i j hashes readable=true
   local -a regular=() chunk=() lines=()
-  paths="$(make-temp)" || return "$?"
-  if ! collect-changed-paths "$paths"; then
+  head="$(git rev-parse --verify --quiet HEAD)" || head=none
+  if ! collect-changed-paths "$paths" "$head"; then
     rm -f "$paths"
     return 1
   fi
-  head="$(git rev-parse --verify --quiet HEAD)" || head=none
   printf '=\t%s\0' "$head" > "$out"
   while IFS= read -r -d '' file; do
     if [[ -L $file ]]; then
@@ -912,7 +910,8 @@ function diff-snapshots() {
   fi
   : > "$3"
   if [[ ${#seen[@]} -gt 0 ]]; then
-    printf '%s\0' "${!seen[@]}" | LC_ALL=C sort -z > "$3"
+    printf '%s\0' "${!seen[@]}" > "$3"
+    LC_ALL=C sort -z -o "$3" "$3"
   fi
 
   return 0
@@ -1283,12 +1282,13 @@ function summarise-results() {
 #   $1=[state directory] $2=[event] $3=[session identifier]
 function write-last-run() {
 
-  local i
+  local i rows=""
   for i in "${!RESULT_STATE[@]}"; do
-    printf '%s\t%s\t%s\t%s\n' "${RESULT_NAME[$i]}" "${RESULT_STATE[$i]}" "${RESULT_RC[$i]}" "${RESULT_SECONDS[$i]}"
-  done | jq -R -s -c --arg event "$2" --arg session "$3" \
+    rows+="${RESULT_NAME[$i]}"$'\t'"${RESULT_STATE[$i]}"$'\t'"${RESULT_RC[$i]}"$'\t'"${RESULT_SECONDS[$i]}"$'\n'
+  done
+  jq -R -s -c --arg event "$2" --arg session "$3" \
     '{time: (now | floor | todate), event: $event, session: $session, gates: (split("\n") | map(select(length > 0) | split("\t") | {name: .[0], state: .[1], status: (.[2] | tonumber), seconds: (.[3] | tonumber)}))}' \
-    > "$1/last-run.json" || echo "Quality gate: cannot write $1/last-run.json" >&2
+    <<< "$rows" > "$1/last-run.json" || echo "Quality gate: cannot write $1/last-run.json" >&2
 
   return 0
 }

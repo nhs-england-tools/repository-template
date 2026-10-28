@@ -14,8 +14,9 @@ set -euo pipefail
 #       Check mode, default is 'working-tree-changes'
 #   dry_run=true
 #       List the files to check without checking them, default is 'false'
-#   BRANCH_NAME=other-branch-than-main
-#       Branch to compare with, default is 'origin/main'
+#   BRANCH_NAME=base-branch
+#       Local base for the branch mode, chosen automatically when unset, as
+#       './scripts/quality/git-base.lib.sh' describes
 #   FORCE_USE_DOCKER=true
 #       Run in a Docker container, default is 'false'
 #   VERBOSE=true

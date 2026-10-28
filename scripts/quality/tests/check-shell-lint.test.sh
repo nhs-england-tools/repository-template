@@ -572,7 +572,7 @@ function test-check-shell-lint-make-target-reports-success() {
   test-stub shellcheck
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER make MISE_SHIMS= check-shell-lint
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER make MISE_SHIMS= lint-shell
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "shell lint: ok" "success message"
@@ -592,7 +592,7 @@ function test-check-shell-lint-make-target-uses-docker() {
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES FORCE_USE_DOCKER=true make MISE_SHIMS= check-shell-lint
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES FORCE_USE_DOCKER=true make MISE_SHIMS= lint-shell
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "shell lint: ok" "success message"
@@ -614,7 +614,7 @@ function test-check-shell-lint-make-target-fails-without-success-message() {
   test-stub shellcheck 'echo "deliberate ShellCheck finding" >&2; exit 1'
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER make MISE_SHIMS= check-shell-lint
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER make MISE_SHIMS= lint-shell
   # Assert
   assert-equal 2 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "deliberate ShellCheck finding" "finding on stderr"

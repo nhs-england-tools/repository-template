@@ -24,6 +24,8 @@ set -euo pipefail
 #                        # number of CPUs
 #   TEST_STOP_TIMEOUT=n  # Seconds an interrupted suite waits for its running
 #                        # tests to stop before killing them, default is 5
+#   TEST_PROFILE=file    # Append the start time, end time and name of each
+#                        # test to this file, default is not to
 #
 # Optional functions a suite can define:
 #   test-suite-setup     # Runs once before the first test
@@ -43,7 +45,9 @@ set -euo pipefail
 # test-capture runs the command in a subshell, so its 'cd' and variable changes
 # are discarded.
 
-TEST_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+TEST_REPO_ROOT="${BASH_SOURCE[0]%/*}"
+[[ "$TEST_REPO_ROOT" != "${BASH_SOURCE[0]}" ]] || TEST_REPO_ROOT=.
+TEST_REPO_ROOT="$(cd "$TEST_REPO_ROOT/../.." && pwd -P)"
 TEST_INDENT_PATTERN='s/^/    /'
 TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find git grep head ln mkdir mktemp mv rm sed sleep sort tail tee touch tr uniq wc xargs)
 
@@ -64,7 +68,7 @@ function test-run-suite() {
     echo "ERROR: no tests to run" >&2
     return 1
   fi
-  if ! _TEST_SUITE_TMP="$(_test-mktemp-dir)"; then
+  if ! _test-mktemp-dir _TEST_SUITE_TMP; then
     echo "ERROR: cannot create the suite scratch directory" >&2
     return 1
   fi
@@ -162,12 +166,13 @@ function _test-report() {
 #   $2=[name of the test function]
 function _test-run-job() {
 
-  local i="$1" rc
+  local i="$1" rc started=$EPOCHREALTIME
   # A plain statement, as errexit is ignored inside a command that is part of a
   # '||' list
   set +e
   ( _test-run-isolated "$2" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null 3>&-
   rc=$?
+  [[ -z "${TEST_PROFILE:-}" ]] || echo "$started $EPOCHREALTIME $2" >> "$TEST_PROFILE"
   echo "$i" >&3
   exit "$rc"
 }
@@ -218,9 +223,8 @@ function _test-run-isolated() {
   local test="$1"
   _TEST_NAME="$test"
   _TEST_RETURNED=""
-  _TEST_TMP="$(_test-mktemp-dir)"
+  _test-mktemp-dir TEST_TMP
   trap '_test-isolated-exit' EXIT
-  TEST_TMP="$_TEST_TMP"
   STUB_DIR="$TEST_TMP/.stubs"
   mkdir "$STUB_DIR"
   PATH="$STUB_DIR:$PATH"
@@ -244,7 +248,7 @@ function _test-isolated-exit() {
     echo "ERROR: test '${_TEST_NAME:-}' exited before returning" >&2
     rc=1
   fi
-  _test-remove-dir "${_TEST_TMP:-}"
+  _test-remove-dir "${TEST_TMP:-}"
   exit "$rc"
 }
 
@@ -336,16 +340,20 @@ function _test-wait-for-tests() {
   return 0
 }
 
-# Print the physical path of a new temporary directory, or fail without output.
+# Set a variable to the physical path of a new temporary directory, or fail and
+# leave it unset.
+# Arguments:
+#   $1=[name of the variable to set]
 function _test-mktemp-dir() {
 
-  local dir
+  local dir here="$PWD"
   if ! dir="$(mktemp -d)" || [[ -z "$dir" || ! -d "$dir" ]]; then
     return 1
   fi
-  (cd "$dir" && pwd -P)
+  cd -P "$dir" && dir="$PWD" && cd "$here" || return 1
+  printf -v "$1" '%s' "$dir"
 
-  return $?
+  return 0
 }
 
 # Remove a scratch directory created by the harness, doing nothing for an empty
@@ -392,7 +400,7 @@ function test-capture() {
   )"
   TEST_STATUS=$?
   set -e
-  TEST_STDERR="$(cat "$TEST_TMP/.stderr")"
+  TEST_STDERR="$(< "$TEST_TMP/.stderr")"
 
   return 0
 }
@@ -423,9 +431,11 @@ function test-stub() {
 #   $1=[command name]
 function test-stub-calls() {
 
-  local name="$1"
+  local name="$1" calls=""
   if [[ -f "$STUB_DIR/$name.calls" ]]; then
-    cat "$STUB_DIR/$name.calls"
+    # Reads the whole file without starting 'cat', the calls hold no NUL
+    IFS= read -r -d '' calls < "$STUB_DIR/$name.calls" || true
+    printf '%s' "$calls"
   fi
 
   return 0
@@ -443,14 +453,15 @@ function test-stub-calls() {
 # shellcheck disable=SC2120
 function test-isolate-path() {
 
-  local bin="$TEST_TMP/.bin" tool path paths i=0 seen=" "
+  local bin="$TEST_TMP/.bin" tool path paths i=0 seen=" " lines cached
   local -a tools=("${TEST_BASE_TOOLS[@]}" "$@") batch=()
   mkdir -p "$bin"
   # One lookup and one 'ln' for all tools, as each process start is slow on
   # macOS. Bash 3.2 may succeed when only some are found, so count the paths
   # instead.
   paths="$(type -P "${tools[@]}")" || true
-  if [[ -z "$paths" || $(wc -l <<< "$paths") -ne ${#tools[@]} ]]; then
+  lines="${paths//[!$'\n']/}"
+  if [[ -z "$paths" || $((${#lines} + 1)) -ne ${#tools[@]} ]]; then
     for tool in "${tools[@]}"; do
       type -P "$tool" > /dev/null || { echo "test-isolate-path: '$tool' is not on PATH" >&2; return 1; }
     done
@@ -461,8 +472,18 @@ function test-isolate-path() {
     [[ "$seen" != *" $tool "* ]] || continue
     seen="$seen$tool "
     if [[ "$path" == */mise/shims/* ]]; then
-      path="$(cd "$TEST_REPO_ROOT" && mise which "$tool")" ||
-        { echo "test-isolate-path: cannot resolve the mise shim of '$tool'" >&2; return 1; }
+      # Each 'mise which' is slow, so the suite keeps a link to the result,
+      # named after the tool and kept apart for each shim path
+      cached="${SUITE_TMP:-}/.mise-which/${path//\//%}/$tool"
+      if [[ -n "${SUITE_TMP:-}" && -L "$cached" ]]; then
+        path="$cached"
+      else
+        path="$(cd "$TEST_REPO_ROOT" && mise which "$tool")" ||
+          { echo "test-isolate-path: cannot resolve the mise shim of '$tool'" >&2; return 1; }
+        if [[ -n "${SUITE_TMP:-}" ]]; then
+          mkdir -p "${cached%/*}" && ln -sf "$path" "$cached" || true
+        fi
+      fi
     fi
     # On a repeated call the tool already resolves to its link, which must not
     # point to itself.
@@ -498,7 +519,7 @@ function test-create-repo() {
   shift
   git init -q -b main "$dir"
   for path in "$@"; do
-    mkdir -p "$dir/$(dirname "$path")"
+    test-mkdir-parent "$dir/$path"
     if [[ -f "$TEST_REPO_ROOT/$path" && -x "$TEST_REPO_ROOT/$path" ]]; then
       ln -s "$TEST_REPO_ROOT/$path" "$dir/$path"
     else
@@ -507,6 +528,18 @@ function test-create-repo() {
   done
   git -C "$dir" add -A
   git -C "$dir" commit -q --allow-empty -m "initial"
+
+  return 0
+}
+
+# Create the parent directory of a path when it is missing, without starting a
+# process when it exists.
+# Arguments:
+#   $1=[path of a file]
+function test-mkdir-parent() {
+
+  local path="$1"
+  [[ "$path" != */* || -d "${path%/*}" ]] || mkdir -p "${path%/*}" || return "$?"
 
   return 0
 }

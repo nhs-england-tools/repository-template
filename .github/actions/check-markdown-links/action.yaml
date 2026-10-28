@@ -6,8 +6,6 @@ runs:
     - name: "Check Markdown links"
       shell: bash
       env:
-        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         FORCE_USE_DOCKER: "true"
       run: |
-        export BRANCH_NAME="origin/$DEFAULT_BRANCH"
-        make check-markdown-links check=all
+        make lint-markdown-links check=all

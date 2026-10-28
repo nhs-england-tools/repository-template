@@ -40,7 +40,7 @@ function quality-create-fixture-repo() {
   cp -Rp "$SUITE_TMP/quality-fixture-base" "$repo"
   cp "$TEST_REPO_ROOT/scripts/quality/tests/mise.toml.test" "$repo/mise.toml"
   for file in "$@"; do
-    mkdir -p "$repo/$(dirname "$file")"
+    test-mkdir-parent "$repo/$file"
     # shellcheck disable=SC2059
     printf "$QUALITY_FIXTURE_FORMAT" "$file" > "$repo/$file"
   done

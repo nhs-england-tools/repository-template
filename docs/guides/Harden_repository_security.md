@@ -217,10 +217,10 @@ repository, on an Apple silicon workstation with the images already pulled.
 | Markdown links, `all`        | 0.08 s | 0.49 s | 0.41 s |
 | Shell lint, `all`            | 2.09 s | 3.33 s | 1.24 s |
 
-In total, the checks took 3.16 s natively and 6.65 s in Docker. ShellCheck
-takes the most time in both modes, though it runs in parallel, one container
-for each group of related scripts in Docker. A first image pull adds time, and
-x64 CI runners have no emulation cost.
+In total, the checks took 3.16 s natively and 6.65 s in Docker. ShellCheck takes
+the most time in both modes, though it runs in parallel, one container for each
+group of related scripts in Docker. A first image pull adds time, and x64 CI
+runners have no emulation cost.
 
 ## Making a security-sensitive change
 
@@ -243,7 +243,6 @@ Review and trust `mise.toml`, then run `make config` as the
 [README](../../README.md) describes. From the repository root, run:
 
 ```shell
-make check-workflow-security
 make scan-secrets
 make scan-secrets check=all
 make lint

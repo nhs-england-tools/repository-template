@@ -23,11 +23,11 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/scan-secrets.sh scripts/docker/docker.lib.sh scripts/config/gitleaks.toml scripts/config/.gitleaksignore)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/scan-secrets.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/gitleaks.toml scripts/config/.gitleaksignore)
   QUALITY_FIXTURE_FORMAT='%s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check BRANCH_NAME FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
 
   GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v1.0.0@sha256:1111111111111111111111111111111111111111111111111111111111111111
   # The gitleaks stub also records the git config it runs with
@@ -41,6 +41,7 @@ function main() {
     test-scan-secrets-all-runs-three-checks-and-keeps-failure \
     test-scan-secrets-all-keeps-the-status-of-a-failing-first-check \
     test-scan-secrets-all-keeps-the-status-of-a-failing-last-check \
+    test-scan-secrets-all-fails-when-branch-base-is-missing \
     test-scan-secrets-rejects-unknown-mode \
     test-scan-secrets-empty-mode-defaults-to-whole-history \
     test-scan-secrets-propagates-leaks \
@@ -87,11 +88,14 @@ function test-scan-secrets-builds-the-command-for-each-mode() {
     expected-gitleaks-calls staged-changes working-tree-changes branch
     printf '%s\n' \
       "detect --source $r --verbose --redact --log-opts dev..HEAD $(gitleaks-tail)" \
+      "detect --source $r --verbose --redact --log-opts origin/v2..HEAD $(gitleaks-tail)" \
       "detect --source $r --verbose --redact --log-opts -1 $(gitleaks-tail)"
   )"
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks "$GITLEAKS_RECORD_ENV"
+  git -C "$r" update-ref refs/heads/dev refs/remotes/origin/main
+  git -C "$r" update-ref refs/remotes/origin/v2 refs/remotes/origin/main
   cd "$r"
   # Act
   test-capture env check=staged-changes ./scripts/quality/scan-secrets.sh
@@ -102,10 +106,12 @@ function test-scan-secrets-builds-the-command-for-each-mode() {
   statuses="$statuses$TEST_STATUS"
   test-capture env check=branch BRANCH_NAME=dev ./scripts/quality/scan-secrets.sh
   statuses="$statuses$TEST_STATUS"
+  test-capture env check=branch GITHUB_BASE_REF=v2 BRANCH_NAME=origin/main ./scripts/quality/scan-secrets.sh
+  statuses="$statuses$TEST_STATUS"
   test-capture env check=last-commit ./scripts/quality/scan-secrets.sh
   statuses="$statuses$TEST_STATUS"
   # Assert
-  assert-equal 00000 "$statuses" "exit status of each mode"
+  assert-equal 000000 "$statuses" "exit status of each mode"
   assert-equal "$expected" "$(test-stub-calls gitleaks)" "gitleaks calls in mode order"
 
   return 0
@@ -181,6 +187,26 @@ function test-scan-secrets-all-keeps-the-status-of-a-failing-last-check() {
   # Assert
   assert-equal 5 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "$expected" "$(test-stub-calls gitleaks)" "gitleaks calls in order"
+
+  return 0
+}
+
+function test-scan-secrets-all-fails-when-branch-base-is-missing() {
+
+  # Arrange
+  local r="$TEST_TMP/repo" calls
+  quality-create-fixture-repo a.txt
+  test-isolate-path
+  test-stub gitleaks "$GITLEAKS_RECORD_ENV"
+  git -C "$r" update-ref -d refs/remotes/origin/main
+  cd "$r"
+  # Act
+  test-capture env check=all ./scripts/quality/scan-secrets.sh
+  calls="$(test-stub-calls gitleaks)"
+  # Assert
+  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-equal 2 "$(printf '%s\n' "$calls" | awk 'NF { n++ } END { print n + 0 }')" "Gitleaks calls before branch-base failure"
+  assert-contains "$TEST_STDERR" 'Branch to compare with not found: origin/main'
 
   return 0
 }

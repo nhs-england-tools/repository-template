@@ -25,6 +25,8 @@ readonly FAILING_LINT='if [[ "${*: -1}" == lint ]]; then echo "lint finding on l
 # Time limits count whole seconds, so a limit of 2 gives the gate at least a
 # second to start its processes
 readonly SHORT_LINT_GATE=$'version: 1\ngates:\n  - name: lint\n    timeout: 2'
+# The prompt text is a marker the tests look for
+readonly PROMPT_JSON_FORMAT='{"hook_event_name":"UserPromptSubmit","session_id":"%s","prompt":"PROMPT-MARKER-4711"}'
 
 # Set up the suite fixtures and run every test.
 function main() {
@@ -35,16 +37,33 @@ function main() {
   # The caller's options must not reach the script under test
   unset -v scope hours QUALITY_GATE_BUDGET QUALITY_GATE_ACTIVE GITHUB_ACTIONS COPILOT_AGENT_PROMPT
 
-  # The tests that wait for time limits or run many turns come first, so the
-  # others run alongside them
+  # The tests that wait for time limits or run many turns come first, slowest
+  # first, so the short ones fill the gaps and none starts late
   test-run-suite \
     test-quality-gate-reports-gates-the-time-budget-did-not-allow \
-    test-quality-gate-matches-path-globs \
-    test-quality-gate-does-not-match-paths-outside-the-globs \
+    test-quality-gate-lets-the-processes-of-a-stopped-gate-clean-up \
     test-quality-gate-times-out-a-gate-and-stops-its-process-group \
     test-quality-gate-stops-processes-a-gate-started \
-    test-quality-gate-lets-the-processes-of-a-stopped-gate-clean-up \
+    test-quality-gate-matches-path-globs \
     test-quality-gate-stops-the-running-gate-when-the-hook-is-stopped \
+    test-quality-gate-honours-max-blocks-and-a-new-prompt-resets-it \
+    test-quality-gate-rejects-invalid-gate-configuration \
+    test-quality-gate-accepts-whole-numbers-written-as-decimals \
+    test-quality-gate-fails-when-a-mise-shim-cannot-run-a-tool \
+    test-quality-gate-skips-a-gate-whose-paths-match-no-change \
+    test-quality-gate-copes-with-rules-that-print-decimals \
+    test-quality-gate-keeps-the-logs-of-each-session-apart \
+    test-quality-gate-blocks-again-after-a-cancelled-continuation \
+    test-quality-gate-starts-a-new-turn-after-the-agent-finishes \
+    test-quality-gate-keeps-a-baseline-per-session \
+    test-quality-gate-pauses-from-the-next-prompt-and-resumes \
+    test-quality-gate-keeps-the-block-count-when-another-prompt-arrives-mid-turn \
+    test-quality-gate-reads-drop-ins-in-byte-order \
+    test-quality-gate-sees-changes-inside-a-nested-repository \
+    test-quality-gate-reruns-itself-with-a-newer-bash \
+    test-quality-gate-ignores-warnings-while-reading-the-configuration \
+    test-quality-gate-hashes-more-files-than-one-chunk \
+    test-quality-gate-does-not-match-paths-outside-the-globs \
     test-quality-gate-rejects-an-unknown-command \
     test-quality-gate-ignores-events-it-does-not-handle \
     test-quality-gate-reports-an-unreadable-payload \
@@ -60,39 +79,27 @@ function main() {
     test-quality-gate-runs-every-gate-when-the-tree-cannot-be-read \
     test-quality-gate-runs-every-gate-when-the-tree-could-not-be-read-at-the-start \
     test-quality-gate-runs-every-gate-when-a-directory-cannot-be-read \
-    test-quality-gate-sees-changes-inside-a-nested-repository \
     test-quality-gate-works-when-the-temporary-directory-is-unusable \
-    test-quality-gate-runs-every-gate-and-says-why-without-a-baseline \
     test-quality-gate-runs-every-gate-without-a-session-id \
     test-quality-gate-treats-an-unsafe-session-id-as-missing \
-    test-quality-gate-keeps-a-baseline-per-session \
     test-quality-gate-keeps-the-baseline-when-another-prompt-arrives-mid-turn \
     test-quality-gate-records-the-time-of-the-last-hook-and-run-in-utc \
-    test-quality-gate-starts-a-new-turn-after-the-agent-finishes \
     test-quality-gate-ignores-subagent-events \
     test-quality-gate-passes-the-changed-paths-to-a-gate \
     test-quality-gate-keeps-awkward-file-names-intact \
-    test-quality-gate-hashes-more-files-than-one-chunk \
     test-quality-gate-matches-paths-of-a-commit-made-during-the-turn \
     test-quality-gate-runs-every-gate-when-the-first-commit-is-made-during-the-turn \
     test-quality-gate-matches-file-names-that-are-not-utf-8 \
     test-quality-gate-blocks-with-valid-output-for-both-harnesses \
-    test-quality-gate-runs-the-remaining-gates-after-a-failure \
-    test-quality-gate-blocks-once-then-lets-the-agent-finish \
-    test-quality-gate-keeps-the-block-count-when-another-prompt-arrives-mid-turn \
-    test-quality-gate-blocks-again-after-a-cancelled-continuation \
     test-quality-gate-lets-the-agent-finish-without-a-session-after-a-block \
-    test-quality-gate-honours-max-blocks-and-a-new-prompt-resets-it \
     test-quality-gate-reports-a-docker-prerequisite-without-blocking \
     test-quality-gate-reports-the-prerequisite-marker \
     test-quality-gate-tells-the-agent-about-a-gate-that-could-not-run \
-    test-quality-gate-keeps-the-logs-of-each-session-apart \
     test-quality-gate-keeps-fresh-log-directories-of-other-sessions \
     test-quality-gate-limits-the-size-of-the-report \
     test-quality-gate-shares-the-report-size-between-failing-gates \
     test-quality-gate-strips-colour-from-the-report \
     test-quality-gate-does-not-block-on-a-warn-gate \
-    test-quality-gate-skips-a-gate-whose-paths-match-no-change \
     test-quality-gate-ignores-gate-list-edits-made-during-the-turn \
     test-quality-gate-uses-the-gate-list-from-the-start-of-the-turn \
     test-quality-gate-reads-the-rules-from-the-start-of-the-turn \
@@ -100,20 +107,12 @@ function main() {
     test-quality-gate-uses-the-start-commit-when-the-tree-could-not-be-read-at-the-start \
     test-quality-gate-reads-an-empty-baseline-as-unreadable \
     test-quality-gate-names-the-gate-list-it-used-without-a-baseline \
-    test-quality-gate-applies-a-committed-drop-in \
-    test-quality-gate-reads-drop-ins-in-byte-order \
     test-quality-gate-warns-about-an-invalid-committed-configuration \
-    test-quality-gate-rejects-invalid-gate-configuration \
     test-quality-gate-rejects-drop-in-names-that-are-not-plain-ascii \
-    test-quality-gate-accepts-whole-numbers-written-as-decimals \
-    test-quality-gate-copes-with-rules-that-print-decimals \
-    test-quality-gate-ignores-warnings-while-reading-the-configuration \
     test-quality-gate-reads-a-budget-with-leading-zeros-as-decimal \
     test-quality-gate-names-the-missing-tool \
     test-quality-gate-names-yq-when-it-cannot-run \
-    test-quality-gate-fails-when-a-mise-shim-cannot-run-a-tool \
     test-quality-gate-needs-mikefarah-yq \
-    test-quality-gate-pauses-from-the-next-prompt-and-resumes \
     test-quality-gate-ignores-a-pause-made-during-the-turn \
     test-quality-gate-removes-an-expired-pause \
     test-quality-gate-rejects-an-out-of-range-pause \
@@ -124,10 +123,8 @@ function main() {
     test-quality-gate-run-rejects-an-unknown-scope \
     test-quality-gate-run-refuses-to-run-inside-a-gate \
     test-quality-gate-lists-the-gates \
-    test-quality-gate-reruns-itself-with-a-newer-bash \
     test-quality-gate-registers-both-hook-events \
-    test-quality-gate-pre-commit-runs-make-test-last \
-    test-quality-gate-default-configuration-is-valid
+    test-quality-gate-pre-commit-runs-make-test-last
 
   return 0
 }
@@ -157,18 +154,22 @@ function test-suite-setup() {
   return 0
 }
 
-# Build the committed fixture repository.
+# Build the committed fixture repository in one commit. It starts few processes,
+# as this runs before any test and the whole run starts at once.
 # Arguments:
 #   $1=[directory]
 function gate-build-repo() {
 
-  local repo="$1"
-  local config="$repo/scripts/config/quality-gates.yaml"
-  test-create-repo "$repo" scripts/quality/quality-gate.sh scripts/quality/quality-gate.jq scripts/config/quality-gates.yaml
+  local repo="$1" line
+  git init -q -b main "$repo"
+  mkdir -p "$repo/scripts/quality" "$repo/scripts/config" "$repo/src"
+  ln -s "$TEST_REPO_ROOT/scripts/quality/quality-gate.sh" "$repo/scripts/quality/quality-gate.sh"
+  cp -p "$TEST_REPO_ROOT/scripts/quality/quality-gate.jq" "$repo/scripts/quality/quality-gate.jq"
   # Pin the block limit so the tests do not depend on the project's setting
-  sed 's/^max_blocks:.*/max_blocks: 1/' "$config" > "$config.tmp"
-  mv "$config.tmp" "$config"
-  mkdir -p "$repo/src"
+  while IFS= read -r line || [[ -n $line ]]; do
+    [[ $line != max_blocks:* ]] || line='max_blocks: 1'
+    printf '%s\n' "$line"
+  done < "$TEST_REPO_ROOT/scripts/config/quality-gates.yaml" > "$repo/scripts/config/quality-gates.yaml"
   printf 'one\n' > "$repo/README.md"
   printf 'int a;\n' > "$repo/src/a.c"
   git -C "$repo" add -A
@@ -182,7 +183,7 @@ function gate-build-repo() {
 #   $1=[path] $2=[content]
 function gate-commit-file() {
 
-  mkdir -p "$(dirname "$1")"
+  test-mkdir-parent "$1"
   printf '%s\n' "$2" > "$1"
   git add -- "$1"
   git commit -q -m "update $1"
@@ -205,7 +206,7 @@ function gate-make() {
 #   $1=[event JSON]
 function gate-send() {
 
-  printf '%s' "$1" | "$SCRIPT" hook
+  "$SCRIPT" hook <<< "$1"
 
   return 0
 }
@@ -216,7 +217,8 @@ function gate-send() {
 #   $1=[session identifier, default is the suite's]
 function gate-prompt-json() {
 
-  printf '{"hook_event_name":"UserPromptSubmit","session_id":"%s","prompt":"PROMPT-MARKER-4711"}' "${1-$SESSION}"
+  # shellcheck disable=SC2059
+  printf "$PROMPT_JSON_FORMAT" "${1-$SESSION}"
 
   return 0
 }
@@ -233,9 +235,14 @@ function gate-stop-json() {
 }
 
 # Start a turn: record the baseline.
+# Arguments:
+#   $1=[session identifier, default is the suite's]
 function gate-start-turn() {
 
-  gate-send "$(gate-prompt-json "$@")" > /dev/null
+  local json
+  # shellcheck disable=SC2059
+  printf -v json "$PROMPT_JSON_FORMAT" "${1-$SESSION}"
+  gate-send "$json" > /dev/null
 
   return 0
 }
@@ -545,20 +552,6 @@ function test-quality-gate-works-when-the-temporary-directory-is-unusable() {
   return 0
 }
 
-function test-quality-gate-runs-every-gate-and-says-why-without-a-baseline() {
-
-  # Arrange
-  gate-create-repo
-  # Act
-  test-capture gate-send "$(gate-stop-json)"
-  # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDOUT" "No baseline was recorded for this turn, so the hook ran every enabled gate."
-  assert-equal "$LINT_CALL"$'\n'"$TEST_CALL" "$(gate-calls)" "make calls"
-
-  return 0
-}
-
 function test-quality-gate-runs-every-gate-without-a-session-id() {
 
   # Arrange
@@ -799,11 +792,12 @@ function test-quality-gate-matches-path-globs() {
   local file
   gate-create-glob-repo
   # Act and assert
+  # 'run' matches paths like the hook does and needs no turn for each file
   for file in schema.json a/b/schema.json docs/x/y.md docs/y.md 'lib/[x]1.py'; do
-    gate-start-turn
-    printf 'edit\n' >> "$file"
-    test-capture gate-send "$(gate-stop-json)"
+    printf 'edit\n' > "$file"
+    test-capture "$SCRIPT" run
     assert-contains "$(gate-calls)" '--no-print-directory check-schema' "make calls after editing $file"
+    rm -- "$file"
     : > "$STUB_DIR/make.calls"
   done
 
@@ -815,15 +809,15 @@ function test-quality-gate-does-not-match-paths-outside-the-globs() {
   # Arrange
   local file
   gate-create-glob-repo
-  # Act and assert
+  gate-start-turn
   for file in other.txt xschema.json docsy.md docs/y.txt lib/x1.py 'lib/[x]10.py'; do
-    gate-start-turn
     printf 'edit\n' >> "$file"
-    test-capture gate-send "$(gate-stop-json)"
-    assert-not-contains "$(gate-calls)" "check-schema" "make calls after editing $file"
-    assert-contains "$(gate-calls)" "$LINT_CALL"
-    : > "$STUB_DIR/make.calls"
   done
+  # Act
+  test-capture gate-send "$(gate-stop-json)"
+  # Assert
+  assert-not-contains "$(gate-calls)" "check-schema" "make calls"
+  assert-contains "$(gate-calls)" "$LINT_CALL"
 
   return 0
 }
@@ -886,40 +880,7 @@ function test-quality-gate-blocks-with-valid-output-for-both-harnesses() {
   assert-contains "$reason" "Full log: .git/quality-gate/logs/$SESSION/lint.log"
   assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "Quality gate blocked the stop: lint"
   assert-not-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "warning only"
-
-  return 0
-}
-
-function test-quality-gate-runs-the-remaining-gates-after-a-failure() {
-
-  # Arrange
-  gate-create-repo
-  gate-make "$FAILING_LINT"
-  gate-start-turn
-  printf 'two\n' >> README.md
-  # Act
-  test-capture gate-send "$(gate-stop-json)"
-  # Assert
-  assert-equal "$LINT_CALL"$'\n'"$TEST_CALL" "$(gate-calls)" "make calls"
-
-  return 0
-}
-
-function test-quality-gate-blocks-once-then-lets-the-agent-finish() {
-
-  # Arrange
-  gate-create-repo
-  gate-make "$FAILING_LINT"
-  gate-start-turn
-  printf 'two\n' >> README.md
-  test-capture gate-send "$(gate-stop-json)"
-  # Act
-  test-capture gate-send "$(gate-stop-json "$SESSION" true)"
-  # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDOUT" "already blocked 1 time(s)"
-  assert-not-contains "$TEST_STDOUT" '"decision"'
-  assert-equal 2 "$(gate-calls | wc -l | tr -d ' ')" "make calls after the second stop"
+  assert-equal "$LINT_CALL"$'\n'"$TEST_CALL" "$(gate-calls)" "make calls, the gate after the failure still runs"
 
   return 0
 }
@@ -938,8 +899,10 @@ function test-quality-gate-keeps-the-block-count-when-another-prompt-arrives-mid
   # Act
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "already blocked 1 time(s)"
   assert-not-contains "$TEST_STDOUT" '"decision"'
+  assert-equal 2 "$(gate-calls | wc -l | tr -d ' ')" "make calls, the gates ran only at the first stop"
 
   return 0
 }
@@ -1319,21 +1282,6 @@ function test-quality-gate-names-the-gate-list-it-used-without-a-baseline() {
   return 0
 }
 
-function test-quality-gate-applies-a-committed-drop-in() {
-
-  # Arrange
-  gate-create-repo
-  gate-commit-file scripts/config/quality-gates.d/project.yaml $'version: 1\ngates:\n  - name: test\n    enabled: false'
-  gate-start-turn
-  printf 'two\n' >> README.md
-  # Act
-  test-capture gate-send "$(gate-stop-json)"
-  # Assert
-  assert-equal "$LINT_CALL" "$(gate-calls)" "make calls"
-
-  return 0
-}
-
 # Byte order puts B.yaml before a.yaml, whereas many locales sort them the other
 # way round, and a dot file is never read.
 function test-quality-gate-reads-drop-ins-in-byte-order() {
@@ -1570,15 +1518,16 @@ function test-quality-gate-lets-the-processes-of-a-stopped-gate-clean-up() {
 
   # Arrange
   gate-create-repo
-  gate-commit-file scripts/config/quality-gates.d/short.yaml "$SHORT_LINT_GATE"
+  # A longer limit than the other time limit tests, so the child has set its
+  # trap before the stop even under load
+  gate-commit-file scripts/config/quality-gates.d/short.yaml $'version: 1\ngates:\n  - name: lint\n    timeout: 3'
   cat > "$TEST_TMP/child.sh" << 'EOF'
-#!/usr/bin/env bash
 trap 'touch "$TEST_TMP/child-cleaned"; exit 0' TERM
 sleep 300 &
 wait
 EOF
-  chmod +x "$TEST_TMP/child.sh"
-  gate-make 'if [[ "${*: -1}" == lint ]]; then "$TEST_TMP/child.sh" & wait; fi'
+  # Run by bash, as macOS is slow to run a new executable the first time
+  gate-make 'if [[ "${*: -1}" == lint ]]; then bash "$TEST_TMP/child.sh" & wait; fi'
   gate-start-turn
   printf 'two\n' >> README.md
   # Act
@@ -1647,10 +1596,9 @@ function test-quality-gate-reports-gates-the-time-budget-did-not-allow() {
   # Arrange
   gate-create-repo
   gate-make 'if [[ "${*: -1}" == lint ]]; then sleep 30; fi'
-  gate-start-turn
-  printf 'two\n' >> README.md
   export QUALITY_GATE_BUDGET=4
   # Act
+  # Without a baseline every gate runs, which skips a prompt on this slow test
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
@@ -1697,8 +1645,9 @@ function test-quality-gate-fails-when-a-mise-shim-cannot-run-a-tool() {
   local shims="$TEST_TMP/shims"
   gate-create-repo
   mkdir -p "$shims"
-  printf '#!/usr/bin/env bash\necho "mise ERROR Config files are not trusted." >&2\nexit 1\n' > "$shims/jq"
-  chmod +x "$shims/jq"
+  # A link to the stub dispatcher, as a new executable is slow to run first
+  printf 'echo "mise ERROR Config files are not trusted." >&2\nexit 1\n' > "$shims/jq.body"
+  ln -s "$TEST_REPO_ROOT/scripts/tests/stub.sh" "$shims/jq"
   test-stub mise "printf 'export PATH=\"%s:\$PATH\"\\n' '$shims'"
   # Act
   test-capture gate-send "$(gate-stop-json)"
@@ -1913,6 +1862,7 @@ function test-quality-gate-lists-the-gates() {
   assert-matches "$TEST_STDOUT" 'NAME +TARGET +MODE +TIMEOUT +PATHS +DESCRIPTION'
   assert-matches "$TEST_STDOUT" 'lint +lint +block +120s +all'
   assert-matches "$TEST_STDOUT" 'test +test +block +240s +all'
+  assert-equal 3 "$(wc -l <<< "$TEST_STDOUT" | tr -d ' ')" "lines of the gate list"
 
   return 0
 }
@@ -1979,19 +1929,6 @@ function test-quality-gate-pre-commit-runs-make-test-last() {
   assert-equal "make test" "$(yq -r '.repos[-1].hooks[0].entry' "$config")" "last hook entry"
   assert-equal true "$(yq -r '.repos[-1].hooks[0].always_run' "$config")" "always_run"
   assert-equal false "$(yq -r '.repos[-1].hooks[0].pass_filenames' "$config")" "pass_filenames"
-
-  return 0
-}
-
-function test-quality-gate-default-configuration-is-valid() {
-
-  # Arrange
-  gate-create-repo
-  # Act
-  test-capture "$SCRIPT" list
-  # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal 3 "$(wc -l <<< "$TEST_STDOUT" | tr -d ' ')" "lines of the gate list"
 
   return 0
 }

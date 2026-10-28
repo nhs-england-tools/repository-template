@@ -6,8 +6,6 @@ runs:
     - name: "Check file format"
       shell: bash
       env:
-        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         FORCE_USE_DOCKER: "true"
       run: |
-        export BRANCH_NAME="origin/$DEFAULT_BRANCH"
-        make check-file-format check=all
+        make lint-file-format check=all

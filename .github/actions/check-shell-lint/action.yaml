@@ -8,4 +8,4 @@ runs:
       env:
         FORCE_USE_DOCKER: "true"
       run: |
-        make check-shell-lint
+        make lint-shell check=all

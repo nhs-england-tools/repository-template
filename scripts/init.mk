@@ -16,23 +16,23 @@ scan-secrets: check ?= whole-history
 scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit) @Quality
 	check=$(check) ./scripts/quality/scan-secrets.sh
 
-check-file-format: check ?= all
-check-file-format: # Check file formats (set check=all|staged-changes|working-tree-changes|branch) @Quality
+lint-file-format: check ?= all
+lint-file-format: # Check file formats (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	check=$(check) ./scripts/quality/check-file-format.sh && echo "file format: ok"
 
-check-markdown-format: check ?= all
-check-markdown-format: # Check markdown formatting (set check=all|staged-changes|working-tree-changes|branch) @Quality
+lint-markdown-format: check ?= all
+lint-markdown-format: # Check markdown formatting (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	check=$(check) ./scripts/quality/check-markdown-format.sh && echo "markdown format: ok"
 
-check-markdown-links: check ?= all
-check-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
+lint-markdown-links: check ?= all
+lint-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
-check-shell-lint: check ?= all
-check-shell-lint: # Lint all tracked shell scripts and check shell and Make comment line length @Quality
-	./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"
+lint-shell: check ?= all
+lint-shell: # Lint tracked shell scripts and check shell and Make comment line length (set check=all|file, with file=[path] for file) @Quality
+	check=$(check) ./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"
 
-check-workflow-security: # Check GitHub Actions workflow security policy @Quality
+lint-workflow-security: # Check GitHub Actions workflow security policy @Quality
 	./scripts/quality/check-workflow-security.sh && echo "workflow security checks: ok"
 
 quality-gate: scope ?= changed
@@ -218,17 +218,17 @@ ${VERBOSE}.SILENT: \
 	_toolchain-check \
 	_toolchain-install \
 	_toolchain-install-one \
-	check-file-format \
-	check-markdown-format \
-	check-markdown-links \
-	check-shell-lint \
-	check-workflow-security \
 	clean \
 	config \
 	format-markdown \
 	githooks-config \
 	githooks-run \
 	help \
+	lint-file-format \
+	lint-markdown-format \
+	lint-markdown-links \
+	lint-shell \
+	lint-workflow-security \
 	list-variables \
 	quality-gate \
 	quality-gate-list \

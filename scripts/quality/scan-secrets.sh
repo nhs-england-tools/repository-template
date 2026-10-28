@@ -12,8 +12,10 @@ set -euo pipefail
 #   check={all,staged-changes,working-tree-changes,branch,whole-history,
 #          last-commit}
 #                                       # Check mode, default is 'whole-history'
-#   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is
-#                                       # 'origin/main'
+#   BRANCH_NAME=base-branch             # Local base for the branch mode,
+#                                       # chosen automatically when unset, as
+#                                       # './scripts/quality/git-base.lib.sh'
+#                                       # describes
 #   FORCE_USE_DOCKER=true               # Run in a Docker container, default is
 #                                       # 'false'
 #   VERBOSE=true                        # Show all the executed commands,
@@ -29,7 +31,7 @@ set -euo pipefail
 #                         # together
 #   staged-changes        # Changes staged for commit
 #   working-tree-changes  # Working tree files, including untracked ones
-#   branch                # Commits on this branch since BRANCH_NAME
+#   branch                # Commits on this branch since the resolved base ref
 #   whole-history         # Every commit on every branch
 #   last-commit           # The most recent commit only
 
@@ -77,11 +79,11 @@ function run-check() {
   local rc=0
   if command -v gitleaks > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     dir="$PWD"
-    cmd="$(check="$check" dir="$dir" get-cmd-to-run)"
+    cmd="$(check="$check" dir="$dir" get-cmd-to-run)" || return "$?"
     cmd="$cmd" run-gitleaks-natively || rc=$?
   else
     dir="/workdir"
-    cmd="$(check="$check" dir="$dir" get-cmd-to-run)"
+    cmd="$(check="$check" dir="$dir" get-cmd-to-run)" || return "$?"
     cmd="$cmd" run-gitleaks-in-docker || rc=$?
   fi
 
@@ -111,7 +113,12 @@ function get-cmd-to-run() {
       # HEAD but not from the base branch. This keeps the scan scoped to the
       # work in progress and does not fail on secrets that live only on
       # unrelated branches another developer may have pushed.
-      cmd="detect --source $dir --verbose --redact --log-opts ${BRANCH_NAME:-origin/main}..HEAD"
+      # shellcheck disable=SC1091
+      source ./scripts/quality/git-base.lib.sh
+      # shellcheck disable=SC2034
+      local base_ref fork_point
+      quality-resolve-base base_ref fork_point || return "$?"
+      cmd="detect --source $dir --verbose --redact --log-opts ${base_ref}..HEAD"
       ;;
     "whole-history")
       # Scan every commit on every branch (Gitleaks' default `git log --all`

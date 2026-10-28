@@ -184,6 +184,22 @@ make format-markdown
 
 `make lint` stops at the first failing check.
 
+`make lint` checks every tracked file, as the pre-commit hook and CI do, so a
+local pass predicts theirs. In a large repository, or one with existing
+findings, limit the file checks to the changes on your branch with
+`make lint check=branch`. Shell lint and the workflow security check always
+cover the whole repository.
+
+The branch-scoped mode resolves its base automatically. In GitHub Actions,
+`GITHUB_BASE_REF` selects the pull request target. Locally, the base of the
+branch's open pull request is read with GitHub CLI when it is installed and
+authenticated, once for all the checks. Without an open pull request, checks use
+`origin/HEAD` and then `origin/main`. If GitHub CLI is unavailable, finds no
+open pull request or does not answer within 5 seconds, the check reports that
+and uses the default branch. `BRANCH_NAME` is an optional local override, used
+exactly as given, for example `BRANCH_NAME=origin/v2 make lint check=branch`. No
+repository configuration is needed.
+
 Each check uses its native tool when it is installed and otherwise falls back to
 the image pinned in `mise.toml`. The workflow security check is the exception.
 It has no container fallback and needs the `yq` and `jq` versions that

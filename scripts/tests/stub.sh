@@ -33,7 +33,7 @@ function main() {
   if [[ $# -eq 0 ]]; then
     echo >> "$_stub_dir/$_stub_name.calls"
   else
-    _stub_line="$(printf '%q ' "$@")"
+    printf -v _stub_line '%q ' "$@"
     printf '%s\n' "${_stub_line% }" >> "$_stub_dir/$_stub_name.calls"
   fi
   # shellcheck source=/dev/null

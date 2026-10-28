@@ -24,11 +24,11 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/format-markdown.sh scripts/quality/git-files.lib.sh scripts/docker/docker.lib.sh scripts/config/prettierrc.yaml scripts/config/.prettierignore)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/format-markdown.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/prettierrc.yaml scripts/config/.prettierignore)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check BRANCH_NAME files FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE files FORCE_USE_DOCKER
 
   NODE_IMAGE=node:7.0.0-slim@sha256:7777777777777777777777777777777777777777777777777777777777777777
   PRETTIER_VERSION=8.0.0

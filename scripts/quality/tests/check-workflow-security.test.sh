@@ -395,6 +395,7 @@ function test-workflow-security-rejects-mise-in-dockerised-quality-job() {
 
 function test-workflow-security-checks-repository-workflows() {
 
+  test-isolate-path yq jq
   test-capture ./scripts/quality/check-workflow-security.sh
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
 
@@ -422,15 +423,17 @@ function workflow-security-check-fixture() {
 function workflow-security-write-fixture() {
 
   local relative_path="$1" content="$2"
-  mkdir -p "$(dirname "$TEST_TMP/$relative_path")"
+  test-mkdir-parent "$TEST_TMP/$relative_path"
   printf '%s\n' "$content" > "$TEST_TMP/$relative_path"
 
   return 0
 }
 
 # Run the policy checker against the fixture workflows, actions and allowlist.
+# The isolated PATH links the real yq and jq, as a mise shim is slow to start.
 function workflow-security-run-fixture() {
 
+  test-isolate-path yq jq
   test-capture env \
     dir="$TEST_TMP/workflows" \
     actions_dir="$TEST_TMP/actions" \
