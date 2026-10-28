@@ -16,8 +16,10 @@ set -euo pipefail
 #
 # Exit codes:
 #   0 - All links are valid
-#   1 - The check mode is not recognised, or lychee failed to run
+#   1 - Lychee failed to run, or the branch to compare with is not found
 #   2 - Broken links found
+#   126 - The check mode is not recognised
+#   Other - Non-zero statuses from Git, lychee, Docker or image pulls
 #
 # Notes:
 #   1) Check modes select existing Markdown files known to Git, as described in

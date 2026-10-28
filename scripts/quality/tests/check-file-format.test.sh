@@ -65,16 +65,20 @@ function test-suite-setup() {
 function test-check-file-format-rejects-unknown-mode() {
 
   # Arrange
+  local mode
+  local -a modes=(bogus ALL ' all')
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub "$EC"
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=bogus ./scripts/quality/check-file-format.sh
+  for mode in "${modes[@]}"; do
+    test-capture env "check=$mode" ./scripts/quality/check-file-format.sh
+    assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
+    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+  done
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Unrecognised check mode: bogus"
   assert-stub-not-called "$EC"
   assert-stub-not-called docker
 
@@ -272,14 +276,18 @@ function test-check-file-format-skips-empty-selection() {
   # Act
   test-capture ./scripts/quality/check-file-format.sh
   local default_status="$TEST_STATUS" default_output="$TEST_STDOUT"
+  test-capture env check= ./scripts/quality/check-file-format.sh
+  local empty_status="$TEST_STATUS" empty_output="$TEST_STDOUT"
   test-capture env dry_run=true ./scripts/quality/check-file-format.sh
   local dry_run_status="$TEST_STATUS" dry_run_output="$TEST_STDOUT"
   test-capture env FORCE_USE_DOCKER=true ./scripts/quality/check-file-format.sh
   # Assert
   assert-equal 0 "$default_status" "default exit status"
+  assert-equal 0 "$empty_status" "empty check mode exit status"
   assert-equal 0 "$dry_run_status" "dry-run exit status"
   assert-equal 0 "$TEST_STATUS" "Docker exit status"
   assert-contains "$default_output" "No files to check"
+  assert-contains "$empty_output" "No files to check"
   assert-contains "$dry_run_output" "No files to check"
   assert-contains "$TEST_STDOUT" "No files to check"
   assert-stub-not-called "$EC"

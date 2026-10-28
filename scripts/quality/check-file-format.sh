@@ -18,7 +18,8 @@ set -euo pipefail
 #
 # Exit codes:
 #   0 - All selected files are formatted correctly, or no files need checking
-#   1 - Files are not formatted correctly, or the check mode is not recognised
+#   1 - Files are not formatted correctly, or the branch to compare with is not found
+#   126 - The check mode is not recognised
 #   Other - Non-zero statuses from Git, EditorConfig Checker, Docker or image pulls
 #
 # Notes:

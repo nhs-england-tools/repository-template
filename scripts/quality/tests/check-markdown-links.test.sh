@@ -63,16 +63,20 @@ function test-suite-setup() {
 function test-check-markdown-links-rejects-unknown-mode() {
 
   # Arrange
+  local mode
+  local -a modes=(bogus ALL ' all')
   quality-create-fixture-repo README.md
   test-isolate-path
   test-stub lychee
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=bogus ./scripts/quality/check-markdown-links.sh
+  for mode in "${modes[@]}"; do
+    test-capture env "check=$mode" ./scripts/quality/check-markdown-links.sh
+    assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
+    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+  done
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Unrecognised check mode: bogus"
   assert-stub-not-called lychee
   assert-stub-not-called docker
 
@@ -89,7 +93,10 @@ function test-check-markdown-links-does-nothing-without-markdown-changes() {
   cd "$TEST_TMP/repo"
   # Act
   test-capture ./scripts/quality/check-markdown-links.sh
+  local default_status="$TEST_STATUS"
+  test-capture env check= ./scripts/quality/check-markdown-links.sh
   # Assert
+  assert-equal 0 "$default_status" "default exit status"
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called lychee
   assert-stub-not-called docker

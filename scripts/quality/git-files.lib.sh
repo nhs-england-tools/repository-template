@@ -88,9 +88,9 @@ function quality-collect-git-files() {
       fi
       ;;
     *)
-      echo "Unrecognised check mode: $check_mode" >&2
+      echo "Unrecognised check mode: '$check_mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" >&2
       rm -f "$list_file"
-      return 1
+      return 126
       ;;
   esac
 

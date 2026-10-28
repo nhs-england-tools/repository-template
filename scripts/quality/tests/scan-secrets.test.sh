@@ -42,6 +42,7 @@ function main() {
     test-scan-secrets-all-keeps-the-status-of-a-failing-first-check \
     test-scan-secrets-all-keeps-the-status-of-a-failing-last-check \
     test-scan-secrets-rejects-unknown-mode \
+    test-scan-secrets-empty-mode-defaults-to-whole-history \
     test-scan-secrets-propagates-leaks \
     test-scan-secrets-isolates-git-config-natively \
     test-scan-secrets-uses-docker-when-forced \
@@ -187,18 +188,39 @@ function test-scan-secrets-all-keeps-the-status-of-a-failing-last-check() {
 function test-scan-secrets-rejects-unknown-mode() {
 
   # Arrange
+  local mode
+  local -a modes=(bogus ALL ' all')
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=bogus ./scripts/quality/scan-secrets.sh
+  for mode in "${modes[@]}"; do
+    test-capture env "check=$mode" ./scripts/quality/scan-secrets.sh
+    assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
+    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" "$TEST_STDERR" "stderr for '$mode'"
+  done
   # Assert
-  assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "Unrecognised check mode: bogus" "$TEST_STDERR" "stderr"
   assert-stub-not-called gitleaks
   assert-stub-not-called docker
+
+  return 0
+}
+
+function test-scan-secrets-empty-mode-defaults-to-whole-history() {
+
+  # Arrange
+  local r="$TEST_TMP/repo"
+  quality-create-fixture-repo a.txt
+  test-isolate-path
+  test-stub gitleaks "$GITLEAKS_RECORD_ENV"
+  cd "$r"
+  # Act
+  test-capture env check= ./scripts/quality/scan-secrets.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "detect --source $r --verbose --redact $(gitleaks-tail)" "$(test-stub-calls gitleaks)" "gitleaks call for empty check mode"
 
   return 0
 }

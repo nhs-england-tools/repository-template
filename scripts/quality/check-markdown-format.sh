@@ -17,7 +17,9 @@ set -euo pipefail
 #
 # Exit codes:
 #   0 - All files are formatted correctly
-#   1 - Files are not formatted correctly, or the check mode is not recognised
+#   1 - Files are not formatted correctly, or the branch to compare with is not found
+#   126 - The check mode is not recognised
+#   Other - Non-zero statuses from Git, markdownlint, Docker or image pulls
 #
 # Notes:
 #   1) Check modes select existing Markdown files known to Git, as described in

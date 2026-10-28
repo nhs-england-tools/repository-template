@@ -73,7 +73,10 @@ function test-format-markdown-does-nothing-without-markdown() {
   cd "$TEST_TMP/repo"
   # Act
   test-capture ./scripts/quality/format-markdown.sh
+  local default_status="$TEST_STATUS"
+  test-capture env check= ./scripts/quality/format-markdown.sh
   # Assert
+  assert-equal 0 "$default_status" "$EXIT_STATUS_LABEL for default mode"
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called prettier
   assert-stub-not-called docker
@@ -84,16 +87,22 @@ function test-format-markdown-does-nothing-without-markdown() {
 function test-format-markdown-rejects-unknown-mode() {
 
   # Arrange
+  local mode
+  local -a modes=(unknown ALL ' all')
   quality-create-fixture-repo README.md
   test-isolate-path
   test-stub prettier
+  test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=unknown ./scripts/quality/format-markdown.sh
+  for mode in "${modes[@]}"; do
+    test-capture env "check=$mode" ./scripts/quality/format-markdown.sh
+    assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
+    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+  done
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Unrecognised check mode: unknown"
   assert-stub-not-called prettier
+  assert-stub-not-called docker
 
   return 0
 }

@@ -53,7 +53,7 @@ function main() {
       run-check "$check"
       ;;
     *)
-      echo "Unrecognised check mode: $check" >&2
+      echo "Unrecognised check mode: '$check'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" >&2
       return 126
       ;;
   esac
@@ -117,7 +117,7 @@ function get-cmd-to-run() {
       cmd="detect --source $dir --verbose --redact --log-opts -1"
       ;;
     *)
-      echo "Unrecognised check mode: $check" >&2
+      echo "Unrecognised check mode: '$check'. Use check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" >&2
       return 126
       ;;
   esac

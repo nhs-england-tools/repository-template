@@ -33,7 +33,7 @@ version: 1
 
 # Times the Stop hook may block one turn, from 1 to 5. Each block starts another
 # agent turn that costs AI credits.
-max_blocks: 1
+max_blocks: 3
 
 defaults:
   mode: block

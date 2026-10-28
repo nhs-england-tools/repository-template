@@ -161,7 +161,11 @@ function test-suite-setup() {
 function gate-build-repo() {
 
   local repo="$1"
+  local config="$repo/scripts/config/quality-gates.yaml"
   test-create-repo "$repo" scripts/quality/quality-gate.sh scripts/quality/quality-gate.jq scripts/config/quality-gates.yaml
+  # Pin the block limit so the tests do not depend on the project's setting
+  sed 's/^max_blocks:.*/max_blocks: 1/' "$config" > "$config.tmp"
+  mv "$config.tmp" "$config"
   mkdir -p "$repo/src"
   printf 'one\n' > "$repo/README.md"
   printf 'int a;\n' > "$repo/src/a.c"

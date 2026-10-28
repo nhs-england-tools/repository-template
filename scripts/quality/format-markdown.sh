@@ -16,7 +16,9 @@ set -euo pipefail
 #
 # Exit codes:
 #   0 - All files formatted successfully
-#   1 - Formatting failed, the check mode is not recognised, or Docker mode has no exact Prettier pin
+#   1 - Formatting failed, Docker mode has no exact Prettier pin, or the branch to compare with is not found
+#   126 - The check mode is not recognised
+#   Other - Non-zero statuses from Git, Prettier, Docker or image pulls
 #
 # Notes:
 #   1) Check modes select existing Markdown files known to Git, as described in
