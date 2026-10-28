@@ -50,16 +50,47 @@ function main() {
   return 0
 }
 
+# Escape glob metacharacters in paths for Lychee's input expansion.
+# Arguments:
+#   $1=[name reference of the output array]
+#   $@=[file paths]
+function escape-lychee-path-globs() {
+
+  local -n escaped_paths="$1" || return "$?"
+  shift
+  local file escaped character i
+  for file in "$@"; do
+    escaped=''
+    for ((i = 0; i < ${#file}; i++)); do
+      character="${file:i:1}"
+      case "$character" in
+        '[') escaped+='[[]' ;;
+        ']') escaped+='[]]' ;;
+        '*') escaped+='[*]' ;;
+        '?') escaped+='[?]' ;;
+        *) escaped+="$character" ;;
+      esac
+    done
+    escaped_paths+=("$escaped")
+  done
+
+  return 0
+}
+
 # Run lychee natively.
 # Arguments:
 #   $@=[files to check]
 function run-lychee-natively() {
 
+  local -a escaped_files=()
+  escape-lychee-path-globs escaped_files "$@" || return "$?"
+
   lychee \
     --config "$PWD/scripts/config/lychee.toml" \
     --no-progress \
     --quiet \
-    "$@" || return "$?"
+    -- \
+    "${escaped_files[@]}" || return "$?"
 
   return 0
 }
@@ -75,6 +106,9 @@ function run-lychee-in-docker() {
   local image
   image=$(name=lycheeverse/lychee docker-get-image-version-and-pull) || return "$?"
 
+  local -a escaped_files=()
+  escape-lychee-path-globs escaped_files "$@" || return "$?"
+
   docker run --rm --platform linux/amd64 \
     --network none \
     --volume "$PWD":/workdir:ro \
@@ -83,7 +117,8 @@ function run-lychee-in-docker() {
       --config /workdir/scripts/config/lychee.toml \
       --no-progress \
       --quiet \
-      "$@" || return "$?"
+      -- \
+      "${escaped_files[@]}" || return "$?"
 
   return 0
 }

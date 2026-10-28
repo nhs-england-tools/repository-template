@@ -64,6 +64,7 @@ function run-prettier-natively() {
     --config "$PWD/scripts/config/prettierrc.yaml" \
     --ignore-path "$PWD/scripts/config/.prettierignore" \
     --write \
+    -- \
     "$@" || rc=$?
 
   return "$rc"
@@ -96,6 +97,7 @@ function run-prettier-in-docker() {
       --config /workdir/scripts/config/prettierrc.yaml \
       --ignore-path /workdir/scripts/config/.prettierignore \
       --write \
+      -- \
       "$@" || rc=$?
 
   return "$rc"

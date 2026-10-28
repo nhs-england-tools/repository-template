@@ -44,6 +44,7 @@ function main() {
     test-check-markdown-links-uses-docker-when-lychee-is-missing \
     test-check-markdown-links-keeps-paths-with-spaces-intact \
     test-check-markdown-links-preserves-newline-and-glob-paths \
+    test-check-markdown-links-passes-glob-path-literally-to-pinned-lychee \
     test-check-markdown-links-treats-dash-leading-name-as-path \
     test-check-markdown-links-stops-when-the-image-pull-fails
 
@@ -117,7 +118,7 @@ function test-check-markdown-links-all-passes-each-existing-file() {
   test-capture env check=all ./scripts/quality/check-markdown-links.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "$options README.md docs/guide.md" "$(test-stub-calls lychee)" "the only lychee call"
+  assert-equal "$options -- README.md docs/guide.md" "$(test-stub-calls lychee)" "the only lychee call"
 
   return 0
 }
@@ -125,8 +126,8 @@ function test-check-markdown-links-all-passes-each-existing-file() {
 function test-check-markdown-links-preserves-newline-and-glob-paths() {
 
   # Arrange
-  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
-  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
+  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md' non_ascii_file='docs/café.md'
+  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md' "$non_ascii_file"
   test-isolate-path
   test-stub lychee
   test-stub docker
@@ -139,9 +140,34 @@ function test-check-markdown-links-preserves-newline-and-glob-paths() {
   assert-equal 0 "$native_status" "native exit status"
   assert-equal 0 "$TEST_STATUS" "Docker exit status"
   assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$newline_file")"
-  assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls lychee)" 'docs/a\[\[\]1\[\]\]\[\*\].md'
+  assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$non_ascii_file")"
   assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$newline_file")"
-  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls docker)" 'docs/a\[\[\]1\[\]\]\[\*\].md'
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$non_ascii_file")"
+
+  return 0
+}
+
+function test-check-markdown-links-passes-glob-path-literally-to-pinned-lychee() {
+
+  # Arrange
+  local target='docs/notes[draft]*?.md' sibling='docs/notesd-other.md'
+  local newline_target=$'docs/line\nbreak.md'
+  quality-create-fixture-repo "$target" "$newline_target"
+  printf '[broken](missing-target.md)\n' > "$TEST_TMP/repo/$target"
+  printf '[broken](missing-newline-target.md)\n' > "$TEST_TMP/repo/$newline_target"
+  # Untracked, so only an unescaped glob can make lychee check it.
+  printf '[broken](missing-sibling-target.md)\n' > "$TEST_TMP/repo/$sibling"
+  test-isolate-path lychee
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=all ./scripts/quality/check-markdown-links.sh
+  # Assert
+  assert-equal 2 "$TEST_STATUS" "$EXIT_STATUS_LABEL for the literal bracket path"
+  assert-contains "$TEST_STDOUT$TEST_STDERR" "$target" "Lychee reports the selected file"
+  assert-contains "$TEST_STDOUT$TEST_STDERR" "$newline_target" "Lychee reports the newline path"
+  assert-not-contains "$TEST_STDOUT$TEST_STDERR" missing-sibling-target.md "Lychee does not check the glob match"
 
   return 0
 }
@@ -183,8 +209,8 @@ function test-check-markdown-links-working-tree-and-staged-select-the-right-file
   # Assert
   assert-equal 0 "$working_tree_status" "exit status of working-tree-changes"
   assert-equal 0 "$TEST_STATUS" "exit status of staged-changes"
-  assert-equal "$options README.md" "$(test-stub-calls lychee | sed -n 1p)" "working-tree-changes call"
-  assert-equal "$options docs/guide.md" "$(test-stub-calls lychee | sed -n 2p)" "staged-changes call"
+  assert-equal "$options -- README.md" "$(test-stub-calls lychee | sed -n 1p)" "working-tree-changes call"
+  assert-equal "$options -- docs/guide.md" "$(test-stub-calls lychee | sed -n 2p)" "staged-changes call"
 
   return 0
 }
@@ -257,7 +283,7 @@ function test-check-markdown-links-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called lychee
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS -- README.md"
   quality-assert-one-docker-run
 
   return 0
@@ -275,7 +301,7 @@ function test-check-markdown-links-uses-docker-when-lychee-is-missing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS README.md"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS -- README.md"
   quality-assert-one-docker-run
 
   return 0
@@ -298,9 +324,9 @@ function test-check-markdown-links-keeps-paths-with-spaces-intact() {
   # Assert
   assert-equal 0 "$native_status" "exit status of the native run"
   assert-equal 0 "$TEST_STATUS" "exit status of the Docker run"
-  assert-equal "$options docs/my\\ doc.md" "$(test-stub-calls lychee)" "the only lychee call"
+  assert-equal "$options -- docs/my\\ doc.md" "$(test-stub-calls lychee)" "the only lychee call"
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS docs/my\\ doc.md"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $LYCHEE_IMAGE $DOCKER_OPTIONS -- docs/my\\ doc.md"
   quality-assert-one-docker-run
 
   return 0

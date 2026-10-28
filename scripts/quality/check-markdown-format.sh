@@ -62,9 +62,10 @@ function main() {
 function run-markdownlint-natively() {
 
   markdownlint \
-    "$@" \
     --config "$PWD/scripts/config/markdownlint.yaml" \
-    --ignore-path "$PWD/scripts/config/.markdownlintignore" || return "$?"
+    --ignore-path "$PWD/scripts/config/.markdownlintignore" \
+    -- \
+    "$@" || return "$?"
 
   return 0
 }
@@ -85,9 +86,10 @@ function run-markdownlint-in-docker() {
     --volume "$PWD":/workdir:ro \
     --workdir /workdir \
     "$image" \
-      "$@" \
       --config /workdir/scripts/config/markdownlint.yaml \
-      --ignore-path /workdir/scripts/config/.markdownlintignore || return "$?"
+      --ignore-path /workdir/scripts/config/.markdownlintignore \
+      -- \
+      "$@" || return "$?"
 
   return 0
 }

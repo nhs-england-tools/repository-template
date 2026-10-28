@@ -43,6 +43,7 @@ function main() {
     test-format-markdown-propagates-git-file-list-failure \
     test-format-markdown-preserves-unusual-filenames \
     test-format-markdown-deduplicates-conflicted-index-paths \
+    test-format-markdown-deduplicates-overlapping-branch-diffs \
     test-format-markdown-uses-docker-when-forced \
     test-format-markdown-uses-docker-when-prettier-is-missing \
     test-format-markdown-requires-an-exact-prettier-pin-in-docker \
@@ -122,7 +123,7 @@ function test-format-markdown-formats-existing-tracked-files() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal \
-    "--config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write README.md docs/my\\ doc.md" \
+    "--config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write -- README.md docs/my\\ doc.md" \
     "$(test-stub-calls prettier)" "the only prettier call"
   assert-stub-not-called docker
 
@@ -223,17 +224,26 @@ function test-format-markdown-preserves-unusual-filenames() {
   local glob_file='docs/strange[1]*.md'
   local glob_match='docs/strange1-other.md'
   local newline_file=$'docs/line\nbreak.md'
-  quality-create-fixture-repo README.md "$glob_file" "$glob_match" "$newline_file"
+  local non_ascii_file='docs/café.md' native_status
+  quality-create-fixture-repo README.md "$glob_file" "$glob_match" "$newline_file" "$non_ascii_file"
   test-isolate-path
   test-stub prettier
+  test-stub docker
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/format-markdown.sh
+  native_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/format-markdown.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal 0 "$native_status" "native $EXIT_STATUS_LABEL"
+  assert-equal 0 "$TEST_STATUS" "Docker $EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$glob_file")"
   assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$glob_match")"
   assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$non_ascii_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$non_ascii_file")"
 
   return 0
 }
@@ -262,6 +272,30 @@ function test-format-markdown-deduplicates-conflicted-index-paths() {
   return 0
 }
 
+function test-format-markdown-deduplicates-overlapping-branch-diffs() {
+
+  # Arrange
+  local repo="$TEST_TMP/repo"
+  local options="--config $repo/scripts/config/prettierrc.yaml --ignore-path $repo/scripts/config/.prettierignore --write --"
+  quality-create-fixture-repo docs/a.md docs/b.md
+  test-isolate-path
+  test-stub prettier
+  printf '%s\n' committed >> "$repo/docs/a.md"
+  printf '%s\n' committed >> "$repo/docs/b.md"
+  git -C "$repo" add docs/a.md docs/b.md
+  git -C "$repo" commit -q -m committed
+  printf '%s\n' unstaged >> "$repo/docs/a.md"
+  cd "$repo"
+  # Act
+  test-capture env check=branch ./scripts/quality/format-markdown.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$options docs/a.md docs/b.md" "$(test-stub-calls prettier)" \
+    "overlapping branch path is passed once in first-seen order"
+
+  return 0
+}
+
 function test-format-markdown-uses-docker-when-forced() {
 
   # Arrange
@@ -278,7 +312,7 @@ function test-format-markdown-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called prettier
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $NODE_IMAGE npx --yes prettier@$PRETTIER_VERSION $options README.md docs/my\\ doc.md"
+    "run --rm --platform linux/amd64 --volume $TEST_TMP/repo:/workdir --workdir /workdir $NODE_IMAGE npx --yes prettier@$PRETTIER_VERSION $options -- README.md docs/my\\ doc.md"
   quality-assert-one-docker-run
 
   return 0
@@ -352,7 +386,7 @@ function test-format-markdown-propagates-prettier-failure() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called prettier \
-    "--config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write README.md"
+    "--config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write -- README.md"
 
   return 0
 }

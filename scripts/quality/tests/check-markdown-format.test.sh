@@ -119,7 +119,7 @@ function test-check-markdown-format-all-passes-each-existing-file() {
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "README.md docs/my\\ doc.md $options" "$(test-stub-calls markdownlint)" "the only markdownlint call"
+  assert-equal "$options -- README.md docs/my\\ doc.md" "$(test-stub-calls markdownlint)" "the only markdownlint call"
 
   return 0
 }
@@ -127,18 +127,27 @@ function test-check-markdown-format-all-passes-each-existing-file() {
 function test-check-markdown-format-preserves-unusual-paths-through-frontmatter() {
 
   # Arrange
-  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
-  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
+  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md' non_ascii_file='docs/café.md'
+  local native_status
+  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md' "$non_ascii_file"
   test-isolate-path python3
   test-stub markdownlint
+  test-stub docker
   printf '%s\n' '---' "$FRONTMATTER_TITLE" '---' '# Heading' > "$TEST_TMP/repo/$newline_file"
   cd "$TEST_TMP/repo"
   # Act
   test-capture env check=all ./scripts/quality/check-markdown-format.sh
+  native_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-markdown-format.sh
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal 1 "$native_status" "native $EXIT_STATUS_LABEL"
+  assert-equal 1 "$TEST_STATUS" "Docker $EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$newline_file")"
   assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$non_ascii_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$newline_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$glob_file")"
+  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$non_ascii_file")"
   assert-contains "$TEST_STDERR" "$newline_file:4: missing blank line after YAML frontmatter"
 
   return 0
@@ -163,8 +172,8 @@ function test-check-markdown-format-working-tree-and-staged-select-the-right-fil
   # Assert
   assert-equal 0 "$working_tree_status" "exit status of working-tree-changes"
   assert-equal 0 "$TEST_STATUS" "exit status of staged-changes"
-  assert-equal "README.md $options" "$(test-stub-calls markdownlint | sed -n 1p)" "working-tree-changes call"
-  assert-equal "docs/my\\ doc.md $options" "$(test-stub-calls markdownlint | sed -n 2p)" "staged-changes call"
+  assert-equal "$options -- README.md" "$(test-stub-calls markdownlint | sed -n 1p)" "working-tree-changes call"
+  assert-equal "$options -- docs/my\\ doc.md" "$(test-stub-calls markdownlint | sed -n 2p)" "staged-changes call"
 
   return 0
 }
@@ -237,7 +246,7 @@ function test-check-markdown-format-uses-docker-when-forced() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-not-called markdownlint
   assert-stub-called docker \
-    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $MARKDOWNLINT_IMAGE README.md --config /workdir/scripts/config/markdownlint.yaml --ignore-path /workdir/scripts/config/.markdownlintignore"
+    "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $MARKDOWNLINT_IMAGE --config /workdir/scripts/config/markdownlint.yaml --ignore-path /workdir/scripts/config/.markdownlintignore -- README.md"
   quality-assert-one-docker-run
 
   return 0
