@@ -29,7 +29,7 @@ function main() {
   QUALITY_FIXTURE_FORMAT='%s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check dry_run dry_run_opt filter BRANCH_NAME FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check dry_run BRANCH_NAME FORCE_USE_DOCKER
 
   EC_IMAGE=mstruebing/editorconfig-checker:6.0.0@sha256:6666666666666666666666666666666666666666666666666666666666666666
   test-run-suite \
@@ -38,10 +38,12 @@ function main() {
     test-check-file-format-preserves-unusual-paths-in-native-and-docker \
     test-check-file-format-working-tree-changes-checks-modified-files-only \
     test-check-file-format-staged-changes-checks-staged-files-only \
+    test-check-file-format-staged-rename-checks-new-path-once \
     test-check-file-format-branch-checks-changes-since-branch \
     test-check-file-format-fails-when-the-base-branch-is-missing \
     test-check-file-format-dry-run-passes-flag \
-    test-check-file-format-native-with-no-changes-checks-nothing \
+    test-check-file-format-skips-empty-selection \
+    test-check-file-format-skips-deleted-files \
     test-check-file-format-propagates-checker-failure \
     test-check-file-format-uses-docker-when-forced \
     test-check-file-format-uses-docker-when-the-checker-is-missing \
@@ -82,7 +84,7 @@ function test-check-file-format-rejects-unknown-mode() {
 function test-check-file-format-all-checks-every-tracked-file() {
 
   # Arrange
-  local prefix="-config $TEST_TMP/repo/scripts/config/editorconfig-checker.json --exclude .git/ " calls
+  local prefix="-config $TEST_TMP/repo/scripts/config/editorconfig-checker.json -- " calls
   quality-create-fixture-repo a.txt b.txt
   test-isolate-path
   test-stub "$EC"
@@ -104,7 +106,9 @@ function test-check-file-format-preserves-unusual-paths-in-native-and-docker() {
 
   # Arrange
   local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
-  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md'
+  local space_file='docs/space name.md' non_ascii_file='docs/café.md' dash_file='-leading.md'
+  quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md' \
+    "$space_file" "$non_ascii_file" "$dash_file"
   test-isolate-path
   test-stub "$EC"
   test-stub docker
@@ -116,10 +120,12 @@ function test-check-file-format-preserves-unusual-paths-in-native-and-docker() {
   # Assert
   assert-equal 0 "$native_status" "native exit status"
   assert-equal 0 "$TEST_STATUS" "Docker exit status"
-  assert-contains "$(test-stub-calls "$EC")" "$(printf '%q' "$newline_file")"
-  assert-contains "$(test-stub-calls "$EC")" "$(printf '%q' "$glob_file")"
-  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$newline_file")"
-  assert-contains "$(test-stub-calls docker)" "$(printf '%q' "$glob_file")"
+  local stub file
+  for stub in "$EC" docker; do
+    for file in "$newline_file" "$glob_file" "$space_file" "$non_ascii_file" "./$dash_file"; do
+      assert-contains "$(test-stub-calls "$stub")" "$(printf '%q' "$file")" "$stub call has $file"
+    done
+  done
 
   return 0
 }
@@ -158,6 +164,27 @@ function test-check-file-format-staged-changes-checks-staged-files-only() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls "$EC") " " b.txt "
   assert-not-contains "$(test-stub-calls "$EC")" "a.txt"
+
+  return 0
+}
+
+function test-check-file-format-staged-rename-checks-new-path-once() {
+
+  # Arrange
+  quality-create-fixture-repo old.txt
+  test-isolate-path
+  test-stub "$EC"
+  git -C "$TEST_TMP/repo" mv old.txt new.txt
+  cd "$TEST_TMP/repo"
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-file-format.sh
+  local calls
+  calls="$(test-stub-calls "$EC")"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal 1 "$(awk 'END { print NR }' <<< "$calls")" "number of checker calls"
+  assert-contains "$calls " " new.txt "
+  assert-not-contains "$calls" "old.txt"
 
   return 0
 }
@@ -218,29 +245,63 @@ function test-check-file-format-dry-run-passes-flag() {
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub "$EC"
+  test-stub docker
   cd "$TEST_TMP/repo"
   # Act
   test-capture env dry_run=true check=all ./scripts/quality/check-file-format.sh
+  local native_status="$TEST_STATUS"
+  test-capture env dry_run=true check=all FORCE_USE_DOCKER=true ./scripts/quality/check-file-format.sh
   # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$(test-stub-calls "$EC") " " --dry-run "
+  assert-equal 0 "$native_status" "native exit status"
+  assert-equal 0 "$TEST_STATUS" "Docker exit status"
+  # The checker reads anything after '--' as a path, so the flag must come first
+  assert-contains "$(test-stub-calls "$EC")" "editorconfig-checker.json --dry-run -- a.txt "
+  assert-contains "$(test-stub-calls docker)" "editorconfig-checker.json --dry-run -- a.txt "
 
   return 0
 }
 
-function test-check-file-format-native-with-no-changes-checks-nothing() {
+function test-check-file-format-skips-empty-selection() {
 
   # Arrange
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub "$EC"
+  test-stub docker
   cd "$TEST_TMP/repo"
   # Act
   test-capture ./scripts/quality/check-file-format.sh
+  local default_status="$TEST_STATUS" default_output="$TEST_STDOUT"
+  test-capture env dry_run=true ./scripts/quality/check-file-format.sh
+  local dry_run_status="$TEST_STATUS" dry_run_output="$TEST_STDOUT"
+  test-capture env FORCE_USE_DOCKER=true ./scripts/quality/check-file-format.sh
+  # Assert
+  assert-equal 0 "$default_status" "default exit status"
+  assert-equal 0 "$dry_run_status" "dry-run exit status"
+  assert-equal 0 "$TEST_STATUS" "Docker exit status"
+  assert-contains "$default_output" "No files to check"
+  assert-contains "$dry_run_output" "No files to check"
+  assert-contains "$TEST_STDOUT" "No files to check"
+  assert-stub-not-called "$EC"
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-check-file-format-skips-deleted-files() {
+
+  # Arrange
+  quality-create-fixture-repo a.txt b.txt
+  test-isolate-path
+  test-stub "$EC"
+  cd "$TEST_TMP/repo"
+  rm a.txt
+  # Act
+  test-capture env check=all ./scripts/quality/check-file-format.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "-config $TEST_TMP/repo/scripts/config/editorconfig-checker.json --exclude .git/ /dev/null" \
-    "$(test-stub-calls "$EC")" "the only checker call"
+  assert-contains "$(test-stub-calls "$EC") " " b.txt "
+  assert-not-contains "$(test-stub-calls "$EC")" "a.txt"
 
   return 0
 }
@@ -323,7 +384,7 @@ function test-check-file-format-stops-when-the-image-pull-fails() {
 # Print the Docker arguments expected when the fixture checks every tracked file.
 function expected-docker-run() {
 
-  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json --exclude .git/ a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh /dev/null"
+  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro --workdir /check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json -- a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh"
 
   return 0
 }

@@ -17,13 +17,19 @@ set -euo pipefail
 #   VERBOSE=true                                            # Show all the executed commands, default is 'false'
 #
 # Exit codes:
-#   0 - All files are formatted correctly
+#   0 - All selected files are formatted correctly, or no files need checking
 #   1 - Files are not formatted correctly, or the check mode is not recognised
+#   Other - Non-zero statuses from Git, EditorConfig Checker, Docker or image pulls
 #
 # Notes:
 #   1) Check modes select existing files known to Git, as described in
 #      './scripts/quality/git-files.lib.sh'. Untracked files are never checked.
-#   2) Enable EditorConfig in your IDE. For Visual Studio Code, the
+#   2) Exclusions are Go/RE2 regular expressions in
+#      './scripts/config/editorconfig-checker.json', matched against paths
+#      relative to the repository root. Escape literal dots and anchor patterns,
+#      for example '^docs/generated/'. Empty selections print 'No files to
+#      check' and skip EditorConfig Checker.
+#   3) Enable EditorConfig in your IDE. For Visual Studio Code, the
 #      'editorconfig.editorconfig' extension is listed in
 #      './.vscode/extensions.json'.
 
@@ -38,16 +44,18 @@ function main() {
   source ./scripts/quality/git-files.lib.sh
   local -a files=() dry_run_opt=()
   quality-collect-git-files files "${check:-working-tree-changes}" || return "$?"
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "No files to check"
+    return 0
+  fi
   if is-arg-true "${dry_run:-false}"; then
     dry_run_opt=(--dry-run)
   fi
 
-  # Pass /dev/null when no paths are selected so editorconfig-checker cannot
-  # treat an empty argument list as a request to check all tracked files.
   if command -v editorconfig-checker > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
-    run-editorconfig-natively "${dry_run_opt[@]}" "${files[@]}" /dev/null || return "$?"
+    run-editorconfig-natively "${dry_run_opt[@]}" -- "${files[@]}" || return "$?"
   else
-    run-editorconfig-in-docker "${dry_run_opt[@]}" "${files[@]}" /dev/null || return "$?"
+    run-editorconfig-in-docker "${dry_run_opt[@]}" -- "${files[@]}" || return "$?"
   fi
 
   return 0
@@ -55,19 +63,19 @@ function main() {
 
 # Run editorconfig-checker natively.
 # Arguments:
-#   $@=[optional dry-run flag, paths to check and /dev/null backstop]
+#   $@=[checker options, then '--' and the paths to check]
 function run-editorconfig-natively() {
 
   editorconfig-checker \
     -config "$PWD/scripts/config/editorconfig-checker.json" \
-    --exclude '.git/' "$@" || return "$?"
+    "$@" || return "$?"
 
   return 0
 }
 
 # Run editorconfig-checker in a Docker container.
 # Arguments:
-#   $@=[optional dry-run flag, paths to check and /dev/null backstop]
+#   $@=[checker options, then '--' and the paths to check]
 function run-editorconfig-in-docker() {
 
   # shellcheck disable=SC1091
@@ -81,8 +89,9 @@ function run-editorconfig-in-docker() {
     --env GITHUB_ACTIONS \
     --env NO_COLOR \
     --volume "$PWD":/check:ro \
+    --workdir /check \
     "$image" \
-      editorconfig-checker -config /check/scripts/config/editorconfig-checker.json --exclude '.git/' "$@" || return "$?"
+      editorconfig-checker -config /check/scripts/config/editorconfig-checker.json "$@" || return "$?"
 
   return 0
 }
