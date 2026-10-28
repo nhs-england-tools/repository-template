@@ -221,7 +221,8 @@ function test-runner-runs-suites-in-parallel() {
 
   # Arrange
   local marker="$TEST_TMP/b-started"
-  # Suite 'a' only passes if suite 'b' starts within 5 seconds, so a runner that runs them one after another fails
+  # Suite 'a' only passes if suite 'b' starts within 5 seconds, so a runner that
+  # runs them one after another fails
   write-fixture a.test.sh "i=0
 while [[ \$i -lt 50 ]]; do
   [[ -e '$marker' ]] && exit 0
@@ -377,7 +378,8 @@ function run-runner-in-tree() {
   return 0
 }
 
-# Change to the fixture tree and run the runner there without an inherited 'dir'.
+# Change to the fixture tree and run the runner there without an inherited
+# 'dir'.
 # Arguments:
 #   $@=[variable assignments for the runner, optional]
 function _run-runner-from-tree() {

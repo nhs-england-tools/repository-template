@@ -56,7 +56,8 @@ function test-suite-setup() {
 #!/bin/sh
 # This fixture uses POSIX sh because the tests put a fake bash first on PATH.
 # A link named NAME prints the lines of .NAME.fake beside it after the first, to
-# stdout for a "1 " prefix and to stderr for "2 ", then exits with the status on the first line
+# stdout for a "1 " prefix and to stderr for "2 ", then exits with the status on
+# the first line
 : > "${0%/*}/.${0##*/}.called"
 {
   read -r status
@@ -112,7 +113,8 @@ function test-version-ge-properties() {
   # Arrange
   local seed=20260926 count=150 i a b suffix ab ba ab_suffix aa gt=0 lt=0 eq=0 where
   local -a lefts=() rights=() suffixes=()
-  # Without its suffix strip, version-ge misreads each of these by value or syntax
+  # Without its suffix strip, version-ge misreads each of these by value or
+  # syntax
   local suffix_set=(rc2 -2 -1ubuntu1 +2 b1)
   source-verify-gnu
   RANDOM=$seed
@@ -149,7 +151,8 @@ function test-version-ge-properties() {
       *) echo "Unexpected comparison statuses: $ab $ba ($where)" >&2; return 1 ;;
     esac
   done
-  # A generator that rarely yields one of the outcomes would leave that case untested
+  # A generator that rarely yields one of the outcomes would leave that case
+  # untested
   assert-equal 1 "$((eq >= 20 && gt >= 20 && lt >= 20))" \
     "at least 20 pairs of each outcome (equal $eq, greater $gt, lesser $lt)"
 
@@ -458,9 +461,9 @@ function test-verify-gnu-prints-platform-specific-hint() {
 
 # ==============================================================================
 
-# Create a fake tool in "$TEST_TMP/fakes" that prints the given text whatever its
-# arguments. Not test-stub, since the stub directory is first on the harness's
-# own PATH and a fake grep or sed there would break the assertions.
+# Create a fake tool in "$TEST_TMP/fakes" that prints the given text whatever
+# its arguments. Not test-stub, since the stub directory is first on the
+# harness's own PATH and a fake grep or sed there would break the assertions.
 # Arguments:
 #   $1=[command name]
 #   $2=[lines it prints to stdout, none if empty]
@@ -485,7 +488,8 @@ function create-fake-tool() {
   return 0
 }
 
-# Create a fake date that supports the GNU-style behaviours checked by the verifier.
+# Create a fake date that supports the GNU-style behaviours checked by the
+# verifier.
 # Arguments:
 #   $1=[version line]
 function create-fake-date() {
@@ -514,7 +518,8 @@ EOF
   return 0
 }
 
-# Create a fake GNU awk, date, diff, find, grep, sed and make, and a fake docker.
+# Create a fake GNU awk, date, diff, find, grep, sed and make, and a fake
+# docker.
 # The grep and make fakes print a second line, as the real tools do.
 # Arguments:
 #   $@=[names of the fakes to leave out]
@@ -565,7 +570,8 @@ function run-verify-gnu() {
 }
 
 # Source the script under test to reach its functions, with only rm on PATH, for
-# the harness clean-up, so that main fails the test if the source guard ever stops working.
+# the harness clean-up, so that main fails the test if the source guard ever
+# stops working.
 function source-verify-gnu() {
 
   local saved_path="$PATH" bin="$TEST_TMP/rm-only"
@@ -594,7 +600,8 @@ function ge-status() {
 
 # Set ORACLE to one "S T" line per "a b" line of the given file, where S and T
 # are the statuses 'sort -V' implies for version-ge a b and version-ge b a.
-# One 'sort -V' over every version orders each pair as sorting the pair alone would.
+# One 'sort -V' over every version orders each pair as sorting the pair alone
+# would.
 # Arguments:
 #   $1=[file of "a b" version pairs]
 function set-sort-v-oracle() {

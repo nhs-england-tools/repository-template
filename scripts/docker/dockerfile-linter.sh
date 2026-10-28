@@ -9,8 +9,9 @@ set -euo pipefail
 #   $ [options] ./dockerfile-linter.sh
 #
 # Arguments (provided as environment variables):
-#   file=Dockerfile         # Path to the Dockerfile to lint, relative to the project's top-level directory, default is './Dockerfile.effective'
-#   FORCE_USE_DOCKER=true   # If set to true the command is run in a Docker container, default is 'false'
+#   file=Dockerfile         # Dockerfile to lint, relative to the repository
+#                           # root, default is './Dockerfile.effective'
+#   FORCE_USE_DOCKER=true   # Run in a Docker container, default is 'false'
 #   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
@@ -33,7 +34,7 @@ function main() {
 
 # Run hadolint natively.
 # Arguments (provided as environment variables):
-#   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
+#   file=[path to the Dockerfile to lint, relative to the repository root]
 function run-hadolint-natively() {
 
   local rc=0
@@ -47,7 +48,7 @@ function run-hadolint-natively() {
 
 # Run hadolint in a Docker container.
 # Arguments (provided as environment variables):
-#   file=[path to the Dockerfile to lint, relative to the project's top-level directory]
+#   file=[path to the Dockerfile to lint, relative to the repository root]
 function run-hadolint-in-docker() {
 
   # shellcheck disable=SC1091

@@ -1,6 +1,7 @@
 include scripts/docker/docker.mk
 
-# Shims give every recipe the pinned tools without requiring `mise activate` in the shell
+# Shims give every recipe the pinned tools without requiring `mise activate` in
+# the shell
 MISE_SHIMS := $(shell mise activate bash --shims 2> /dev/null | sed -n 's/^export PATH="\([^:]*\):.*/\1/p')
 ifneq ($(MISE_SHIMS),)
 export PATH := $(MISE_SHIMS):$(PATH)
@@ -28,7 +29,7 @@ check-markdown-links: # Check markdown links (set check=all|staged-changes|worki
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
 check-shell-lint: check ?= all
-check-shell-lint: # Lint all tracked shell scripts @Quality
+check-shell-lint: # Lint all tracked shell scripts and check shell and Make comment line length @Quality
 	./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"
 
 check-workflow-security: # Check GitHub Actions workflow security policy @Quality
@@ -72,7 +73,8 @@ _toolchain-install: _toolchain-check # Install every toolchain tool listed in mi
 	source scripts/docker/docker.lib.sh
 	tools="$$( _toml-table-entries tools mise.toml | awk '{ print $$1 "@" $$2 }' )"
 	[[ -n "$${tools}" ]] || { echo "No [tools] entries found in mise.toml" >&2; exit 1; }
-	# Name the tools so global config tools are neither installed nor required in mise.lock
+	# Name the tools so global config tools are neither installed nor required in
+	# mise.lock
 	mise install --locked $$(sed 's/@[^@]*$$//' <<< "$${tools}")
 	echo "Project mise tools installed:"
 	while read -r tool; do
@@ -92,13 +94,15 @@ toolchain-outdated: _toolchain-check # List newer upstream versions of the toolc
 	mise outdated --bump
 
 toolchain-upgrade: _toolchain-check # Bump native tools pinned in mise.toml to the newest releases and refresh mise.lock (Docker image pins are not updated) - optional: exclude=[space-separated tools to skip], dry_run=[true to preview only] @Configuration
-	# A separate assignment so a failed lookup stops the recipe instead of reading as 'up to date'
+	# A separate assignment so a failed lookup stops the recipe instead of reading
+	# as 'up to date'
 	outdated="$$(mise outdated --bump --json)"
 	specs="$$(jq -r --arg p "$$(pwd -P)/mise.toml" 'to_entries[] | select(.value.source.path == $$p and (.key as $$k | $$ARGS.positional | any(. == $$k) | not)) | "\(.key)@\(.value.bump)"' --args $(exclude) <<< "$${outdated}")"
 	[[ -n "$${specs}" ]] || { echo "All pinned tools are up to date"; exit 0; }
 	echo "$${specs}"
 	[[ "$(dry_run)" =~ ^(true|yes|y|on|1)$$ ]] && exit 0
-	# 'mise lock' resolves new versions and rewrites mise.toml pins, which 'mise upgrade' cannot do under locked mode
+	# 'mise lock' resolves new versions and rewrites mise.toml pins, which 'mise
+	# upgrade' cannot do under locked mode
 	mise lock $${specs} && mise install --locked $$(sed 's/@[^@]*$$//' <<< "$${specs}") && mise lock
 
 toolchain-install-gnu-macos: # Install this repository's required GNU userland tools via Homebrew (macOS only, no-op on Linux) @Configuration
@@ -152,7 +156,8 @@ else
 	.SHELLFLAGS := -ce
 endif
 
-# This script parses all the make target descriptions and renders the help output.
+# This script parses all the make target descriptions and renders the help
+# output.
 HELP_SCRIPT = \
 	\
 	use Text::Wrap; \
@@ -202,7 +207,8 @@ HELP_SCRIPT = \
 	}
 
 # ==============================================================================
-# Extensions: load every '*.ext.mk' file under scripts/ in a stable order, see docs/guides/Use_Bash_and_Make.md
+# Extensions: load every '*.ext.mk' file under scripts/ in a stable order, see
+# docs/guides/Use_Bash_and_Make.md
 
 include $(sort $(shell find scripts \( -type f -o -type l \) -name '*.ext.mk'))
 

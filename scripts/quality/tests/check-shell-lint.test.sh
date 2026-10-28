@@ -61,7 +61,16 @@ function main() {
     test-check-shell-lint-make-target-reports-success \
     test-check-shell-lint-make-target-uses-docker \
     test-check-shell-lint-make-target-fails-without-success-message \
-    test-check-shell-lint-rejects-unknown-mode
+    test-check-shell-lint-rejects-unknown-mode \
+    test-check-shell-lint-fails-a-comment-over-80-characters \
+    test-check-shell-lint-all-fails-a-comment-over-80-characters \
+    test-check-shell-lint-accepts-long-code-urls-and-shebangs \
+    test-check-shell-lint-all-fails-a-make-comment-over-80-characters \
+    test-check-shell-lint-checks-only-comments-of-a-make-file \
+    test-check-shell-lint-all-keeps-the-shellcheck-status-with-a-long-comment \
+    test-check-shell-lint-all-checks-comments-in-docker-mode \
+    test-check-shell-lint-all-reads-a-file-named-like-an-awk-assignment \
+    test-check-shell-lint-counts-bytes-in-comments
 
   return 0
 }
@@ -635,6 +644,168 @@ function test-check-shell-lint-rejects-unknown-mode() {
   return 0
 }
 
+function test-check-shell-lint-fails-a-comment-over-80-characters() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.sh
+  # Act
+  test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "scripts/x.sh:1: comment is 81 characters, the limit is 80" "finding on stderr"
+
+  return 0
+}
+
+function test-check-shell-lint-all-fails-a-comment-over-80-characters() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'true\n  # %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.sh
+  # Act
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "scripts/x.sh:2: comment is 83 characters, the limit is 80" "finding on stderr"
+
+  return 0
+}
+
+function test-check-shell-lint-accepts-long-code-urls-and-shebangs() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  local long
+  long="$(printf 'a%.0s' {1..90})"
+  printf '#!/usr/bin/env %s\n# https://example.com/%s\necho %s\n# %s\n' "$long" "$long" "$long" "$(printf 'a%.0s' {1..78})" > scripts/x.sh
+  # Act
+  test-capture env file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-check-shell-lint-all-fails-a-make-comment-over-80-characters() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.mk
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf 'all:\n\t# %s\n\techo %s\n' "$(printf 'a%.0s' {1..79})" "$(printf 'a%.0s' {1..90})" > scripts/x.mk
+  # Act
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/x.mk:2: comment is 82 characters, the limit is 80" "$TEST_STDERR" "stderr"
+  check-shell-lint-assert-group-calls \
+    "$(check-shell-lint-call-line -f quiet -- scripts/docker/docker.lib.sh scripts/quality/check-shell-lint.sh)"
+
+  return 0
+}
+
+function test-check-shell-lint-checks-only-comments-of-a-make-file() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.mk
+  test-isolate-path
+  test-stub shellcheck
+  test-stub docker
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.mk
+  # Act
+  test-capture env file=scripts/x.mk ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/x.mk:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "stderr"
+  assert-stub-not-called shellcheck
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-check-shell-lint-all-keeps-the-shellcheck-status-with-a-long-comment() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck 'exit 2'
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.sh
+  # Act
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 2 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "scripts/x.sh:1: comment is 81 characters, the limit is 80" "finding on stderr"
+
+  return 0
+}
+
+function test-check-shell-lint-all-checks-comments-in-docker-mode() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  test-stub docker
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > scripts/x.sh
+  # Act
+  test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/x.sh:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "stderr"
+  assert-stub-not-called shellcheck
+
+  return 0
+}
+
+function test-check-shell-lint-all-reads-a-file-named-like-an-awk-assignment() {
+
+  # Arrange
+  quality-create-fixture-repo "scripts/x=y.sh"
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > "scripts/x=y.sh"
+  # Act
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/x=y.sh:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-check-shell-lint-counts-bytes-in-comments() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  printf '# %s\n' "$(printf '\303\251%.0s' {1..40})" > scripts/x.sh
+  # Act
+  test-capture env LC_ALL=en_US.UTF-8 file=scripts/x.sh ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/x.sh:1: comment is 82 characters, the limit is 80" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
 # ==============================================================================
 
 # Create a scratch repository with the Make modules used by target tests.
@@ -662,7 +833,8 @@ function check-shell-lint-call-line() {
   return 0
 }
 
-# Fail unless the shellcheck stub recorded exactly the given calls, in any order.
+# Fail unless the shellcheck stub recorded exactly the given calls, in any
+# order.
 # Arguments:
 #   $@=[expected call lines]
 function check-shell-lint-assert-group-calls() {
@@ -684,7 +856,8 @@ function check-shell-lint-assert-default-group-calls() {
   return 0
 }
 
-# Fail unless the last shellcheck call is the only full call, over the given files.
+# Fail unless the last shellcheck call is the only full call, over the given
+# files.
 # Arguments:
 #   $@=[tracked shell-script paths in the expected order]
 function check-shell-lint-assert-full-call-last() {
@@ -697,7 +870,8 @@ function check-shell-lint-assert-full-call-last() {
   return 0
 }
 
-# Print the docker run call line of the ShellCheck image with the given ShellCheck arguments.
+# Print the docker run call line of the ShellCheck image with the given
+# ShellCheck arguments.
 # Arguments:
 #   $@=[ShellCheck arguments]
 function check-shell-lint-docker-run-line() {
@@ -708,7 +882,8 @@ function check-shell-lint-docker-run-line() {
   return 0
 }
 
-# Fail unless the docker stub recorded exactly the given run calls, in any order.
+# Fail unless the docker stub recorded exactly the given run calls, in any
+# order.
 # Arguments:
 #   $@=[expected run call lines]
 function check-shell-lint-assert-docker-group-runs() {
@@ -719,7 +894,8 @@ function check-shell-lint-assert-docker-group-runs() {
   return 0
 }
 
-# Fail unless the last docker call is the only full ShellCheck run, over the given files.
+# Fail unless the last docker call is the only full ShellCheck run, over the
+# given files.
 # Arguments:
 #   $@=[tracked shell-script paths in the expected order]
 function check-shell-lint-assert-docker-full-run-last() {

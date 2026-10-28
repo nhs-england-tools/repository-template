@@ -10,21 +10,26 @@ set -euo pipefail
 # turn.
 #
 # Usage:
-#   $ ./scripts/quality/quality-gate.sh hook    # Copilot hook, the event JSON arrives on stdin
+#   $ ./scripts/quality/quality-gate.sh hook  # Copilot hook, the event JSON
+#                                             # arrives on stdin
 #   $ [options] ./scripts/quality/quality-gate.sh run
 #   $ ./scripts/quality/quality-gate.sh list
 #   $ [options] ./scripts/quality/quality-gate.sh pause
 #   $ ./scripts/quality/quality-gate.sh resume
 #
 # Options:
-#   scope={changed,all}             # 'changed' skips a gate whose 'paths' match no changed file, default is 'changed'
-#   hours=1..8                      # Length of a pause, default is '1'
-#   QUALITY_GATE_BUDGET=seconds     # Time all gates may use in the hook, default is '240'
-#   VERBOSE=true                    # Show all the executed commands, default is 'false'
+#   scope={changed,all}          # 'changed' skips a gate whose 'paths' match no
+#                                # changed file, default is 'changed'
+#   hours=1..8                   # Length of a pause, default is '1'
+#   QUALITY_GATE_BUDGET=seconds  # Time all gates may use in the hook, default
+#                                # is '240'
+#   VERBOSE=true                 # Show all the executed commands, default is
+#                                # 'false'
 #
 # Exit codes:
 #   0   - The command succeeded, 'hook' returns 0 once it has read the event
-#   1   - A blocking gate failed or could not run, jq or yq cannot run, or an option is invalid
+#   1   - A blocking gate failed or could not run, jq or yq cannot run, or an
+#         option is invalid
 #   2   - The gate configuration is missing or invalid
 #   126 - The command or scope is not recognised
 #
@@ -62,7 +67,8 @@ if [[ ${BASH_VERSINFO[0]} -lt 5 ]]; then
       break
     fi
   done < <(type -aP bash; printf '%s\n' /opt/homebrew/bin/bash /usr/local/bin/bash)
-  # Outside the loop, so the newer Bash reads the hook event from this script's stdin
+  # Outside the loop, so the newer Bash reads the hook event from this script's
+  # stdin
   if [[ -n $newer ]]; then
     exec "$newer" "$0" "$@"
   fi
@@ -191,7 +197,8 @@ function handle-hook() {
   if [[ ! $session =~ $SESSION_PATTERN ]]; then
     session=""
   fi
-  # The Copilot harness marks events from inside a subagent, whose parent's stop runs the gates
+  # The Copilot harness marks events from inside a subagent, whose parent's stop
+  # runs the gates
   if [[ -n $agent ]]; then
     emit-allow
     return 0
@@ -276,7 +283,8 @@ function remove-old-state() {
 # directory that is always removed.
 # Arguments:
 #   $1=[session identifier, empty when unknown]
-#   $2=[stop_hook_active, 'true' when an earlier Stop hook already blocked this turn]
+#   $2=[stop_hook_active, 'true' when an earlier Stop hook already blocked this
+#     turn]
 function handle-stop() {
 
   local scratch rc=0
@@ -336,7 +344,8 @@ function decide-stop() {
   # Rules from the start of the turn may print a whole number as 1.0
   max_blocks="$(jq -r '.max_blocks | floor' <<< "$config")" || max_blocks=1
   [[ $max_blocks =~ ^[0-9]+$ ]] || max_blocks=1
-  # Blocks are counted only across continuations, so a stop after a cancelled continuation starts at zero
+  # Blocks are counted only across continuations, so a stop after a cancelled
+  # continuation starts at zero
   if [[ $active == true ]]; then
     if [[ -z $session ]]; then
       note-hook "$state" Stop "$session" already-continued
@@ -381,7 +390,8 @@ function decide-stop() {
     fi
     execute-gates "$config" "$changes" changed "$budget" false "$state/logs/${session:-hook}"
   else
-    # Without the turn's changes, a gate list that is not the start's may have been changed in it
+    # Without the turn's changes, a gate list that is not the start's may have
+    # been changed in it
     if [[ $source != "$start" ]]; then
       guard_note="${guard_note:+$guard_note }$(describe-source "$source" "$start")"
     fi
@@ -447,7 +457,8 @@ function pause-state() {
 # Say where the hook read the gate list from.
 # Arguments:
 #   $1=[a commit, or 'working-tree']
-#   $2=[commit at the start of the turn, 'none' before the first commit, empty when unknown]
+#   $2=[commit at the start of the turn, 'none' before the first commit, empty
+#     when unknown]
 function describe-source() {
 
   if [[ -n $2 && $1 == "$2" ]]; then
@@ -463,7 +474,8 @@ function describe-source() {
   return 0
 }
 
-# Write a record of the last hook event, for diagnosing the hook. It holds no prompt.
+# Write a record of the last hook event, for diagnosing the hook. It holds no
+# prompt.
 # Arguments:
 #   $1=[state directory]
 #   $2=[event name]
@@ -577,7 +589,8 @@ function resume-command() {
 # the turn, or HEAD when the start is unknown. Print 'working-tree' when that
 # commit does not hold the gate list.
 # Arguments:
-#   $1=[commit at the start of the turn, 'none' before the first commit, empty when unknown]
+#   $1=[commit at the start of the turn, 'none' before the first commit, empty
+#     when unknown]
 function config-source() {
 
   local commit="$1"
@@ -655,7 +668,8 @@ function read-config() {
 
 # Succeed when a drop-in file name is plain ASCII, so a commit and the working
 # tree, which may store other names in different Unicode forms, order it alike.
-# The C locale in a subshell compares bytes and leaves the caller's locale alone.
+# The C locale in a subshell compares bytes and leaves the caller's locale
+# alone.
 # Arguments:
 #   $1=[file name]
 function is-drop-in-name() {
@@ -856,7 +870,8 @@ function nested-snapshot-hash() {
 }
 
 # Write the paths whose state differs between two snapshots, and the paths of
-# commits made between them, NUL-separated. Fail when the commits cannot be compared.
+# commits made between them, NUL-separated. Fail when the commits cannot be
+# compared.
 # Arguments:
 #   $1=[snapshot taken first]
 #   $2=[snapshot taken second]
@@ -878,7 +893,8 @@ function diff-snapshots() {
     fi
   done
   if [[ $head_before != "$head_after" ]]; then
-    # Before the first commit, or after HEAD is unborn again, compare with the empty tree
+    # Before the first commit, or after HEAD is unborn again, compare with the
+    # empty tree
     if [[ $head_before == none || $head_after == none ]]; then
       empty="$(git hash-object -t tree /dev/null)" || return 1
       [[ $head_before != none ]] || head_before="$empty"
@@ -923,7 +939,8 @@ function read-snapshot() {
   return 0
 }
 
-# Print the changed paths that are gate configuration or hook files, comma separated.
+# Print the changed paths that are gate configuration or hook files, comma
+# separated.
 # Arguments:
 #   $1=[file of changed paths, NUL-separated]
 function changed-guarded-paths() {
@@ -1013,7 +1030,8 @@ function execute-gates() {
 
 # Append one result.
 # Arguments:
-#   $1=[gate name] $2=[target] $3=[mode] $4=[state] $5=[exit status] $6=[seconds] $7=[log file]
+#   $1=[gate name] $2=[target] $3=[mode] $4=[state] $5=[exit status]
+#   $6=[seconds] $7=[log file]
 function record-result() {
 
   RESULT_NAME+=("$1") RESULT_TARGET+=("$2") RESULT_MODE+=("$3") RESULT_STATE+=("$4") RESULT_RC+=("$5") RESULT_SECONDS+=("$6") RESULT_LOG+=("$7")
@@ -1026,7 +1044,8 @@ function record-result() {
 # leaves the caller's locale alone.
 # Arguments:
 #   $1=[file of changed paths, NUL-separated]
-#   $2=[anchored extended regular expressions separated by the ASCII record separator]
+#   $2=[anchored extended regular expressions separated by the ASCII record
+#     separator]
 function changes-match() {
 
   (
@@ -1068,7 +1087,8 @@ function run-with-limit() {
   RUNNING_GATE=$pid
   set +m
   deadline=$(( SECONDS + seconds ))
-  # Poll quickly at first so short gates finish promptly, then back off to 0.2 seconds
+  # Poll quickly at first so short gates finish promptly, then back off to 0.2
+  # seconds
   local -a naps=(0.01 0.02 0.05 0.1 0.2)
   local nap=0
   while kill -0 "$pid" 2> /dev/null; do
@@ -1148,7 +1168,8 @@ function blocking-failure() {
   return 1
 }
 
-# Succeed when a gate in block mode did not pass, which fails 'make quality-gate'.
+# Succeed when a gate in block mode did not pass, which fails 'make
+# quality-gate'.
 function run-failed() {
 
   local i

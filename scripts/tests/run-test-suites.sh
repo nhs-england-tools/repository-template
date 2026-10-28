@@ -15,13 +15,15 @@ set -euo pipefail
 #   $ [options] ./run-test-suites.sh
 #
 # Options:
-#   dir=path      # Directory within a Git worktree, relative to the repository's
-#                 # top-level directory or absolute, default is 'scripts'
+#   dir=path      # Directory within a Git worktree, relative to the
+#                 # repository's top-level directory or absolute, default is
+#                 # 'scripts'
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - Every test suite passed
-#   1 - At least one test suite failed, no test suite was found, or Git could not search the directory
+#   1 - At least one test suite failed, no test suite was found, or Git could
+#       not search the directory
 #   Other - Non-zero statuses from temporary-file creation or sorting
 
 # ==============================================================================
@@ -95,7 +97,8 @@ function list-test-suites() {
   return 0
 }
 
-# Run test suites in parallel, then print each suite's output in the given order.
+# Run test suites in parallel, then print each suite's output in the given
+# order.
 # Arguments:
 #   $@=[test suite paths]
 function run-test-suites() {
@@ -107,7 +110,8 @@ function run-test-suites() {
   trap "rm -rf '$logs'" EXIT
 
   for suite in "${paths[@]}"; do
-    # 'env' keeps the runner's own variables out of the suite and reports a suite that cannot run as 126
+    # 'env' keeps the runner's own variables out of the suite and reports a
+    # suite that cannot run as 126
     env -u dir -u suites "$suite" > "$logs/$i.log" 2>&1 < /dev/null &
     pids+=("$!")
     i=$((i + 1))

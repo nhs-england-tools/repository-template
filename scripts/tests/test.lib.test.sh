@@ -26,7 +26,8 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
 
-  # A harness that ignores errexit in tests also ignores failed assertions here, so check it from outside first
+  # A harness that ignores errexit in tests also ignores failed assertions here,
+  # so check it from outside first
   if "$BASH" -c 'source ./scripts/tests/test.lib.sh; function t() { false; true; }; test-run-suite t' > /dev/null 2>&1; then
     echo "ERROR: the harness passed a test whose command failed" >&2
     return 1
@@ -144,7 +145,8 @@ function b() { return 0; }' a b
 function test-harness-starts-the-next-test-when-any-test-ends() {
 
   # Arrange
-  # Test a passes only once c has run, which needs a free slot while a is still running.
+  # Test a passes only once c has run, which needs a free slot while a is still
+  # running.
   write-mini-suite 'function a() {
   local i
   for ((i = 0; i < 100; i++)); do
@@ -357,7 +359,8 @@ function test-harness-keeps-files-when-the-suite-scratch-directory-cannot-be-cre
 function test-harness-keeps-files-when-a-test-scratch-directory-cannot-be-created() {
 
   # Arrange
-  # The setup replaces mktemp with a function that records its arguments and fails, for every test.
+  # The setup replaces mktemp with a function that records its arguments and
+  # fails, for every test.
   write-mini-suite 'function test-suite-setup() {
   function mktemp() { printf "%s\n" "$*" >> "$OUT/mktemp-calls"; return 1; }
 }
@@ -412,7 +415,8 @@ function test-harness-fails-a-test-that-calls-exit-0() {
 function test-harness-fails-a-test-that-reads-an-unset-variable() {
 
   # Arrange
-  # Bash 3.2 ends a nounset abort under an EXIT trap with the trap's status, 0 here.
+  # Bash 3.2 ends a nounset abort under an EXIT trap with the trap's status, 0
+  # here.
   write-mini-suite 'function t() { printf "%s\n" "$TEST_TMP" > "$OUT/tmp-path"; echo "${NO_SUCH_VARIABLE_XYZ}"; }' t
   export OUT="$TEST_TMP"
   # Act
@@ -965,7 +969,8 @@ function run-mini-suite-with-limit() {
   return 0
 }
 
-# Create an executable "$TEST_TMP/fake/fake-tool" that is not installed anywhere else.
+# Create an executable "$TEST_TMP/fake/fake-tool" that is not installed anywhere
+# else.
 function create-fake-tool() {
 
   mkdir -p "$TEST_TMP/fake"
@@ -977,7 +982,8 @@ function create-fake-tool() {
 
 # Create "$TEST_TMP/mise/shims/fake-tool", a shim that exits 1, the real
 # "$TEST_TMP/real/fake-tool" that exits 0, and a fake "$TEST_TMP/mise-bin/mise"
-# whose 'which' prints the real one if it exists and records its working directory.
+# whose 'which' prints the real one if it exists and records its working
+# directory.
 function create-fake-mise-shim() {
 
   mkdir -p "$TEST_TMP/mise/shims" "$TEST_TMP/real" "$TEST_TMP/mise-bin"

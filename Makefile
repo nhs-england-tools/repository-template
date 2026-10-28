@@ -21,7 +21,7 @@ lint-markdown-format: # Check markdown formatting @Quality
 lint-markdown-links: # Check markdown links @Quality
 	$(MAKE) check-markdown-links check=branch
 
-lint-shell: # Lint all tracked shell scripts @Quality
+lint-shell: # Lint all tracked shell scripts and check shell and Make comment line length @Quality
 	$(MAKE) check-shell-lint
 
 lint-workflow-security: # Check GitHub Actions workflow security policy @Quality

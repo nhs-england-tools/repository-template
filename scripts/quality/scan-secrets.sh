@@ -9,11 +9,15 @@ set -euo pipefail
 #   $ [options] ./scripts/quality/scan-secrets.sh
 #
 # Options:
-#   check={all,staged-changes,working-tree-changes,branch,whole-history,last-commit}
+#   check={all,staged-changes,working-tree-changes,branch,whole-history,
+#          last-commit}
 #                                       # Check mode, default is 'whole-history'
-#   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is 'origin/main'
-#   FORCE_USE_DOCKER=true               # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                        # Show all the executed commands, default is 'false'
+#   BRANCH_NAME=other-branch-than-main  # Branch to compare with, default is
+#                                       # 'origin/main'
+#   FORCE_USE_DOCKER=true               # Run in a Docker container, default is
+#                                       # 'false'
+#   VERBOSE=true                        # Show all the executed commands,
+#                                       # default is 'false'
 #
 # Exit codes:
 #   0 - No leaks present
@@ -21,7 +25,8 @@ set -euo pipefail
 #   126 - The check mode is not recognised
 #
 # Check modes:
-#   all                   # staged-changes, working-tree-changes and branch together
+#   all                   # staged-changes, working-tree-changes and branch
+#                         # together
 #   staged-changes        # Changes staged for commit
 #   working-tree-changes  # Working tree files, including untracked ones
 #   branch                # Commits on this branch since BRANCH_NAME

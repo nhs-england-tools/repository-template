@@ -9,20 +9,26 @@ set -euo pipefail
 #   $ [options] ./scripts/quality/format-markdown.sh
 #
 # Options:
-#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
-#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is 'origin/main'
-#   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                            # Show all the executed commands, default is 'false'
+#   check={all,staged-changes,working-tree-changes,branch}
+#       Check mode, default is 'working-tree-changes'
+#   BRANCH_NAME=other-branch-than-main
+#       Branch to compare with, default is 'origin/main'
+#   FORCE_USE_DOCKER=true
+#       Run in a Docker container, default is 'false'
+#   VERBOSE=true
+#       Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All files formatted successfully
-#   1 - Formatting failed, Docker mode has no exact Prettier pin, or the branch to compare with is not found
+#   1 - Formatting failed, Docker mode has no exact Prettier pin, or the branch
+#       to compare with is not found
 #   126 - The check mode is not recognised
 #   Other - Non-zero statuses from Git, Prettier, Docker or image pulls
 #
 # Notes:
 #   1) Check modes select existing Markdown files known to Git, as described in
-#      './scripts/quality/git-files.lib.sh'. Untracked files are never formatted.
+#      './scripts/quality/git-files.lib.sh'. Untracked files are never
+#      formatted.
 #   2) Prettier rewrites the files in place. Its exact version is the
 #      'npm:prettier' entry in the '[tools]' table of 'mise.toml', which
 #      'make config' installs. In Docker, npx downloads that version at run
@@ -56,7 +62,7 @@ function main() {
 
 # Run Prettier natively.
 # Arguments:
-#   $@=[Markdown file paths to format, relative to the project's top-level directory]
+#   $@=[Markdown file paths to format, relative to the repository root]
 function run-prettier-natively() {
 
   local rc=0
@@ -72,7 +78,7 @@ function run-prettier-natively() {
 
 # Run Prettier in a Docker container, at the version pinned in 'mise.toml'.
 # Arguments:
-#   $@=[Markdown file paths to format, relative to the project's top-level directory]
+#   $@=[Markdown file paths to format, relative to the repository root]
 function run-prettier-in-docker() {
 
   # shellcheck disable=SC1091
@@ -88,7 +94,8 @@ function run-prettier-in-docker() {
   image=$(name=node docker-get-image-version-and-pull) || return "$?"
 
   local rc=0
-  # No '--network none' or read-only mount: npx downloads Prettier at run time, which then rewrites files
+  # No '--network none' or read-only mount: npx downloads Prettier at run time,
+  # which then rewrites files
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \

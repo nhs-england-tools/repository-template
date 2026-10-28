@@ -22,7 +22,8 @@ readonly SCRIPT=./scripts/quality/quality-gate.sh
 readonly LINT_CALL='--no-print-directory lint'
 readonly TEST_CALL='--no-print-directory test'
 readonly FAILING_LINT='if [[ "${*: -1}" == lint ]]; then echo "lint finding on line 7"; exit 1; fi'
-# Time limits count whole seconds, so a limit of 2 gives the gate at least a second to start its processes
+# Time limits count whole seconds, so a limit of 2 gives the gate at least a
+# second to start its processes
 readonly SHORT_LINT_GATE=$'version: 1\ngates:\n  - name: lint\n    timeout: 2'
 
 # Set up the suite fixtures and run every test.
@@ -34,7 +35,8 @@ function main() {
   # The caller's options must not reach the script under test
   unset -v scope hours QUALITY_GATE_BUDGET QUALITY_GATE_ACTIVE GITHUB_ACTIONS COPILOT_AGENT_PROMPT
 
-  # The tests that wait for time limits or run many turns come first, so the others run alongside them
+  # The tests that wait for time limits or run many turns come first, so the
+  # others run alongside them
   test-run-suite \
     test-quality-gate-reports-gates-the-time-budget-did-not-allow \
     test-quality-gate-matches-path-globs \
@@ -133,9 +135,9 @@ function main() {
 # ==============================================================================
 # Helpers
 
-# Create the scratch repository "$TEST_TMP/repo" with the script, its rules and the
-# default gate list, commit it with a README and a source file, stub 'make' and
-# change into it.
+# Create the scratch repository "$TEST_TMP/repo" with the script, its rules and
+# the default gate list, commit it with a README and a source file, stub 'make'
+# and change into it.
 function gate-create-repo() {
 
   local repo="$TEST_TMP/repo"
@@ -208,7 +210,8 @@ function gate-send() {
   return 0
 }
 
-# Print a UserPromptSubmit event. The prompt text is a marker the tests look for.
+# Print a UserPromptSubmit event. The prompt text is a marker the tests look
+# for.
 # Arguments:
 #   $1=[session identifier, default is the suite's]
 function gate-prompt-json() {
@@ -732,7 +735,8 @@ function test-quality-gate-hashes-more-files-than-one-chunk() {
   done
   mapfile -t sorted < <(printf '%s\n' bulk-*.txt | LC_ALL=C sort)
   gate-start-turn
-  # One file in each of the three chunks of 100, at their first and last positions
+  # One file in each of the three chunks of 100, at their first and last
+  # positions
   for i in 0 99 100 199 200 204; do
     edited+=("${sorted[$i]}")
     printf 'changed\n' > "${sorted[$i]}"

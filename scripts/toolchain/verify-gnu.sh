@@ -134,7 +134,8 @@ function check-date() {
   fi
 }
 
-# Check that Bash is on PATH, identifies as GNU, and is at least MIN_BASH_VERSION.
+# Check that Bash is on PATH, identifies as GNU, and is at least
+# MIN_BASH_VERSION.
 function check-bash() {
 
   local path version

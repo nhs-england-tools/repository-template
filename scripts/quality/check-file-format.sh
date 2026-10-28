@@ -10,17 +10,24 @@ set -euo pipefail
 #   $ [options] ./scripts/quality/check-file-format.sh
 #
 # Options:
-#   check={all,staged-changes,working-tree-changes,branch}  # Check mode, default is 'working-tree-changes'
-#   dry_run=true                                            # List the files to check without checking them, default is 'false'
-#   BRANCH_NAME=other-branch-than-main                      # Branch to compare with, default is 'origin/main'
-#   FORCE_USE_DOCKER=true                                   # If set to true the command is run in a Docker container, default is 'false'
-#   VERBOSE=true                                            # Show all the executed commands, default is 'false'
+#   check={all,staged-changes,working-tree-changes,branch}
+#       Check mode, default is 'working-tree-changes'
+#   dry_run=true
+#       List the files to check without checking them, default is 'false'
+#   BRANCH_NAME=other-branch-than-main
+#       Branch to compare with, default is 'origin/main'
+#   FORCE_USE_DOCKER=true
+#       Run in a Docker container, default is 'false'
+#   VERBOSE=true
+#       Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - All selected files are formatted correctly, or no files need checking
-#   1 - Files are not formatted correctly, or the branch to compare with is not found
+#   1 - Files are not formatted correctly, or the branch to compare with is not
+#       found
 #   126 - The check mode is not recognised
-#   Other - Non-zero statuses from Git, EditorConfig Checker, Docker or image pulls
+#   Other - Non-zero statuses from Git, EditorConfig Checker, Docker or image
+#           pulls
 #
 # Notes:
 #   1) Check modes select existing files known to Git, as described in

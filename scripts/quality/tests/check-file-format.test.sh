@@ -209,7 +209,8 @@ function test-check-file-format-branch-checks-changes-since-branch() {
   default_status="$TEST_STATUS"
   default_call="$(test-stub-calls "$EC" | sed -n 1p)"
   # Arrange (second run)
-  # Without origin/main the second run can only pass by comparing with BRANCH_NAME
+  # Without origin/main the second run can only pass by comparing with
+  # BRANCH_NAME
   git update-ref -d refs/remotes/origin/main
   # Act (second run)
   test-capture env check=branch BRANCH_NAME=other ./scripts/quality/check-file-format.sh
@@ -389,7 +390,8 @@ function test-check-file-format-stops-when-the-image-pull-fails() {
 
 # ==============================================================================
 
-# Print the Docker arguments expected when the fixture checks every tracked file.
+# Print the Docker arguments expected when the fixture checks every tracked
+# file.
 function expected-docker-run() {
 
   echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro --workdir /check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json -- a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh"

@@ -9,9 +9,11 @@ set -euo pipefail
 #   $ [options] ./scripts/quality/check-workflow-security.sh
 #
 # Options:
-#   dir=path          # Directory of workflow files, default is '.github/workflows'
+#   dir=path          # Directory of workflow files, default is
+#                     # '.github/workflows'
 #   actions_dir=path  # Directory of local actions, default is '.github/actions'
-#   allowlist=path    # Approved write permissions, default is 'scripts/config/workflow-security.yaml'
+#   allowlist=path    # Approved write permissions, default is
+#                     # 'scripts/config/workflow-security.yaml'
 #   VERBOSE=true      # Show all the executed commands, default is 'false'
 #
 # Exit codes:

@@ -12,7 +12,8 @@ set -euo pipefail
 # this file directly.
 #
 # Usage:
-#   $ test-stub NAME [BODY]  # In a test that sources ./scripts/tests/test.lib.sh
+#   $ test-stub NAME [BODY]  # In a test that sources
+#                            # ./scripts/tests/test.lib.sh
 #
 # Exit codes:
 #   0     - The body succeeded

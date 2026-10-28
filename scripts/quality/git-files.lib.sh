@@ -12,7 +12,8 @@ set -euo pipefail
 #   all                   # Every tracked file
 #   staged-changes        # Files added or changed in the index
 #   working-tree-changes  # Files changed in the working tree but not yet staged
-#   branch                # Files added or changed since BRANCH_NAME, default 'origin/main', including uncommitted changes
+#   branch                # Files added or changed since BRANCH_NAME (default
+#                         # 'origin/main'), including uncommitted changes
 #
 # Notes:
 #   1) Only paths that exist as regular files are returned. Untracked files are

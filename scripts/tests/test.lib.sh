@@ -6,26 +6,32 @@ set -euo pipefail
 # Shared test harness for the repository's shell test suites. Each test runs in
 # its own subshell with 'set -e' in force, so any failing command fails the
 # test, not only the last one. A test that calls exit fails, even with status
-# 0, since it never reached its end. Each test also gets its own scratch directory
-# and a command stub directory first on PATH, and nothing a test changes leaks
-# into the next test. Each test runs in its own process group, so when the suite
-# is interrupted it stops the running tests and every command they started
-# before the teardown runs.
+# 0, since it never reached its end. Each test also gets its own scratch
+# directory and a command stub directory first on PATH, and nothing a test
+# changes leaks into the next test. Each test runs in its own process group, so
+# when the suite is interrupted it stops the running tests and every command
+# they started before the teardown runs.
 #
 # Usage:
 #   $ source ./scripts/tests/test.lib.sh
 #   $ test-run-suite test-one test-two
 #
 # Arguments (provided as environment variables):
-#   VERBOSE=true  # The suite traces its commands and the harness also prints the output of passing tests, default is 'false'
-#   TEST_JOBS=n   # Number of tests to run in parallel, default is the number of CPUs
-#   TEST_STOP_TIMEOUT=n  # Seconds an interrupted suite waits for its running tests to stop before killing them, default is 5
+#   VERBOSE=true         # The suite traces its commands and the harness also
+#                        # prints the output of passing tests, default is
+#                        # 'false'
+#   TEST_JOBS=n          # Number of tests to run in parallel, default is the
+#                        # number of CPUs
+#   TEST_STOP_TIMEOUT=n  # Seconds an interrupted suite waits for its running
+#                        # tests to stop before killing them, default is 5
 #
 # Optional functions a suite can define:
 #   test-suite-setup     # Runs once before the first test
-#   test-suite-teardown  # Runs once on exit, even when a test or the setup fails
-# Setup and teardown can use SUITE_TMP and have git isolated and LC_ALL=C like the tests.
-# TEST_TMP, STUB_DIR and the helpers that need them are not available there.
+#   test-suite-teardown  # Runs once on exit, even when a test or the setup
+#                        # fails
+# Setup and teardown can use SUITE_TMP and have git isolated and LC_ALL=C like
+# the tests. TEST_TMP, STUB_DIR and the helpers that need them are not available
+# there.
 #
 # Variables available to tests:
 #   TEST_REPO_ROOT   # Absolute path of this repository
@@ -34,7 +40,8 @@ set -euo pipefail
 #   TEST_TMP         # Scratch directory of the current test, removed after it
 #   STUB_DIR         # Directory of command stubs, first on PATH
 #   TEST_STDOUT, TEST_STDERR, TEST_STATUS  # Set by test-capture
-# test-capture runs the command in a subshell, so its 'cd' and variable changes are discarded.
+# test-capture runs the command in a subshell, so its 'cd' and variable changes
+# are discarded.
 
 TEST_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 TEST_INDENT_PATTERN='s/^/    /'
@@ -73,7 +80,8 @@ function test-run-suite() {
 
   jobs="${TEST_JOBS:-$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)}"
   [[ "$jobs" =~ ^[1-9][0-9]*$ ]] || jobs=4
-  # Each test writes its index to this pipe when it ends, so a slow test does not hold up the next ones
+  # Each test writes its index to this pipe when it ends, so a slow test does
+  # not hold up the next ones
   if ! mkfifo "$SUITE_TMP/.ended"; then
     echo "ERROR: cannot create the pipe that reports ended tests" >&2
     return 1
@@ -87,9 +95,11 @@ function test-run-suite() {
       running=$((running - 1))
     done
     # Job control gives the test its own process group, whose ID is its PID
-    # Known gap: a signal between the launch and the PID registration below leaves that one test running
-    # unsupervised until it ends on its own. Accepted for now as the window is tiny and the test is short-lived.
-    # If that starts to matter, have the INT and TERM traps only set a flag while launching and exit once registered.
+    # Known gap: a signal between the launch and the PID registration below
+    # leaves that one test running unsupervised until it ends on its own.
+    # Accepted for now as the window is tiny and the test is short-lived. If
+    # that starts to matter, have the INT and TERM traps only set a flag while
+    # launching and exit once registered.
     set -m
     # The parent also sets the group, so hide the child's setpgid warning
     { _test-run-job "$i" "${tests[$i]}" & } 2> /dev/null
@@ -153,7 +163,8 @@ function _test-report() {
 function _test-run-job() {
 
   local i="$1" rc
-  # A plain statement, as errexit is ignored inside a command that is part of a '||' list
+  # A plain statement, as errexit is ignored inside a command that is part of a
+  # '||' list
   set +e
   ( _test-run-isolated "$2" ) > "$SUITE_TMP/.test-$i.log" 2>&1 < /dev/null 3>&-
   rc=$?
@@ -168,7 +179,8 @@ function _test-await-end() {
 
   local i
   while true; do
-    # In a subshell, as a signal trap that exits during 'read -t' leaves its timer to break the exit trap
+    # In a subshell, as a signal trap that exits during 'read -t' leaves its
+    # timer to break the exit trap
     if i="$(read -r -t 1 -u 3 i && printf '%s' "$i")"; then
       if [[ -z "${_TEST_ENDED[i]:-}" ]]; then
         _TEST_ENDED[i]=true
@@ -237,8 +249,9 @@ function _test-isolated-exit() {
 }
 
 # Point git at an empty global config and a fixed identity, and drop the
-# variables that could point it at another repository, such as a git hook's GIT_DIR.
-# Turn off the automatic maintenance that each commit would otherwise start as another git process.
+# variables that could point it at another repository, such as a git hook's
+# GIT_DIR. Turn off the automatic maintenance that each commit would otherwise
+# start as another git process.
 function _test-isolate-git() {
 
   local vars var
@@ -364,7 +377,8 @@ function _test-indent() {
 # Helpers
 
 # Run a command with errexit on, xtrace off, VERBOSE unset and stdin from
-# /dev/null, capturing its stdout (trailing newlines removed), stderr and exit status.
+# /dev/null, capturing its stdout (trailing newlines removed), stderr and exit
+# status.
 # Arguments:
 #   $@=[command and arguments, a function is allowed]
 function test-capture() {
@@ -387,11 +401,13 @@ function test-capture() {
 # "$STUB_DIR/<name>.calls": the arguments quoted with printf %q and separated
 # by single spaces, or an empty line for a call without arguments. The stub is
 # a symlink to scripts/tests/stub.sh, which runs "$STUB_DIR/<name>.body".
-# "$STUB_DIR/<name>" links to the tracked dispatcher, so never write to it, change a body with another test-stub call.
-# Calling it again for the same name replaces the body.
+# "$STUB_DIR/<name>" links to the tracked dispatcher, so never write to it,
+# change a body with another test-stub call. Calling it again for the same name
+# replaces the body.
 # Arguments:
 #   $1=[command name]
-#   $2=[bash code the stub runs after recording, with the call's arguments in "$@", default is 'exit 0']
+#   $2=[bash code the stub runs after recording, with the call's arguments in
+#     "$@", default is 'exit 0']
 function test-stub() {
 
   local name="$1" body="${2:-exit 0}"
@@ -401,7 +417,8 @@ function test-stub() {
   return 0
 }
 
-# Print the recorded calls of a stub, one per line, or nothing if it was never called.
+# Print the recorded calls of a stub, one per line, or nothing if it was never
+# called.
 # Arguments:
 #   $1=[command name]
 function test-stub-calls() {
@@ -416,7 +433,8 @@ function test-stub-calls() {
 
 # Replace PATH with the stub directory plus symlinks to the base tools and the
 # given tools, so the command under test cannot see anything else installed on
-# the host. Call it before creating stubs. Calling it again in the same test is harmless.
+# the host. Call it before creating stubs. Calling it again in the same test is
+# harmless.
 # A tool found in a mise shims directory is linked to the real executable, as
 # 'mise which' resolves it from this repository, because a shim's behaviour
 # depends on the mise config of the directory it runs in.
@@ -428,8 +446,9 @@ function test-isolate-path() {
   local bin="$TEST_TMP/.bin" tool path paths i=0 seen=" "
   local -a tools=("${TEST_BASE_TOOLS[@]}" "$@") batch=()
   mkdir -p "$bin"
-  # One lookup and one 'ln' for all tools, as each process start is slow on macOS.
-  # Bash 3.2 may succeed when only some are found, so count the paths instead.
+  # One lookup and one 'ln' for all tools, as each process start is slow on
+  # macOS. Bash 3.2 may succeed when only some are found, so count the paths
+  # instead.
   paths="$(type -P "${tools[@]}")" || true
   if [[ -z "$paths" || $(wc -l <<< "$paths") -ne ${#tools[@]} ]]; then
     for tool in "${tools[@]}"; do
@@ -445,7 +464,8 @@ function test-isolate-path() {
       path="$(cd "$TEST_REPO_ROOT" && mise which "$tool")" ||
         { echo "test-isolate-path: cannot resolve the mise shim of '$tool'" >&2; return 1; }
     fi
-    # On a repeated call the tool already resolves to its link, which must not point to itself.
+    # On a repeated call the tool already resolves to its link, which must not
+    # point to itself.
     if [[ "$path" == "$bin/$tool" ]]; then
       continue
     elif [[ "${path##*/}" == "$tool" ]]; then
@@ -467,7 +487,8 @@ function test-isolate-path() {
 # this repository, with one commit. Executable files are symlinked, not copied,
 # because macOS assesses every new executable on its first run. Linked
 # executables are the real repository files, so tests must never write to them
-# or change their mode or timestamps (chmod, touch and redirections all follow links).
+# or change their mode or timestamps (chmod, touch and redirections all follow
+# links).
 # Arguments:
 #   $1=[directory to create]
 #   $@=[paths to include, relative to this repository's top-level directory]
@@ -641,7 +662,8 @@ function assert-files-identical() {
   return 0
 }
 
-# Fail unless a stub recorded a call whose whole arguments line equals the given line.
+# Fail unless a stub recorded a call whose whole arguments line equals the given
+# line.
 # Arguments:
 #   $1=[command name]
 #   $2=[expected arguments line, as recorded by test-stub]

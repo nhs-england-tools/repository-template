@@ -180,7 +180,8 @@ function offer-append() {
     return 0
   fi
 
-  # 'read' fails on end of input (Ctrl-D), which 'set -e' would turn into an exit
+  # 'read' fails on end of input (Ctrl-D), which 'set -e' would turn into an
+  # exit
   read -r -p "Append this line to ${rc_file} now? [y/N] " reply || { reply=""; echo >&2; }
   if [[ "${reply}" =~ ^[Yy]$ ]]; then
     mkdir -p "$(dirname "${rc_file}")"

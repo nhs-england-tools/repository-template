@@ -1,7 +1,8 @@
 # This file is for you! Edit it to implement your own Docker make targets.
 
 # ==============================================================================
-# Custom implementation - implementation of a make target should not exceed 5 lines of effective code.
+# Custom implementation - implementation of a make target should not exceed 5
+# lines of effective code.
 # In most cases there should be no need to modify the existing make targets.
 
 DOCKER_IMAGE ?= $(or ${docker_image}, $(or ${IMAGE}, $(or ${image}, ghcr.io/org/repo)))
@@ -39,7 +40,8 @@ clean:: # Remove Docker resources (docker) - optional: docker_dir|dir=[path to t
 		dir=$(or ${docker_dir}, ${dir})
 
 _docker: # Docker command wrapper - mandatory: cmd=[command to execute]; optional: dir=[path to the image directory where the Dockerfile is located, relative to the project's top-level directory, default is '.']
-	# 'DOCKER_IMAGE' and 'DOCKER_TITLE' are passed to the functions as environment variables
+	# 'DOCKER_IMAGE' and 'DOCKER_TITLE' are passed to the functions as
+	# environment variables
 	dir=$(realpath $(or ${dir}, infrastructure/images/${DOCKER_IMAGE}))
 	source scripts/docker/docker.lib.sh
 	docker-${cmd} # 'dir' is accessible by the function as environment variable

@@ -11,8 +11,11 @@ set -euo pipefail
 #   $ source ./scripts/quality/tests/quality-test.lib.sh
 #
 # Arguments (provided as global variables, set once by the suite):
-#   QUALITY_FIXTURE_PATHS=(...)      # Paths of this repository to put in each scratch repository, the script under test and its libraries and config files
-#   QUALITY_FIXTURE_FORMAT='# %s\n'  # printf format of each content file, given its name
+#   QUALITY_FIXTURE_PATHS=(...)      # Paths of this repository to put in each
+#                                    # scratch repository, the script under
+#                                    # test and its libraries and config files
+#   QUALITY_FIXTURE_FORMAT='# %s\n'  # printf format of each content file,
+#                                    # given its name
 
 # ==============================================================================
 
@@ -27,7 +30,8 @@ function quality-build-fixture-base() {
 
 # Create the scratch repository "$TEST_TMP/repo" from the fixture base, add the
 # fixture mise.toml and the given files, each containing its own name in
-# QUALITY_FIXTURE_FORMAT, and commit them on main with origin/main pointing at that commit.
+# QUALITY_FIXTURE_FORMAT, and commit them on main with origin/main pointing at
+# that commit.
 # Arguments:
 #   $@=[content files to create, relative to the repository]
 function quality-create-fixture-repo() {

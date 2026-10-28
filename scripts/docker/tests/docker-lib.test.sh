@@ -817,7 +817,8 @@ function test-docker-build-passes-metadata-and-tags-every-version() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   build_count="$(test-stub-calls docker | awk '/^build / { n++ } END { print n + 0 }')"
   assert-equal 1 "$build_count" "number of build calls"
-  # Spaces around the line and each needle make every needle match whole arguments.
+  # Spaces around the line and each needle make every needle match whole
+  # arguments.
   build=" $(test-stub-calls docker | grep '^build ' || true) "
   assert-contains "$build" " --build-arg IMAGE=$image "
   assert-contains "$build" " --build-arg TITLE=Repository\\ Template\\ Docker\\ Test "

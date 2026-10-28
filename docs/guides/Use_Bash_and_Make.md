@@ -8,6 +8,7 @@
   - [Conventions](#conventions)
     - [Debugging](#debugging)
     - [Scripts](#scripts)
+    - [Comment line length](#comment-line-length)
 
 ## Using Make
 
@@ -242,4 +243,15 @@ flow:
 
 ```shell
 VERBOSE=1 FORCE_USE_DOCKER=1 scripts/quality/check-shell-lint.sh
+```
+
+### Comment line length
+
+`make lint-shell` fails any full-line comment longer than 80 characters in a
+tracked `*.sh` or `*.mk` file. It counts bytes, so a non-ASCII character counts
+as more than one. The shebang and comment lines that contain a URL are exempt.
+Code lines are not limited. To check a single file, run:
+
+```shell
+file=scripts/init.mk make check-shell-lint check=file
 ```
