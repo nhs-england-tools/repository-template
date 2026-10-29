@@ -119,14 +119,26 @@ config:: # Configure development environment (common) @Configuration
 		githooks-config \
 		docker-pull-pinned-images \
 
-clean:: # Remove files ignored by Git and the empty directories left behind (common) - optional: CONFIRM=[true to delete, default is a preview only] @Operations
+clean:: # Remove files ignored by Git and the empty directories left behind (common) - optional: CONFIRM=[true to delete, default is a preview only], UNTRACKED=[true to also remove untracked files, staged files are kept], UNSTAGED=[true to also discard unstaged changes to tracked files, staged changes are kept] @Operations
+	mode=-X
+	if [[ "$(UNTRACKED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
+		mode=-x
+	fi
 	if [[ "$(CONFIRM)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
-		git clean -f -d -X
-		find . -mindepth 1 -type d -empty -not -path '*/.git/*' -delete
+		git clean -f -d $$mode
+		if [[ "$(UNSTAGED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
+			git diff --name-only | sed 's|^|Discarding unstaged changes in |'
+			git restore -- .
+		fi
+		find . -mindepth 1 -type d -empty -not -path '*/.git/*' -print -delete | sed 's|^\./|Removing empty directory |'
 	else
-		git clean -n -d -X
+		git clean -n -d $$mode
+		if [[ "$(UNSTAGED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
+			git diff --name-only | sed 's|^|Would discard unstaged changes in |'
+		fi
 		find . -mindepth 1 -type d -empty -not -path '*/.git/*' | sed 's|^\./|Would remove empty directory |'
 		echo "Preview only, run 'make clean CONFIRM=true' to delete"
+		echo "Add UNTRACKED=true to also remove untracked files and UNSTAGED=true to also discard unstaged changes"
 	fi
 
 help: # Print help @Others
