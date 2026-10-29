@@ -27,23 +27,34 @@ function docker-build() {
   local dir=${dir:-$PWD}
   local tag
   local version
+  local base_reference
+  local base_image
+  local base_digest
 
   version-create-effective-file
   _create-effective-dockerfile
 
   tag=$(_get-effective-tag)
+  base_reference=$(dir="$dir" _get-effective-base-image) || base_reference=""
+  base_image="$base_reference"
+  base_digest=""
+  if [[ "$base_reference" == *@* ]]; then
+    base_image="${base_reference%@*}"
+    base_digest="${base_reference##*@}"
+  fi
 
   docker build \
     --progress=plain \
     --platform linux/amd64 \
-    --build-arg IMAGE="${DOCKER_IMAGE}" \
+    --build-arg BASE_IMAGE="${base_image}" \
+    --build-arg BASE_DIGEST="${base_digest}" \
     --build-arg TITLE="${DOCKER_TITLE}" \
     --build-arg DESCRIPTION="${DOCKER_TITLE}" \
     --build-arg LICENCE=MIT \
     --build-arg GIT_URL="$(git config --get remote.origin.url)" \
     --build-arg GIT_BRANCH="$(_get-git-branch-name)" \
     --build-arg GIT_COMMIT_HASH="$(git rev-parse --short HEAD)" \
-    --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%S%z")" \
+    --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
     --build-arg BUILD_VERSION="$(_get-effective-version)" \
     --tag "${tag}" \
     --rm \
@@ -127,6 +138,141 @@ function docker-run() {
     "${tag}" \
     ${cmd:-} || return "$?"
 
+  return 0
+}
+
+# Run one Docker Compose operation from the Compose project directory, so the
+# Compose lookup, 'compose.override.yaml', COMPOSE_FILE and
+# COMPOSE_PROJECT_NAME keep working. Without 'file', 'compose_dir' or
+# COMPOSE_FILE, it uses the top-level Compose file, else the only directory in
+# the repository with one.
+# Arguments (provided as environment variables):
+#   file=[Compose file, default is the Compose lookup]
+#   compose_dir=[directory with the Compose file, default is discovered]
+#   project=[Compose project name, default is the Compose default]
+function _docker-compose-run() {
+
+  local compose_dir=${compose_dir:-}
+  local options=()
+
+  if [[ -n "${file:-}" && -n "$compose_dir" ]]; then
+    echo "ERROR: Set either 'file' or 'dir', not both" >&2
+    return 1
+  fi
+  if [[ -n "${file:-}" ]]; then
+    [[ -f "$file" ]] || {
+      echo "ERROR: Compose file '$file' was not found" >&2
+      return 1
+    }
+    options+=(--file "$file")
+  elif [[ -n "$compose_dir" ]]; then
+    _has-compose-file "$compose_dir" || {
+      echo "ERROR: No Compose file was found in '$compose_dir'" >&2
+      return 1
+    }
+  elif [[ -z "${COMPOSE_FILE:-}" ]]; then
+    compose_dir=$(_find-compose-dir) || return "$?"
+  fi
+  [[ -z "${project:-}" ]] || options+=(--project-name "$project")
+  command -v docker > /dev/null 2>&1 || {
+    echo "ERROR: Docker CLI is required for Compose operations" >&2
+    return 1
+  }
+  docker compose version > /dev/null 2>&1 || {
+    echo "ERROR: Docker Compose v2 or later is required" >&2
+    return 1
+  }
+
+  (
+    cd "${compose_dir:-.}" || exit "$?"
+    docker compose ${options[@]+"${options[@]}"} "$@"
+  ) || return "$?"
+
+  return 0
+}
+
+# Succeed when the directory has a file Compose finds by default.
+# Arguments:
+#   $1=[directory]
+function _has-compose-file() {
+
+  local name
+  for name in compose.yaml compose.yml docker-compose.yaml docker-compose.yml; do
+    [[ -f "$1/$name" ]] && return 0
+  done
+
+  return 1
+}
+
+# Print the Compose project directory: '.' when the top level has a Compose
+# file, else the only directory with one among the tracked and not ignored
+# files. Fails when there is none or more than one.
+function _find-compose-dir() {
+
+  local path candidate found=() listed
+
+  if _has-compose-file .; then
+    echo .
+    return 0
+  fi
+  while IFS= read -r -d '' path; do
+    [[ -f "$path" ]] || continue
+    if [[ "$path" == */* ]]; then path=${path%/*}; else path=.; fi
+    listed=false
+    for candidate in ${found[@]+"${found[@]}"}; do
+      [[ "$candidate" != "$path" ]] || listed=true
+    done
+    [[ "$listed" == true ]] || found+=("$path")
+  done < <(git ls-files -z --cached --others --exclude-standard -- \
+    ':(glob)**/compose.yaml' ':(glob)**/compose.yml' \
+    ':(glob)**/docker-compose.yaml' ':(glob)**/docker-compose.yml')
+
+  if [[ ${#found[@]} -eq 1 ]]; then
+    echo "${found[0]}"
+    return 0
+  elif [[ ${#found[@]} -eq 0 ]]; then
+    echo "ERROR: No Compose file was found, set 'file' or 'dir'" >&2
+  else
+    echo "ERROR: Compose files were found in several directories," \
+      "set 'dir' to one of: ${found[*]}" >&2
+  fi
+
+  return 1
+}
+
+# Build services declared by the Compose file.
+function docker-compose-build() {
+  _docker-compose-run build || return "$?"
+  return 0
+}
+
+# Start the Compose project after its images have been built.
+function docker-compose-up() {
+  _docker-compose-run up --detach --wait || return "$?"
+  return 0
+}
+
+# Stop the Compose project and remove its containers and network.
+function docker-compose-down() {
+  _docker-compose-run down --remove-orphans || return "$?"
+  return 0
+}
+
+# Print the current Compose project status.
+function docker-compose-status() {
+  _docker-compose-run ps || return "$?"
+  return 0
+}
+
+# Print the last 100 lines of Compose project logs without following.
+function docker-compose-logs() {
+  _docker-compose-run logs --no-color --tail=100 || return "$?"
+  return 0
+}
+
+# Remove Compose project containers and network without deleting volumes.
+function docker-compose-clean() {
+  docker-compose-down || return "$?"
   return 0
 }
 
@@ -630,6 +776,261 @@ function _append-metadata() {
   mv "$dir/Dockerfile.effective.tmp" "$dir/Dockerfile.effective" || return "$?"
 
   return 0
+}
+
+# Print the final stage's base image from the effective Dockerfile in the
+# Docker normalised form, for example
+# 'docker.io/library/python:3.15-slim@sha256:...', or nothing for 'scratch'.
+# Supports global ARG defaults, '$VAR', '${VAR}', '${VAR:-word}',
+# '${VAR-word}', '${VAR:+word}', '${VAR+word}', line continuations, heredocs
+# and stage aliases. Prints a warning and returns 1 when it cannot resolve it.
+# Arguments (provided as environment variables):
+#   dir=[image directory, default is '.']
+function _get-effective-base-image() {
+
+  local dir=${dir:-$PWD}
+  local dockerfile="${dir}/Dockerfile.effective"
+
+  [[ -f "$dockerfile" ]] || {
+    echo "WARN Base image labels left empty ('$dockerfile' not found)" >&2
+    return 1
+  }
+
+  awk '
+    function fail(reason) {
+      if (error == "") error = reason
+      return ""
+    }
+
+    # Split on blanks outside quotes and remove the quotes
+    function words(s, w,    n, i, c, q, word, has) {
+      n = 0
+      word = ""
+      q = ""
+      has = 0
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (q != "") {
+          if (c == q) q = ""
+          else word = word c
+        } else if (c == "\"" || c == squote) {
+          q = c
+          has = 1
+        } else if (c == " " || c == "\t") {
+          if (has) w[++n] = word
+          word = ""
+          has = 0
+        } else {
+          word = word c
+          has = 1
+        }
+      }
+      if (has) w[++n] = word
+      return n
+    }
+
+    function expand(s,    out, i, rest, depth, j, c, inner, name, op, isset, val) {
+      out = ""
+      while ((i = index(s, "$")) > 0) {
+        out = out substr(s, 1, i - 1)
+        rest = substr(s, i + 1)
+        if (substr(rest, 1, 1) == "{") {
+          depth = 1
+          for (j = 2; j <= length(rest) && depth > 0; j++) {
+            c = substr(rest, j, 1)
+            if (c == "{") depth++
+            else if (c == "}") depth--
+          }
+          if (depth > 0) return fail("unterminated variable in " s)
+          inner = substr(rest, 2, j - 3)
+          s = substr(rest, j)
+        } else if (match(rest, /^[A-Za-z_][A-Za-z0-9_]*/)) {
+          inner = substr(rest, 1, RLENGTH)
+          s = substr(rest, RLENGTH + 1)
+        } else {
+          out = out "$"
+          s = rest
+          continue
+        }
+        if (!match(inner, /^[A-Za-z_][A-Za-z0-9_]*/))
+          return fail("unsupported variable ${" inner "}")
+        name = substr(inner, 1, RLENGTH)
+        op = substr(inner, RLENGTH + 1)
+        isset = (name in args)
+        val = isset ? args[name] : ""
+        if (op == "") {
+          if (name in bad) return fail(bad[name])
+          if (!isset) return fail("no global ARG default for " name)
+          out = out val
+        } else if (substr(op, 1, 2) == ":-") {
+          out = out (val != "" ? val : expand(substr(op, 3)))
+        } else if (substr(op, 1, 2) == ":+") {
+          out = out (val != "" ? expand(substr(op, 3)) : "")
+        } else if (substr(op, 1, 1) == "-") {
+          out = out (isset ? val : expand(substr(op, 2)))
+        } else if (substr(op, 1, 1) == "+") {
+          out = out (isset ? expand(substr(op, 2)) : "")
+        } else {
+          return fail("unsupported variable ${" inner "}")
+        }
+        if (error != "") return ""
+      }
+      return out s
+    }
+
+    function declare(word,    k, name, value) {
+      k = index(word, "=")
+      if (k == 0) return
+      name = substr(word, 1, k - 1)
+      error = ""
+      value = expand(substr(word, k + 1))
+      if (error != "") {
+        bad[name] = error
+        delete args[name]
+      } else {
+        args[name] = value
+        delete bad[name]
+      }
+      error = ""
+    }
+
+    # Queue heredoc delimiters, skipping "<<<" here-strings
+    function heredocs(s,    k, rest, strip, c) {
+      while ((k = index(s, "<<")) > 0) {
+        rest = substr(s, k + 2)
+        if (substr(rest, 1, 1) == "<") {
+          s = substr(rest, 2)
+          continue
+        }
+        strip = 0
+        if (substr(rest, 1, 1) == "-") {
+          strip = 1
+          rest = substr(rest, 2)
+        }
+        sub(/^[[:space:]]+/, "", rest)
+        c = substr(rest, 1, 1)
+        if (c == "\"" || c == squote) rest = substr(rest, 2)
+        if (match(rest, /^[A-Za-z_][A-Za-z0-9_]*/)) {
+          heredoc_word[++heredoc_total] = substr(rest, 1, RLENGTH)
+          heredoc_strip[heredoc_total] = strip
+          rest = substr(rest, RLENGTH + 1)
+        }
+        s = rest
+      }
+    }
+
+    function normalise(ref,    digest, k, c, last, tag, registry, path, out) {
+      if (ref == "") return fail("empty image reference")
+      digest = ""
+      k = index(ref, "@")
+      if (k > 0) {
+        digest = substr(ref, k + 1)
+        if (digest !~ /^[a-z0-9]+:[a-f0-9]+$/)
+          return fail("invalid digest in " ref)
+        ref = substr(ref, 1, k - 1)
+      }
+      last = ref
+      while ((k = index(last, "/")) > 0) last = substr(last, k + 1)
+      tag = ""
+      k = index(last, ":")
+      if (k > 0) {
+        tag = substr(last, k + 1)
+        if (tag !~ /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/)
+          return fail("invalid tag in " ref)
+        ref = substr(ref, 1, length(ref) - length(last) + k - 1)
+      }
+      registry = "docker.io"
+      path = ref
+      k = index(ref, "/")
+      if (k > 0) {
+        c = substr(ref, 1, k - 1)
+        if (c ~ /[.:]/ || c == "localhost") {
+          registry = c
+          path = substr(ref, k + 1)
+        }
+      }
+      if (registry == "index.docker.io") registry = "docker.io"
+      if (registry == "docker.io" && index(path, "/") == 0)
+        path = "library/" path
+      if (path !~ /^[a-z0-9]+([._-]+[a-z0-9]+)*(\/[a-z0-9]+([._-]+[a-z0-9]+)*)*$/)
+        return fail("invalid repository in " ref)
+      if (tag == "" && digest == "") tag = "latest"
+      out = registry "/" path
+      if (tag != "") out = out ":" tag
+      if (digest != "") out = out "@" digest
+      return out
+    }
+
+    function instruction(s,    w, n, i, keyword, alias, ref, key) {
+      n = words(s, w)
+      if (n == 0) return
+      keyword = toupper(w[1])
+      if (keyword == "RUN" || keyword == "COPY" || keyword == "ADD")
+        heredocs(s)
+      if (keyword == "ARG" && !stages) {
+        for (i = 2; i <= n; i++) declare(w[i])
+      } else if (keyword == "FROM") {
+        stages++
+        i = 2
+        while (i <= n && substr(w[i], 1, 2) == "--") i++
+        alias = ""
+        if (i + 2 <= n && toupper(w[i + 1]) == "AS") alias = tolower(w[i + 2])
+        error = ""
+        ref = expand(w[i])
+        key = tolower(ref)
+        if (error != "") {
+          base = ""
+        } else if (key in stage_base) {
+          base = stage_base[key]
+          error = stage_error[key]
+        } else if (key == "scratch") {
+          base = ""
+        } else {
+          base = normalise(ref)
+        }
+        base_error = error
+        error = ""
+        if (alias != "") {
+          stage_base[alias] = base
+          stage_error[alias] = base_error
+        }
+      }
+    }
+
+    BEGIN {
+      squote = sprintf("%c", 39)
+      heredoc_next = 1
+    }
+    {
+      line = $0
+      sub(/\r$/, "", line)
+      if (heredoc_next <= heredoc_total) {
+        if (heredoc_strip[heredoc_next]) sub(/^\t+/, "", line)
+        if (line == heredoc_word[heredoc_next]) heredoc_next++
+        next
+      }
+      if (line ~ /^[[:space:]]*#/ || line ~ /^[[:space:]]*$/) next
+      if (line ~ /\\[[:space:]]*$/) {
+        sub(/\\[[:space:]]*$/, "", line)
+        pending = pending line " "
+        next
+      }
+      instruction(pending line)
+      pending = ""
+    }
+    END {
+      if (pending != "") instruction(pending)
+      if (!stages) base_error = "no FROM instruction"
+      if (base_error != "") {
+        printf "WARN Base image labels left empty (%s)\n", base_error \
+          > "/dev/stderr"
+        exit 1
+      }
+      if (base != "") print base
+    }
+  ' "$dockerfile"
+
+  return "$?"
 }
 
 # Print top Docker image version.

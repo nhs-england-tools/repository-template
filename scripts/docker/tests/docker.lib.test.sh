@@ -8,7 +8,7 @@ set -euo pipefail
 # test writes only into its own scratch directory.
 #
 # Usage:
-#   $ ./scripts/docker/tests/docker-lib.test.sh
+#   $ ./scripts/docker/tests/docker.lib.test.sh
 #
 # Arguments (provided as environment variables):
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
@@ -29,7 +29,7 @@ function main() {
   source ./scripts/docker/docker.lib.sh
 
   # The caller's options must not reach the functions under test
-  unset -v args cmd check dir docker_dir name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT CONFIRM
+  unset -v args cmd check compose_dir dir docker_dir file project name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT CONFIRM
 
   DOCKER_IMAGE=repository-template/docker-test
   DOCKER_TITLE="Repository Template Docker Test"
@@ -72,11 +72,27 @@ function main() {
     test-docker-pull-pinned-images-skips-when-docker-is-missing \
     test-docker-pull-pinned-images-skips-when-docker-is-unreachable \
     test-docker-build-passes-metadata-and-tags-every-version \
+    test-docker-build-continues-without-base-labels-when-unresolved \
+    test-get-effective-base-image-normalises-python-and-node-flavours \
+    test-get-effective-base-image-expands-global-args \
+    test-get-effective-base-image-follows-stages-and-instruction-syntax \
+    test-get-effective-base-image-warns-when-unresolved \
     test-docker-bake-dockerfile-creates-effective-files \
     test-docker-bake-dockerfile-returns-create-effective-dockerfile-failure-in-conditional-call \
     test-docker-make-run-without-command-preserves-image-cmd \
     test-docker-make-run-forwards-command-and-args \
     test-docker-make-targets-select-functions \
+    test-docker-compose-build-forwards-file-and-project \
+    test-docker-compose-build-uses-compose-lookup-by-default \
+    test-docker-compose-make-forwards-dir \
+    test-docker-compose-run-finds-the-only-compose-dir \
+    test-docker-compose-run-prefers-top-level-compose-file \
+    test-docker-compose-run-rejects-several-compose-dirs \
+    test-docker-compose-run-rejects-repository-without-compose-file \
+    test-docker-compose-run-rejects-dir-without-compose-file \
+    test-docker-compose-run-rejects-file-and-dir \
+    test-docker-compose-run-rejects-missing-file \
+    test-docker-compose-run-propagates-failure \
     test-docker-make-build-and-lint-honour-docker-dir \
     test-docker-make-requires-docker-fn \
     test-docker-run-passes-args-command-and-tag \
@@ -725,13 +741,13 @@ function test-docker-pull-pinned-images-skips-when-runtime-hangs() {
   test-isolate-path
   test-stub docker 'if [[ "${1:-}" == "info" ]]; then exec sleep 30; fi'
   # Act
-  CONTAINER_INFO_TIMEOUT=1 test-capture docker-pull-pinned-images
+  CONTAINER_INFO_TIMEOUT=3 test-capture docker-pull-pinned-images
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
   assert-equal "$(printf '%s\n' \
-    "Checking docker (up to 1s)" \
-    "WARN Docker/Podman image pull skipped (docker: no response after 1s; podman: not installed)" \
+    "Checking docker (up to 3s)" \
+    "WARN Docker/Podman image pull skipped (docker: no response after 3s; podman: not installed)" \
     "HINT Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
     "$TEST_STDERR" "$STDERR_LABEL"
   assert-equal "info" "$(test-stub-calls docker)" "Docker calls"
@@ -825,8 +841,10 @@ function test-docker-build-passes-metadata-and-tags-every-version() {
   # Spaces around the line and each needle make every needle match whole
   # arguments.
   build=" $(test-stub-calls docker | grep '^build ' || true) "
-  assert-contains "$build" " --build-arg IMAGE=$image "
   assert-contains "$build" " --build-arg TITLE=Repository\\ Template\\ Docker\\ Test "
+  assert-contains "$build" " --build-arg BASE_IMAGE=docker.io/library/python:3.11.4-alpine3.18 "
+  assert-contains "$build" " --build-arg BASE_DIGEST=sha256:0135ae6442d1269379860b361760ad2cf6ab7c403d21935a8015b48d5bf78a86 "
+  assert-matches "$build" ' --build-arg BUILD_DATE=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z '
   assert-contains "$build" " --build-arg BUILD_VERSION=20230904-$commit "
   assert-contains "$build" " --tag $image:20230904-$commit "
   assert-contains "$build" " --file $(printf '%q' "$TEST_TMP/Dockerfile.effective") "
@@ -837,6 +855,132 @@ function test-docker-build-passes-metadata-and-tags-every-version() {
     "tag $image:20230904-$commit $image:latest")" \
     "$(test-stub-calls docker | grep '^tag ' || true)" "tag calls"
   assert-effective-dockerfile-is-pinned-with-metadata "$TEST_TMP/Dockerfile.effective"
+
+  return 0
+}
+
+function test-docker-build-continues-without-base-labels-when-unresolved() {
+
+  local build
+
+  # Arrange
+  printf '%s\n' 'ARG BASE_IMAGE' 'FROM ${BASE_IMAGE}' > "$TEST_TMP/Dockerfile"
+  use-empty-mise-toml
+  export BUILD_DATETIME="$FIXTURE_BUILD_DATETIME"
+  test-isolate-path
+  test-stub docker
+  # Act
+  dir="$TEST_TMP" test-capture docker-build
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "WARN Base image labels left empty (no global ARG default for BASE_IMAGE)" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+  build=" $(test-stub-calls docker | grep '^build ' || true) "
+  assert-contains "$build" " --build-arg BASE_IMAGE= "
+  assert-contains "$build" " --build-arg BASE_DIGEST= "
+
+  return 0
+}
+
+function test-get-effective-base-image-normalises-python-and-node-flavours() {
+
+  # Arrange, act and assert
+  assert-base-image docker.io/library/python:3.15.0-slim \
+    'FROM python:3.15.0-slim'
+  assert-base-image docker.io/library/python:3.15-slim-trixie \
+    'FROM python:3.15-slim-trixie'
+  assert-base-image docker.io/library/python:3.15-alpine3.22 \
+    'FROM python:3.15-alpine3.22'
+  assert-base-image "docker.io/library/python:3.15.0-slim@$DIGEST_A" \
+    "FROM python:3.15.0-slim@$DIGEST_A"
+  assert-base-image docker.io/library/node:26.12.0-slim \
+    'FROM node:26.12.0-slim'
+  assert-base-image docker.io/library/node:26-alpine3.22 \
+    'FROM node:26-alpine3.22'
+  assert-base-image docker.io/library/node:lts-bookworm-slim \
+    'FROM node:lts-bookworm-slim'
+  assert-base-image docker.io/library/node:latest 'FROM node'
+  assert-base-image "docker.io/library/node@$DIGEST_B" "FROM node@$DIGEST_B"
+  assert-base-image docker.io/library/python:3.15-slim \
+    'FROM docker.io/python:3.15-slim'
+  assert-base-image docker.io/library/node:26-slim \
+    'FROM index.docker.io/library/node:26-slim'
+  assert-base-image docker.io/cimg/python:3.15-node \
+    'FROM cimg/python:3.15-node'
+  assert-base-image cgr.dev/chainguard/python:latest-dev \
+    'FROM cgr.dev/chainguard/python:latest-dev'
+  assert-base-image public.ecr.aws/docker/library/node:26-slim \
+    'FROM public.ecr.aws/docker/library/node:26-slim'
+  assert-base-image localhost:5000/python:3.15-slim \
+    'FROM localhost:5000/python:3.15-slim'
+  assert-base-image "" 'FROM node:26-slim AS build' 'FROM scratch'
+
+  return 0
+}
+
+function test-get-effective-base-image-expands-global-args() {
+
+  # Arrange, act and assert
+  assert-base-image "docker.io/library/python:3.15.0-slim@$DIGEST_A" \
+    "ARG PYTHON_VERSION=3.15.0-slim@$DIGEST_A" \
+    'FROM python:${PYTHON_VERSION} AS builder' \
+    'FROM python:${PYTHON_VERSION} AS runtime'
+  assert-base-image docker.io/library/node:26.12.0-slim \
+    'ARG NODE_VERSION="26.12.0-slim"' 'FROM node:${NODE_VERSION}'
+  assert-base-image docker.io/library/node:26-alpine \
+    'ARG IMAGE=node TAG=26-alpine' 'FROM ${IMAGE}:$TAG'
+  assert-base-image docker.io/library/node:26-slim \
+    'ARG NODE_MAJOR=26' 'ARG NODE_TAG=${NODE_MAJOR}-slim' 'FROM node:${NODE_TAG}'
+  assert-base-image docker.io/library/python:3.15-slim \
+    'ARG PYTHON_VERSION' 'FROM python:${PYTHON_VERSION:-3.15-slim}'
+  assert-base-image docker.io/library/python:3.15-slim \
+    'ARG VARIANT=slim' 'FROM python:3.15${VARIANT:+-$VARIANT}'
+  assert-base-image docker.io/library/python:3.15 \
+    'ARG VARIANT=' 'FROM python:3.15${VARIANT:+-$VARIANT}'
+  assert-base-image docker.io/library/python:3.15-slim \
+    'FROM python:3.15-slim' 'ARG PYTHON_VERSION=3.14'
+
+  return 0
+}
+
+function test-get-effective-base-image-follows-stages-and-instruction-syntax() {
+
+  # Arrange, act and assert
+  assert-base-image docker.io/library/python:3.15-slim \
+    'FROM node:26-slim AS assets' 'FROM python:3.15-slim AS runtime'
+  assert-base-image docker.io/library/python:3.15-slim \
+    'FROM python:3.15-slim AS Base' 'FROM base AS test' 'FROM TEST'
+  assert-base-image docker.io/library/node:26-alpine \
+    'from --platform=$BUILDPLATFORM node:26-alpine as build'
+  assert-base-image docker.io/library/python:3.15-slim \
+    $'FROM \\' '  # A comment inside a continuation' $'  python:3.15-slim \\' \
+    '  AS runtime'
+  assert-base-image docker.io/library/python:3.15-slim \
+    'FROM python:3.15-slim' 'RUN <<EOF' 'from os import path' 'EOF' \
+    "RUN python - <<-'PY'" $'\tfrom sys import argv' $'\tPY' \
+    'RUN cat <<< "from here-string"'
+  assert-base-image docker.io/library/python:3.15-slim \
+    $'FROM python:3.15-slim\r' $'ARG PYTHON_VERSION=3.14\r'
+
+  return 0
+}
+
+function test-get-effective-base-image-warns-when-unresolved() {
+
+  # Arrange, act and assert
+  assert-base-image-unresolved "no global ARG default for BASE" \
+    'ARG BASE' 'FROM ${BASE}'
+  assert-base-image-unresolved "no global ARG default for UNDECLARED" \
+    'FROM python:${UNDECLARED}'
+  assert-base-image-unresolved "no global ARG default for A" \
+    'ARG B=${A}' 'FROM python:${B}'
+  assert-base-image-unresolved 'unsupported variable ${V#3}' \
+    'ARG V=3.15' 'FROM python:${V#3}'
+  assert-base-image-unresolved "invalid repository in Python" \
+    'FROM Python:3.15'
+  assert-base-image-unresolved "invalid digest in python@sha256:XYZ" \
+    'FROM python@sha256:XYZ'
+  assert-base-image-unresolved "no FROM instruction" 'RUN true'
 
   return 0
 }
@@ -967,6 +1111,230 @@ function test-docker-make-targets-select-functions() {
   assert-file-not-exists "$TEST_TMP/Dockerfile.effective"
   assert-contains "$help_output" "[command to run in the container]"
   assert-contains "$help_output" "[docker run options]"
+
+  return 0
+}
+
+function test-docker-compose-build-forwards-file-and-project() {
+
+  local compose_file expected
+
+  # Arrange
+  compose_file="$TEST_TMP/compose.yaml"
+  touch "$compose_file"
+  test-isolate-path make
+  test-stub docker '
+    if [[ "$1 ${2:-}" == "compose version" ]]; then exit 0; fi
+  '
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    file="$compose_file" project=dx-test make docker-compose-build
+  expected="$(printf '%s\n' \
+    "compose version" \
+    "compose --file $compose_file --project-name dx-test build")"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$expected" "$(test-stub-calls docker)" "Compose arguments"
+
+  return 0
+}
+
+function test-docker-compose-build-uses-compose-lookup-by-default() {
+
+  local expected
+
+  # Arrange
+  test-isolate-path make
+  test-stub docker '
+    if [[ "$1 ${2:-}" == "compose version" ]]; then exit 0; fi
+  '
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    -u file -u project -u compose_dir COMPOSE_FILE=compose.yaml:compose.dev.yaml \
+    make docker-compose-build
+  expected="$(printf '%s\n' "compose version" "compose build")"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$expected" "$(test-stub-calls docker)" "Compose arguments"
+
+  return 0
+}
+
+function test-docker-compose-make-forwards-dir() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/api/compose.yaml)"
+  test-isolate-path make
+  stub-docker-compose-recording-cwd
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    -u file -u project -u COMPOSE_FILE dir="$repo/services/api" \
+    make docker-compose-build
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(printf '%s\n' "compose version" "compose build")" \
+    "$(test-stub-calls docker)" "Compose arguments"
+  assert-equal "$(cd "$repo/services/api" && pwd -P)" \
+    "$(< "$TEST_TMP/docker.cwd")" "Compose working directory"
+
+  return 0
+}
+
+function test-docker-compose-run-finds-the-only-compose-dir() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/api/compose.yaml \
+    services/api/compose.override.yaml build/compose.yaml)"
+  printf '%s\n' 'build/' > "$repo/.gitignore"
+  test-isolate-path
+  stub-docker-compose-recording-cwd
+  # Act
+  test-capture compose-run-in "$repo" up --detach --wait
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(printf '%s\n' "compose version" "compose up --detach --wait")" \
+    "$(test-stub-calls docker)" "Compose arguments"
+  assert-equal "$(cd "$repo/services/api" && pwd -P)" \
+    "$(< "$TEST_TMP/docker.cwd")" "Compose working directory"
+
+  return 0
+}
+
+function test-docker-compose-run-prefers-top-level-compose-file() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo compose.yml services/api/compose.yaml)"
+  test-isolate-path
+  stub-docker-compose-recording-cwd
+  # Act
+  test-capture compose-run-in "$repo" ps
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(cd "$repo" && pwd -P)" "$(< "$TEST_TMP/docker.cwd")" \
+    "Compose working directory"
+
+  return 0
+}
+
+function test-docker-compose-run-rejects-several-compose-dirs() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/web/docker-compose.yml \
+    services/api/compose.yaml services/api/docker-compose.yaml)"
+  test-isolate-path
+  test-stub docker
+  # Act
+  test-capture compose-run-in "$repo" build
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "ERROR: Compose files were found in several directories, set 'dir' to one of: services/api services/web" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-docker-compose-run-rejects-repository-without-compose-file() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/api/compose.yaml.template)"
+  test-isolate-path
+  test-stub docker
+  # Act
+  test-capture compose-run-in "$repo" build
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "ERROR: No Compose file was found, set 'file' or 'dir'" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-docker-compose-run-rejects-dir-without-compose-file() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo compose.yaml services/api/compose.yaml)"
+  test-isolate-path
+  test-stub docker
+  # Act
+  compose_dir=services test-capture compose-run-in "$repo" build
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "ERROR: No Compose file was found in 'services'" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-docker-compose-run-rejects-file-and-dir() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/api/compose.yaml)"
+  test-isolate-path
+  test-stub docker
+  # Act
+  compose_dir=services/api file=services/api/compose.yaml \
+    test-capture compose-run-in "$repo" build
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "ERROR: Set either 'file' or 'dir', not both" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-docker-compose-run-rejects-missing-file() {
+
+  # Arrange
+  test-isolate-path
+  test-stub docker
+  # Act
+  file="$TEST_TMP/missing.yaml" test-capture _docker-compose-run build
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "ERROR: Compose file '$TEST_TMP/missing.yaml' was not found" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+  assert-stub-not-called docker
+
+  return 0
+}
+
+function test-docker-compose-run-propagates-failure() {
+
+  local compose_file
+
+  # Arrange
+  compose_file="$TEST_TMP/compose.yaml"
+  touch "$compose_file"
+  test-isolate-path
+  test-stub docker '
+    if [[ "$1 ${2:-}" == "compose version" ]]; then exit 0; fi
+    exit 42
+  '
+  # Act
+  file="$compose_file" project=dx-test test-capture \
+    _docker-compose-run up --detach --wait
+  # Assert
+  assert-equal 42 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$(test-stub-calls docker)" \
+    "compose --file $compose_file --project-name dx-test up --detach --wait"
 
   return 0
 }
@@ -1222,6 +1590,84 @@ function stub-image-absent() {
 
   local cli="$1"
   test-stub "$cli" 'if [[ "${1:-} ${2:-}" == "image inspect" ]]; then exit 1; fi'
+
+  return 0
+}
+
+# Fail unless the effective Dockerfile made of the given lines resolves to the
+# expected base image.
+# Arguments:
+#   $1=[expected base image, empty for 'scratch']
+#   $2...=[Dockerfile lines]
+function assert-base-image() {
+
+  local expected="$1"
+  shift
+  printf '%s\n' "$@" > "$TEST_TMP/Dockerfile.effective"
+  dir="$TEST_TMP" test-capture _get-effective-base-image
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL for: $*"
+  assert-equal "$expected" "$TEST_STDOUT" "base image for: $*"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL for: $*"
+
+  return 0
+}
+
+# Fail unless the effective Dockerfile made of the given lines is reported as
+# unresolved with the expected reason.
+# Arguments:
+#   $1=[expected reason]
+#   $2...=[Dockerfile lines]
+function assert-base-image-unresolved() {
+
+  local reason="$1"
+  shift
+  printf '%s\n' "$@" > "$TEST_TMP/Dockerfile.effective"
+  dir="$TEST_TMP" test-capture _get-effective-base-image
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL for: $*"
+  assert-equal "" "$TEST_STDOUT" "base image for: $*"
+  assert-equal "WARN Base image labels left empty ($reason)" \
+    "$TEST_STDERR" "$STDERR_LABEL for: $*"
+
+  return 0
+}
+
+# Create a Git repository with the given empty files and print its path.
+# Arguments:
+#   $@=[file paths relative to the repository]
+function make-compose-repo() {
+
+  local repo="$TEST_TMP/repo" path
+  git init --quiet "$repo"
+  for path in "$@"; do
+    mkdir -p "$repo/$(dirname "$path")"
+    touch "$repo/$path"
+  done
+  echo "$repo"
+
+  return 0
+}
+
+# Stub docker so that 'compose version' succeeds and any other call writes its
+# working directory to "$TEST_TMP/docker.cwd".
+function stub-docker-compose-recording-cwd() {
+
+  test-stub docker "
+    if [[ \"\$1 \${2:-}\" == 'compose version' ]]; then exit 0; fi
+    pwd -P > '$TEST_TMP/docker.cwd'
+  "
+
+  return 0
+}
+
+# Run _docker-compose-run from the given directory.
+# Arguments:
+#   $1=[directory]
+#   $2...=[Compose arguments]
+function compose-run-in() {
+
+  cd "$1" || return "$?"
+  shift
+  _docker-compose-run "$@" || return "$?"
 
   return 0
 }

@@ -14,7 +14,7 @@ set -euo pipefail
 # written inside the repository. A run killed with SIGKILL leaves its tags.
 # The former test that pulled a real, unpinned image over the network is
 # replaced by deterministic stub tests of 'docker-get-image-version-and-pull'
-# in 'docker-lib.test.sh', so this suite never pulls anything but the base
+# in 'docker.lib.test.sh', so this suite never pulls anything but the base
 # image pinned in 'mise.toml.test'.
 #
 # Usage:
@@ -133,18 +133,31 @@ function test-docker-build-tags-every-version-on-one-image() {
 function test-docker-build-sets-oci-labels() {
 
   # Arrange
-  local version revision expected labels
+  local version revision base_digest expected labels created
   version="$(head -n 1 "$SUITE_TMP/image/.version")"
   revision="$(git rev-parse --short HEAD)"
-  expected="$(printf '%s\n' "$version" "$revision" "$DOCKER_TITLE")"
+  base_digest="${PINNED_PYTHON##*@}"
+  expected="$(printf '%s\n' \
+    "$version" \
+    "$revision" \
+    "$DOCKER_TITLE" \
+    "docker.io/library/python:3.11.4-alpine3.18" \
+    "$base_digest")"
   # Act
   labels="$(docker image inspect --format \
     '{{ index .Config.Labels "org.opencontainers.image.version" }}
 {{ index .Config.Labels "org.opencontainers.image.revision" }}
-{{ index .Config.Labels "org.opencontainers.image.title" }}' \
+{{ index .Config.Labels "org.opencontainers.image.title" }}
+{{ index .Config.Labels "org.opencontainers.image.base.name" }}
+{{ index .Config.Labels "org.opencontainers.image.base.digest" }}' \
+    "$DOCKER_IMAGE:$version")"
+  created="$(docker image inspect --format \
+    '{{ index .Config.Labels "org.opencontainers.image.created" }}' \
     "$DOCKER_IMAGE:$version")"
   # Assert
   assert-equal "$expected" "$labels" "version, revision and title labels"
+  assert-matches "$created" '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' \
+    "RFC 3339 created label"
 
   return 0
 }

@@ -61,8 +61,7 @@ checks every tracked workflow file and every tracked local `action.yaml` or
 checks, `check=staged-changes`, `check=working-tree-changes` or `check=branch`
 limits it to the changed files, and untracked files are never checked. A change
 to the allowlist, the rules or the check script checks every file. It converts
-each file to JSON with
-`yq`, applies the rules in
+each file to JSON with `yq`, applies the rules in
 [check-workflow-security.jq](../../scripts/quality/check-workflow-security.jq)
 with `jq`, and fails when a file breaks a rule or cannot be parsed. The rules
 require:

@@ -3,16 +3,24 @@ name: "Test stage"
 on:
   workflow_call:
     inputs:
+      build_datetime_london:
+        description: "London build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
       build_datetime:
         description: "Build datetime, set by the CI/CD pipeline workflow"
+        required: true
+        type: string
+      build_epoch:
+        description: "Build epoch, set by the CI/CD pipeline workflow"
         required: true
         type: string
       build_timestamp:
         description: "Build timestamp, set by the CI/CD pipeline workflow"
         required: true
         type: string
-      build_epoch:
-        description: "Build epoch, set by the CI/CD pipeline workflow"
+      mise_version:
+        description: "mise CLI version, set by the CI/CD pipeline workflow"
         required: true
         type: string
       nodejs_version:
@@ -46,10 +54,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: "Run unit test suite"
+      - name: "Set up mise"
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: ${{ inputs.mise_version }}
+          install: true
+          install_args: "python node jq yq editorconfig-checker npm:markdownlint-cli npm:prettier lychee shellcheck"
+          persist_github_token: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Run type checks and tests"
         run: |
           make toolchain-verify-gnu
-          make test
+          make typecheck test
       - name: "Save the result of fast test suite"
         run: |
           echo "Nothing to save"

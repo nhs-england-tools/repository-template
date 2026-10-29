@@ -5,10 +5,11 @@ this template, not the NHS Tech Radar. It does not grant technology approval.
 Consult the current internal NHS Tech Radar for approval status and requirements
 before selecting a tool.
 
-Python and TypeScript are Engineering-approved Mainstream languages on the NHS
-Tech Radar. [Django], [FastAPI] and [React] are also approved. Teams are asked
-to use [OpenFeature] for feature toggling. The remaining tools below are
-provisional suggestions, not ratified defaults.
+Python and TypeScript are orgnaisation-approved Mainstream languages on the NHS
+Tech Radar. PostgreSQL is an orgnaisation-approved Mainstream database. [Django],
+[FastAPI] and [React] are also approved. Teams are asked to use [OpenFeature] for
+feature toggling. The remaining tools below are provisional suggestions, not
+ratified defaults.
 
 ## Python ecosystem 🐍
 
@@ -38,6 +39,11 @@ provisional suggestions, not ratified defaults.
 | CLI argument parsing     | [Commander.js] with optional [Chalk] for colour or text emphasis                                         |
 | TUI framework            | [Ink] for React-based interactive terminal applications, not simple prompts                              |
 
+## Persistence 🗄️
+
+Use [PostgreSQL] for production-grade persistence and [SQLite] as a supporting
+in-memory database.
+
 ## Shared tooling and standards 🔗
 
 | Area                         | Practical recommendation                                                |
@@ -51,40 +57,42 @@ provisional suggestions, not ratified defaults.
 
 Record tool choices and alternatives in an ADR using the [ADR template].
 
-[uv]: https://docs.astral.sh/uv/
+[ADR template]: ./ADR-nnn_Any_Decision_Record_Template.md
+[Biome]: https://biomejs.dev/
+[Bruno]: https://www.usebruno.com/
+[Chalk]: https://github.com/chalk/chalk
+[Commander.js]: https://github.com/tj/commander.js
 [Django]: https://www.djangoproject.com/
+[ESLint]: https://eslint.org/
+[fast-check]: https://fast-check.dev/
 [FastAPI]: https://fastapi.tiangolo.com/
-[Ruff]: https://docs.astral.sh/ruff/
+[Hypothesis]: https://hypothesis.readthedocs.io/en/latest/
+[Ink]: https://github.com/vadimdemedes/ink
+[Jest]: https://jestjs.io/
 [mypy]: https://mypy.readthedocs.io/
+[Node.js]: https://nodejs.org/en
+[OpenFeature]: https://openfeature.dev/
+[Pact]: https://pact.io/
+[pnpm]: https://pnpm.io/
+[PostgreSQL]: https://www.postgresql.org/
+[Powertools for AWS Lambda]: https://docs.aws.amazon.com/powertools/
+[Prettier]: https://prettier.io/
+[Prism]: https://github.com/stoplightio/prism
 [Pyright]: https://microsoft.github.io/pyright/
 [pytest]: https://pytest.org/
-[Hypothesis]: https://hypothesis.readthedocs.io/en/latest/
-[Requests]: https://requests.readthedocs.io/en/latest/
-[structlog]: https://www.structlog.org/en/stable/
-[Powertools for AWS Lambda]: https://docs.aws.amazon.com/powertools/
-[Typer]: https://typer.tiangolo.com/
-[Rich]: https://rich.readthedocs.io/en/stable/
-[Textual]: https://textual.textualize.io/
-[Node.js]: https://nodejs.org/en
-[pnpm]: https://pnpm.io/
 [React]: https://react.dev/
-[Biome]: https://biomejs.dev/
-[ESLint]: https://eslint.org/
-[Prettier]: https://prettier.io/
-[tsc]: https://www.typescriptlang.org/
-[Vitest]: https://vitest.dev/
-[Vite]: https://vite.dev/
-[Jest]: https://jestjs.io/
-[fast-check]: https://fast-check.dev/
-[supertest]: https://github.com/forwardemail/supertest
-[winston]: https://github.com/winstonjs/winston
-[Commander.js]: https://github.com/tj/commander.js
-[Chalk]: https://github.com/chalk/chalk
-[Ink]: https://github.com/vadimdemedes/ink
+[Requests]: https://requests.readthedocs.io/en/latest/
+[Rich]: https://rich.readthedocs.io/en/stable/
+[Ruff]: https://docs.astral.sh/ruff/
 [Schemathesis]: https://schemathesis.io/
-[Prism]: https://github.com/stoplightio/prism
-[Pact]: https://pact.io/
+[SQLite]: https://www.sqlite.org/
+[structlog]: https://www.structlog.org/en/stable/
+[supertest]: https://github.com/forwardemail/supertest
+[Textual]: https://textual.textualize.io/
+[tsc]: https://www.typescriptlang.org/
+[Typer]: https://typer.tiangolo.com/
+[uv]: https://docs.astral.sh/uv/
+[Vite]: https://vite.dev/
+[Vitest]: https://vitest.dev/
+[winston]: https://github.com/winstonjs/winston
 [WireMock]: https://wiremock.org/
-[Bruno]: https://www.usebruno.com/
-[OpenFeature]: https://openfeature.dev/
-[ADR template]: ./ADR-nnn_Any_Decision_Record_Template.md

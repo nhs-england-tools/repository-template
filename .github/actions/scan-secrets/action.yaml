@@ -8,5 +8,5 @@ runs:
       env:
         FORCE_USE_DOCKER: "true"
       run: |
-        # Please do not change this `check=whole-history` setting, as new patterns may be added or history may be rewritten.
+        # Full-history scanning is intentional, so new patterns also cover earlier commits and rewritten history.
         make scan-secrets check=whole-history

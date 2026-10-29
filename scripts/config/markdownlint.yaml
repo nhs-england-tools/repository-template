@@ -3,8 +3,7 @@
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ AI ASSISTANT DIRECTIVE                                                      │
 # │                                                                             │
-# │ Do NOT modify this file to fix markdown lint errors.                        │
-# │ Instead, fix the markdown files themselves:                                 │
+# │ These rules are shared. Fix Markdown source files to meet them.             │
 # │   - Indent list sub-content with 4 spaces to maintain list continuity       │
 # │   - Add blank lines between headings and content                            │
 # │   - Use proper fenced code block language specifiers                        │

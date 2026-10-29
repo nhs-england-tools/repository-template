@@ -8,8 +8,8 @@ set -euo pipefail
 # records the call's arguments in "<stub directory>/<name>.calls", then runs
 # "<stub directory>/<name>.body" with the same arguments. It uses bash builtins
 # only, because some tests run it with almost nothing on PATH. VERBOSE is not
-# honoured, so a stub never adds a trace to the output under test. Do not run
-# this file directly.
+# honoured, so a stub never adds a trace to the output under test. Use
+# 'test-stub' from the test harness to invoke this dispatcher.
 #
 # Usage:
 #   $ test-stub NAME [BODY]  # In a test that sources

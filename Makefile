@@ -31,6 +31,12 @@ typecheck: # Run type checker @Quality
 test: # Run all tests @Quality
 	./scripts/tests/run-test-suites.sh
 
+check: # Run all format, lint, type and test checks @Quality
+	$(MAKE) format
+	$(MAKE) lint
+	$(MAKE) typecheck
+	$(MAKE) test
+
 build: # Build the project artefact @Build
 	# TODO: Implement the artefact build step
 
@@ -40,16 +46,17 @@ publish: # Publish the project artefact @Release
 deploy: # Deploy the project artefact to the target environment @Release
 	# TODO: Implement the artefact deployment step
 
-clean:: # Clean-up project resources (main) @Operations
-	# TODO: Implement project resources clean-up step
-
 config:: # Configure development environment (main) @Configuration
 	# TODO: Implement project-specific configuration steps
+
+clean:: # Clean-up project resources (main) @Operations
+	# TODO: Implement project resources clean-up step
 
 # ==============================================================================
 
 ${VERBOSE}.SILENT: \
 	build \
+	check \
 	clean \
 	config \
 	deploy \

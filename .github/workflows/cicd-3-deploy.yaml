@@ -17,9 +17,11 @@ jobs:
       contents: read
     timeout-minutes: 1
     outputs:
+      build_datetime_london: ${{ steps.variables.outputs.build_datetime_london }}
       build_datetime: ${{ steps.variables.outputs.build_datetime }}
-      build_timestamp: ${{ steps.variables.outputs.build_timestamp }}
       build_epoch: ${{ steps.variables.outputs.build_epoch }}
+      build_timestamp: ${{ steps.variables.outputs.build_timestamp }}
+      mise_version: ${{ steps.variables.outputs.mise_version }}
       nodejs_version: ${{ steps.variables.outputs.nodejs_version }}
       python_version: ${{ steps.variables.outputs.python_version }}
       version: ${{ steps.variables.outputs.version }}
@@ -42,21 +44,23 @@ jobs:
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
+          echo "build_datetime_london=$(TZ=Europe/London date --date=$datetime +'%Y-%m-%dT%H:%M:%S%z')" >> $GITHUB_OUTPUT
           echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
-          echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
+          echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
           source scripts/docker/docker.lib.sh
-          nodejs_version="$(_toml-table-entry tools node mise.toml)"
-          python_version="$(_toml-table-entry tools python mise.toml)"
-          echo "nodejs_version=${nodejs_version}" >> "$GITHUB_OUTPUT"
-          echo "python_version=${python_version}" >> "$GITHUB_OUTPUT"
+          echo "mise_version=$(_toml-table-entry "" min_version mise.toml)" >> "$GITHUB_OUTPUT"
+          echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
+          echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
           # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
       - name: "List variables"
         env:
+          BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
           BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
-          BUILD_TIMESTAMP: ${{ steps.variables.outputs.build_timestamp }}
           BUILD_EPOCH: ${{ steps.variables.outputs.build_epoch }}
+          BUILD_TIMESTAMP: ${{ steps.variables.outputs.build_timestamp }}
+          MISE_VERSION: ${{ steps.variables.outputs.mise_version }}
           NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
           PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
           VERSION: ${{ steps.variables.outputs.version }}
@@ -70,6 +74,15 @@ jobs:
       contents: read
     needs: [metadata]
     timeout-minutes: 10
+    env:
+      BUILD_DATETIME_LONDON: ${{ needs.metadata.outputs.build_datetime_london }}
+      BUILD_DATETIME: ${{ needs.metadata.outputs.build_datetime }}
+      BUILD_EPOCH: ${{ needs.metadata.outputs.build_epoch }}
+      BUILD_TIMESTAMP: ${{ needs.metadata.outputs.build_timestamp }}
+      MISE_VERSION: ${{ needs.metadata.outputs.mise_version }}
+      NODEJS_VERSION: ${{ needs.metadata.outputs.nodejs_version }}
+      PYTHON_VERSION: ${{ needs.metadata.outputs.python_version }}
+      VERSION: ${{ needs.metadata.outputs.version }}
     steps:
       - name: "Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

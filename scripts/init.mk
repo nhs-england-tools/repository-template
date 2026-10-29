@@ -113,6 +113,12 @@ toolchain-install-gnu-macos: # Install this repository's required GNU userland t
 toolchain-verify-gnu: # Verify GNU tools, GNU Make 3.82+ and Bash 5.2+ on PATH; report Docker/Podman versions (any OS) @Configuration
 	./scripts/toolchain/verify-gnu.sh
 
+config:: # Configure development environment (common) @Configuration
+	$(MAKE) \
+		_toolchain-install \
+		githooks-config \
+		docker-pull-pinned-images \
+
 clean:: # Remove files ignored by Git and the empty directories left behind (common) - optional: CONFIRM=[true to delete, default is a preview only] @Operations
 	if [[ "$(CONFIRM)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
 		git clean -f -d -X
@@ -122,12 +128,6 @@ clean:: # Remove files ignored by Git and the empty directories left behind (com
 		find . -mindepth 1 -type d -empty -not -path '*/.git/*' | sed 's|^\./|Would remove empty directory |'
 		echo "Preview only, run 'make clean CONFIRM=true' to delete"
 	fi
-
-config:: # Configure development environment (common) @Configuration
-	$(MAKE) \
-		_toolchain-install \
-		githooks-config \
-		docker-pull-pinned-images \
 
 help: # Print help @Others
 	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"
@@ -149,7 +149,7 @@ list-variables: # List all the variables available to make @Others
 .EXPORT_ALL_VARIABLES:
 .NOTPARALLEL:
 .ONESHELL:
-.PHONY: * # Please do not change this line! The alternative usage of it introduces unnecessary complexity and is considered an anti-pattern.
+.PHONY: * # This wildcard declaration is intentional, per-target lists add complexity.
 MAKEFLAGS := --no-print-director
 SHELL := $(shell command -v bash)
 ifeq (true, $(shell [[ "${VERBOSE}" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]] && echo true))

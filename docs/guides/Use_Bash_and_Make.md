@@ -3,6 +3,8 @@
 - [Use Bash and Make](#use-bash-and-make)
   - [Using Make](#using-make)
     - [Make extensions](#make-extensions)
+      - [Root lifecycle target map](#root-lifecycle-target-map)
+      - [Compose with root lifecycle targets](#compose-with-root-lifecycle-targets)
   - [Using Bash](#using-bash)
   - [Make and Bash working together](#make-and-bash-working-together)
   - [Conventions](#conventions)
@@ -105,6 +107,104 @@ Follow these rules:
 - Keep extension paths free of spaces, as Make splits file lists on whitespace.
 - When load order matters, use one `*.ext.mk` file that includes `*.lib.mk`
   files in the order needed.
+
+#### Root lifecycle target map
+
+This map covers common lifecycle targets, not every command shown by
+`make help`. The full help also includes shared toolchain, Docker, quality-gate
+and extension commands. The root `Makefile` provides stable target names for
+common project tasks. Some already run template checks, while others are
+placeholders for the adopting project. Implement a missing capability in the
+root recipe or add it through an auto-loaded extension. Keep the public target
+name stable either way.
+
+| Target                                        | Template default                                                  | Project or extension responsibility                                           |
+| --------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `config`                                      | Installs shared tools, hooks and pinned helper images.            | Add independent setup with a `config::` rule when needed.                     |
+| `env`                                         | Placeholder for project environment setup.                        | Create or validate the language environment.                                  |
+| `setup`                                       | Optional convenience target, not a core requirement.              | Compose `config` and `deps` for one-command onboarding.                       |
+| `deps`                                        | Placeholder for project dependencies.                             | Install or synchronise locked application dependencies.                       |
+| `deps-prod`                                   | Optional; no core default.                                        | Install only production dependencies when they differ from development deps.  |
+| `deps-update`                                 | Optional; no core default.                                        | Update dependencies and their lock files explicitly.                          |
+| `format`                                      | Formats Markdown files.                                           | Add language formatters as prerequisites.                                     |
+| `lint`                                        | Runs common file, Markdown, shell and workflow checks.            | Add language or domain linters as prerequisites.                              |
+| `typecheck`                                   | Placeholder for project type checking.                            | Add the selected static type checker.                                         |
+| `test`                                        | Runs the template's shell test suites.                            | Add unit, integration or domain test targets.                                 |
+| `test-unit` / `test-integration` / `test-all` | Optional; no core default.                                        | Add slower integration or end-to-end tiers to the fast `test` target.         |
+| `check`                                       | Runs `format`, `lint`, `typecheck` and `test`.                    | Extend component targets; keep ordered aggregate semantics stable.            |
+| `build`                                       | Placeholder for project artefact creation.                        | Build the package, binary, image or other artefact.                           |
+| `run`                                         | Optional; no core default.                                        | Run the application in the foreground for local development.                  |
+| `up` / `down`                                 | Optional; no core default.                                        | Start and stop an application or dependency stack.                            |
+| `start` / `stop`                              | Optional; no core default.                                        | Start and stop a background service, managing only project-owned resources.   |
+| `status` / `logs`                             | Optional; no core default.                                        | Inspect service state and view its logs.                                      |
+| `install` / `uninstall`                       | Optional when shipping an installable package or command.         | Install and safely reverse that installation.                                 |
+| `publish`                                     | Placeholder for publishing.                                       | Add publishing only when the project defines a release process.               |
+| `deploy`                                      | Placeholder for deployment.                                       | Add deployment only when the project defines an environment and release flow. |
+| `clean`                                       | Previews ignored-file cleanup and removes Docker build artefacts. | Add project-owned cleanup with a `clean::` rule when needed.                  |
+
+For an ordered aggregate such as `check`, prefer a recipe that invokes each root
+target in sequence:
+
+```makefile
+check: # Run all format, lint, type and test checks @Quality
+  $(MAKE) format
+  $(MAKE) lint
+  $(MAKE) typecheck
+  $(MAKE) test
+```
+
+This order matters when formatting changes files that linting or tests then
+read. Recursive `$(MAKE)` calls propagate Make options, and the repository's
+fail-fast shell makes the aggregate stop at the first failure. A prerequisite
+list such as `check: format lint typecheck test` is suitable when the work is
+independent. GNU Make may run independent prerequisites concurrently when
+parallel execution is enabled. This template currently sets `.NOTPARALLEL`, but
+the recipe still makes the required order explicit if that policy changes.
+
+#### Compose with root lifecycle targets
+
+Use the root targets as the stable interface for engineers and CI. An extension
+can add its work as a prerequisite without replacing the recipe already owned by
+the root `Makefile`:
+
+```makefile
+# Existing project target in the root Makefile
+lint: # Run common and project lint checks @Quality
+  $(MAKE) lint-markdown-format
+
+# scripts/python/python.ext.mk
+python-lint: # Lint Python source @Quality
+  uv run ruff check src tests
+
+lint: python-lint
+```
+
+The root `Makefile` still owns the public `lint` target and its common recipe.
+The auto-loaded extension adds `python-lint` to its prerequisites. GNU Make
+merges single-colon declarations for the same target, so `make lint` runs the
+Python check and then the root recipe. This is why the extension does not need
+to edit the root `Makefile` or define a second recipe for `lint`.
+
+Choose extension target prefixes to reflect ownership. In a repository with one
+primary ecosystem, a technology prefix is clear: a Python extension can add
+`deps: python-deps`, `lint: python-lint`, `format: python-format`,
+`typecheck: python-typecheck`, `test: python-test` and `build: python-build`.
+
+In a larger domain-driven system, prefer the bounded context or domain as the
+prefix. For example, an Orders extension might add `test: orders-test` and
+`deploy: orders-deploy`, even if those recipes use Python, TypeScript or SQL
+tools internally. The public target then describes the capability's domain owner
+and can stay stable if its implementation technology changes. Separate domain
+extensions can each add prerequisites to a root target such as `test`.
+
+Database operations should follow the same ownership rule. Use a domain name
+such as `orders-migrate` when a migration belongs to that bounded context, or a
+technology name such as `database-migrate` when it is a shared platform
+operation. Attach each operation only to the lifecycle targets that require it.
+Use `config::` or `clean::` when separate extensions need independent setup or
+cleanup recipes. Do not use double-colon rules as an override for a single-colon
+target. A target cannot mix `:` and `::` rules, and double-colon rules run
+separate recipes rather than merging prerequisites.
 
 ## Using Bash
 

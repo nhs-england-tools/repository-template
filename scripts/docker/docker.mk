@@ -5,9 +5,33 @@
 # lines of effective code.
 # In most cases there should be no need to modify the existing make targets.
 
-DOCKER_IMAGE ?= $(or ${docker_image}, $(or ${IMAGE}, $(or ${image}, ghcr.io/org/repo)))
-DOCKER_TITLE ?= $(or "${docker_title}", $(or "${TITLE}", $(or "${title}", "Service Docker image")))
+DOCKER_IMAGE ?= $(or ${docker_image}, ${IMAGE}, ${image})
+DOCKER_TITLE ?= $(or ${docker_title}, ${TITLE}, ${title})
 FORCE_USE_DOCKER ?= false
+
+docker-compose-build: # Build Compose services - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Build
+	$(MAKE) _docker docker_fn="compose-build" dir=. \
+		compose_dir=$(or ${compose_dir}, ${dir})
+
+docker-compose-up: # Start Compose services - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Development
+	$(MAKE) _docker docker_fn="compose-up" dir=. \
+		compose_dir=$(or ${compose_dir}, ${dir})
+
+docker-compose-down: # Stop Compose services - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Operations
+	$(MAKE) _docker docker_fn="compose-down" dir=. \
+		compose_dir=$(or ${compose_dir}, ${dir})
+
+docker-compose-status: # Show Compose status - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Operations
+	$(MAKE) _docker docker_fn="compose-status" dir=. \
+		compose_dir=$(or ${compose_dir}, ${dir})
+
+docker-compose-logs: # Print recent Compose logs - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Operations
+	$(MAKE) _docker docker_fn="compose-logs" dir=. \
+		compose_dir=$(or ${compose_dir}, ${dir})
+
+docker-compose-clean: # Remove Compose resources - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Operations
+	$(MAKE) _docker docker_fn="compose-clean" dir=. \
+		compose_dir=$(or ${compose_dir}, ${dir})
 
 docker-bake-dockerfile: # Create Dockerfile.effective - optional: docker_dir|dir=[path to the image directory where the Dockerfile is located, default is '.'] @Build
 	$(MAKE) _docker docker_fn="bake-dockerfile" \
@@ -57,6 +81,12 @@ ${VERBOSE}.SILENT: \
 	clean \
 	docker-bake-dockerfile \
 	docker-build \
+	docker-compose-build \
+	docker-compose-clean \
+	docker-compose-down \
+	docker-compose-logs \
+	docker-compose-status \
+	docker-compose-up \
 	docker-lint \
 	docker-pull-pinned-images \
 	docker-push \
