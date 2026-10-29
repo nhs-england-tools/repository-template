@@ -29,7 +29,7 @@ function main() {
   source ./scripts/docker/docker.lib.sh
 
   # The caller's options must not reach the functions under test
-  unset -v args cmd check dir name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT
+  unset -v args cmd check dir docker_dir name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT CONFIRM
 
   DOCKER_IMAGE=repository-template/docker-test
   DOCKER_TITLE="Repository Template Docker Test"
@@ -74,6 +74,11 @@ function main() {
     test-docker-build-passes-metadata-and-tags-every-version \
     test-docker-bake-dockerfile-creates-effective-files \
     test-docker-bake-dockerfile-returns-create-effective-dockerfile-failure-in-conditional-call \
+    test-docker-make-run-without-command-preserves-image-cmd \
+    test-docker-make-run-forwards-command-and-args \
+    test-docker-make-targets-select-functions \
+    test-docker-make-build-and-lint-honour-docker-dir \
+    test-docker-make-requires-docker-fn \
     test-docker-run-passes-args-command-and-tag \
     test-docker-check-test-reports-pass-and-fail \
     test-docker-push-pushes-every-version-and-latest \
@@ -890,6 +895,121 @@ function test-docker-run-passes-args-command-and-tag() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "run --rm --platform linux/amd64 --env A=1 repository-template/docker-test:1.2.3 python --version" \
     "$(test-stub-calls docker)" "docker calls"
+
+  return 0
+}
+
+function test-docker-make-run-without-command-preserves-image-cmd() {
+
+  # Arrange
+  echo 1.2.3 > "$TEST_TMP/.version"
+  test-isolate-path make
+  test-stub docker
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    DOCKER_IMAGE="$DOCKER_IMAGE" dir="$TEST_TMP" make docker-run
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "run --rm --platform linux/amd64 $DOCKER_IMAGE:1.2.3" \
+    "$(test-stub-calls docker)" "docker run arguments without cmd"
+
+  return 0
+}
+
+function test-docker-make-run-forwards-command-and-args() {
+
+  # Arrange
+  echo 1.2.3 > "$TEST_TMP/.version"
+  test-isolate-path make
+  test-stub docker
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    DOCKER_IMAGE="$DOCKER_IMAGE" dir="$TEST_TMP" \
+    cmd="python --version" args="--env A=1" make docker-run
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "run --rm --platform linux/amd64 --env A=1 $DOCKER_IMAGE:1.2.3 python --version" \
+    "$(test-stub-calls docker)" "docker run arguments with cmd and args"
+
+  return 0
+}
+
+function test-docker-make-targets-select-functions() {
+
+  local bake_status push_calls help_output
+
+  # Arrange
+  cp "$TEST_REPO_ROOT/scripts/docker/tests/Dockerfile" "$TEST_TMP/Dockerfile"
+  cp "$TEST_REPO_ROOT/scripts/docker/tests/VERSION" "$TEST_TMP/VERSION"
+  test-isolate-path make perl tput
+  test-stub docker
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    DOCKER_IMAGE="$DOCKER_IMAGE" dir="$TEST_TMP" MISE_TOML="$FIXTURE_MISE_TOML" \
+    BUILD_DATETIME="$FIXTURE_BUILD_DATETIME" make docker-bake-dockerfile
+  bake_status="$TEST_STATUS"
+  assert-equal 0 "$bake_status" "docker-bake-dockerfile exit status"
+  assert-file-exists "$TEST_TMP/Dockerfile.effective"
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    DOCKER_IMAGE="$DOCKER_IMAGE" dir="$TEST_TMP" make docker-push
+  push_calls="$(test-stub-calls docker)"
+  # Not 'make clean', whose common rule cleans the real checkout
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    DOCKER_IMAGE="$DOCKER_IMAGE" dir="$TEST_TMP" make _docker docker_fn=clean
+  # A wide terminal keeps each help description on one line
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    TERM=dumb COLUMNS=1000 make help
+  help_output="$TEST_STDOUT"
+  # Assert
+  assert-contains "$push_calls" "push $DOCKER_IMAGE:"
+  assert-contains "$(test-stub-calls docker)" "rmi $DOCKER_IMAGE:"
+  assert-file-not-exists "$TEST_TMP/.version"
+  assert-file-not-exists "$TEST_TMP/Dockerfile.effective"
+  assert-contains "$help_output" "[command to run in the container]"
+  assert-contains "$help_output" "[docker run options]"
+
+  return 0
+}
+
+function test-docker-make-build-and-lint-honour-docker-dir() {
+
+  # Arrange
+  local effective
+  cp "$TEST_REPO_ROOT/scripts/docker/tests/Dockerfile" "$TEST_TMP/Dockerfile"
+  cp "$TEST_REPO_ROOT/scripts/docker/tests/VERSION" "$TEST_TMP/VERSION"
+  effective="$(printf '%q' "$TEST_TMP/Dockerfile.effective")"
+  test-isolate-path make
+  test-stub hadolint
+  test-stub docker
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER \
+    DOCKER_IMAGE="$DOCKER_IMAGE" docker_dir="$TEST_TMP" MISE_TOML="$FIXTURE_MISE_TOML" \
+    BUILD_DATETIME="$FIXTURE_BUILD_DATETIME" make docker-lint
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "docker-lint exit status"
+  assert-equal "--config scripts/config/hadolint.yaml $effective" \
+    "$(test-stub-calls hadolint)" "hadolint calls"
+  # Build only once lint is proven, so it cannot write to the checkout
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER \
+    DOCKER_IMAGE="$DOCKER_IMAGE" docker_dir="$TEST_TMP" MISE_TOML="$FIXTURE_MISE_TOML" \
+    BUILD_DATETIME="$FIXTURE_BUILD_DATETIME" make docker-build
+  assert-equal 0 "$TEST_STATUS" "docker-build exit status"
+  assert-contains " $(test-stub-calls docker | grep '^build ' || true) " " --file $effective "
+
+  return 0
+}
+
+function test-docker-make-requires-docker-fn() {
+
+  # Arrange
+  test-isolate-path make
+  # Act
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    make _docker docker_fn=
+  # Assert
+  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "docker_fn is required"
+  assert-contains "$TEST_STDERR" "make _docker docker_fn=run"
 
   return 0
 }

@@ -33,7 +33,7 @@ function main() {
   cd ./scripts/docker/tests
 
   # The caller's options must not reach the functions under test
-  unset -v args dir
+  unset -v args cmd dir docker_dir
   export DOCKER_TITLE="Repository Template Docker Test"
   export BUILD_DATETIME="2023-09-04T15:46:34+0000"
   export MISE_TOML="$PWD/mise.toml.test"
@@ -167,7 +167,11 @@ function test-docker-run-executes-the-command() {
 
   # Arrange
   # Act
-  cmd="python --version" dir="$SUITE_TMP/image" test-capture docker-run
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    make --no-print-directory -C "$TEST_REPO_ROOT" docker-run \
+    DOCKER_IMAGE="$DOCKER_IMAGE" \
+    dir="$SUITE_TMP/image" \
+    cmd="python --version"
   # Assert
   assert-equal 0 "$TEST_STATUS" "docker-run exit status"
   assert-matches "$TEST_STDOUT" '^Python 3\.11\.4$' "docker-run output"

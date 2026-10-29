@@ -91,13 +91,13 @@ function docker-lint() {
 #   cmd=[command to pass to the container for execution, default is none]
 #   dir=[image directory with the Dockerfile, default is '.']
 #   check=[output string to search for]
+# This function has no Make target, so callers invoke it directly.
 function docker-check-test() {
 
   local dir=${dir:-$PWD}
 
   # check is supplied by the environment, not declared as a local.
   # Intentional split: args and cmd environment strings contain multiple words.
-  # docker-check-test has no Make target, so callers invoke it directly.
   # shellcheck disable=SC2086,SC2154
   docker run --rm --platform linux/amd64 \
     ${args:-} \
@@ -113,6 +113,7 @@ function docker-check-test() {
 #   args=[arguments to pass to Docker to run the container, default is none]
 #   cmd=[command to pass to the container for execution, default is none]
 #   dir=[image directory with the Dockerfile, default is '.']
+# cmd and args are available through 'make docker-run' as well as direct calls.
 function docker-run() {
 
   local dir=${dir:-$PWD}
@@ -120,7 +121,6 @@ function docker-run() {
   tag=$(dir="$dir" _get-effective-tag)
 
   # Intentional split: args and cmd environment strings contain multiple words.
-  # cmd is for direct callers until PR 37 gives the Make selector a new name.
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
     ${args:-} \

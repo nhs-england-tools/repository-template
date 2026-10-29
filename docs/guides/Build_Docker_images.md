@@ -95,8 +95,8 @@ anti-patterns:
 ```shell
  $ DOCKER_IMAGE=my-shiny-app make docker-lint
 /workdir/./infrastructure/images/my-shiny-app/Dockerfile.effective:1 DL3006 warning: Always tag the version of an image explicitly
-make[1]: *** [scripts/docker/docker.mk:34: _docker] Error 1
-make: *** [scripts/docker/docker.mk:20: docker-lint] Error 2
+make[1]: *** [scripts/docker/docker.mk:42: _docker] Error 1
+make: *** [scripts/docker/docker.mk:23: docker-lint] Error 2
 ```
 
 All the provided docker `make` tasks take the `DOCKER_IMAGE` parameter.
@@ -124,6 +124,15 @@ And now we can run it:
  $ DOCKER_IMAGE=my-shiny-app make docker-run
 hello world
 ```
+
+Pass `cmd` to override the image's default command:
+
+```shell
+DOCKER_IMAGE=my-shiny-app make docker-run cmd="python --version"
+```
+
+If you maintain a custom Make target that calls `$(MAKE) _docker cmd=...`,
+change the selector to `docker_fn=...`. `cmd` now remains the container command.
 
 Confirm that the image has been built:
 
