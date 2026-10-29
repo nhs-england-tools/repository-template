@@ -9,8 +9,9 @@ endif
 
 # ==============================================================================
 
-format-markdown: # Format Markdown files @Quality
-	./scripts/quality/format-markdown.sh
+format-markdown: check ?= all
+format-markdown: # Format Markdown files (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	check=$(check) ./scripts/quality/format-markdown.sh
 
 scan-secrets: check ?= whole-history
 scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit) @Quality

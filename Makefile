@@ -9,7 +9,8 @@ env: # Set up project environment @Configuration
 deps: # Install dependencies needed to build and test the project @Build
 	# TODO: Implement installation of your project dependencies
 
-format: # Auto-format code @Quality
+format: check ?= all
+format: # Auto-format code (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	$(MAKE) format-markdown
 
 lint: check ?= all

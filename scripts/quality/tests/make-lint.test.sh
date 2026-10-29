@@ -3,9 +3,9 @@
 
 set -euo pipefail
 
-# Test suite for the check modes that 'make lint' passes to each check. Each
-# test runs the real Makefile in a scratch repository, with the check scripts
-# replaced by a recorder and 'gh' stubbed, so it needs none of the tools.
+# Test suite for the check modes that Make passes to quality scripts. Each test
+# runs the real Makefile in a scratch repository, with scripts replaced by a
+# recorder and 'gh' stubbed, so it needs none of the tools.
 #
 # Usage:
 #   $ ./scripts/quality/tests/make-lint.test.sh
@@ -16,7 +16,7 @@ set -euo pipefail
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
-readonly CHECKS=(check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security)
+readonly CHECKS=(check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security format-markdown)
 
 # Set up the suite fixtures and run every test.
 function main() {
@@ -35,7 +35,8 @@ function main() {
     test-make-lint-passes-a-check-mode-to-the-file-checks \
     test-make-lint-targets-run-their-check-directly \
     test-make-lint-shell-honours-a-scoped-mode \
-    test-make-lint-workflow-security-honours-a-scoped-mode
+    test-make-lint-workflow-security-honours-a-scoped-mode \
+    test-make-format-defaults-to-all-and-passes-a-scoped-mode
 
   return 0
 }
@@ -142,6 +143,24 @@ function test-make-lint-workflow-security-honours-a-scoped-mode() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "check-workflow-security.sh check=staged-changes pr=unset" "$(cat "$TEST_TMP/checks.log")" "workflow security mode"
+
+  return 0
+}
+
+function test-make-format-defaults-to-all-and-passes-a-scoped-mode() {
+
+  # Arrange
+  make-lint-create-fixture-repo
+  cd "$TEST_TMP/repo"
+  # Act
+  make-lint-run format
+  local default_status="$TEST_STATUS"
+  make-lint-run format check=staged-changes
+  # Assert
+  assert-equal 0 "$default_status" "default $EXIT_STATUS_LABEL"
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL for staged-changes"
+  assert-equal "format-markdown.sh check=all pr=unset
+format-markdown.sh check=staged-changes pr=unset" "$(cat "$TEST_TMP/checks.log")" "format check modes"
 
   return 0
 }
