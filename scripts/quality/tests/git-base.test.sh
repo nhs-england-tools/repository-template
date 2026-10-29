@@ -313,16 +313,18 @@ function test-quality-resolve-base-falls-back-when-gh-is-unavailable() {
 function test-quality-resolve-base-stops-waiting-for-a-slow-gh() {
 
   # Arrange
-  local base_commit start
+  local base_commit start_us elapsed_us
   base_commit="$(quality-test-create-repo)"
   test-isolate-path
   test-stub gh 'sleep 5; printf "OPEN v2\n"'
   cd "$TEST_TMP/repo"
   # Act
-  start=$SECONDS
+  # Strip the locale's decimal separator to get whole microseconds
+  start_us="${EPOCHREALTIME//[!0-9]/}"
   QUALITY_GH_TIMEOUT=1 test-capture quality-test-resolve-base
+  elapsed_us=$((${EPOCHREALTIME//[!0-9]/} - start_us))
   # Assert
-  assert-matches "$((SECONDS - start))" '^[0-3]$' "seconds waited"
+  assert-equal 0 "$((elapsed_us >= 5000000))" "waited less than the slow GitHub CLI call"
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "default base"
   assert-contains "$TEST_STDERR" "GitHub CLI did not answer within 1s, so the default branch is used."

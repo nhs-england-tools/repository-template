@@ -894,9 +894,14 @@ function write-blocked-mini-suite() {
   local body
   body="$(cat << 'EOF'
 function test-suite-teardown() {
-  local pid
-  for pid in $(cat "$OUT/pids"); do
-    if kill -0 "$pid" 2> /dev/null; then
+  local pid state
+  local -a pids=()
+  read -r -a pids < "$OUT/pids"
+  for pid in "${pids[@]}"; do
+    # A killed process can linger as a zombie until launchd or init reaps it
+    state="$(ps -o stat= -p "$pid" 2> /dev/null || true)"
+    state="${state// /}"
+    if [[ -n "$state" && "$state" != Z* ]]; then
       touch "$OUT/alive-at-teardown"
     fi
   done

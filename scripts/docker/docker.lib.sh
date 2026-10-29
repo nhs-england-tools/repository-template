@@ -52,6 +52,7 @@ function docker-build() {
 
   # Tag the image with all the stated versions, see the documentation for
   # more details
+  # Intentional splitting: Docker tags contain no whitespace or glob characters.
   for version in $(_get-all-effective-versions) latest; do
     if [[ -n "$version" ]]; then
       docker tag "${tag}" "${DOCKER_IMAGE}:${version}" || return "$?"
@@ -94,6 +95,9 @@ function docker-check-test() {
 
   local dir=${dir:-$PWD}
 
+  # check is supplied by the environment, not declared as a local.
+  # Intentional split: args and cmd environment strings contain multiple words.
+  # docker-check-test has no Make target, so callers invoke it directly.
   # shellcheck disable=SC2086,SC2154
   docker run --rm --platform linux/amd64 \
     ${args:-} \
@@ -115,6 +119,8 @@ function docker-run() {
   local tag
   tag=$(dir="$dir" _get-effective-tag)
 
+  # Intentional split: args and cmd environment strings contain multiple words.
+  # cmd is for direct callers until PR 37 gives the Make selector a new name.
   # shellcheck disable=SC2086
   docker run --rm --platform linux/amd64 \
     ${args:-} \
@@ -133,6 +139,7 @@ function docker-push() {
 
   # Push all the image tags based on the stated versions, see the
   # documentation for more details
+  # Intentional splitting: Docker tags contain no whitespace or glob characters.
   for version in $(dir="$dir" _get-all-effective-versions) latest; do
     docker push "${DOCKER_IMAGE}:${version}" || return "$?"
   done
@@ -147,6 +154,7 @@ function docker-clean() {
 
   local dir=${dir:-$PWD}
 
+  # Intentional splitting: Docker tags contain no whitespace or glob characters.
   for version in $(dir="$dir" _get-all-effective-versions) latest; do
     docker rmi "${DOCKER_IMAGE}:${version}" > /dev/null 2>&1 ||:
   done

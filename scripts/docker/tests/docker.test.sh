@@ -97,13 +97,12 @@ function test-suite-teardown() {
 # gone and only warning when an image cannot be removed.
 function remove-test-images() {
 
-  local tags
-  tags="$(docker images --format '{{.Repository}}:{{.Tag}}' 2> /dev/null \
-    | awk -v a="$DOCKER_IMAGE" -v b="$CLEAN_IMAGE" -F: '$1 == a || $1 == b' || true)"
-  if [[ -n "$tags" ]]; then
-    # shellcheck disable=SC2086
-    docker rmi $tags > /dev/null 2>&1 ||
-      echo "WARNING: could not remove test images: ${tags//$'\n'/ }" >&2
+  local -a tags=()
+  mapfile -t tags < <(docker images --format '{{.Repository}}:{{.Tag}}' 2> /dev/null \
+    | awk -v a="$DOCKER_IMAGE" -v b="$CLEAN_IMAGE" -F: '$1 == a || $1 == b')
+  if [[ ${#tags[@]} -gt 0 ]]; then
+    docker rmi "${tags[@]}" > /dev/null 2>&1 ||
+      echo "WARNING: could not remove test images: ${tags[*]}" >&2
   fi
 
   return 0

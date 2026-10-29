@@ -16,6 +16,8 @@ set -euo pipefail
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
+# A space, a glob character and a non-ASCII character in one path
+readonly AWKWARD_REPO='dir with space [x] café/repo'
 
 # Set up the suite fixtures and run every test.
 function main() {
@@ -38,6 +40,7 @@ function main() {
     test-scan-secrets-defaults-to-whole-history \
     test-scan-secrets-builds-the-command-for-each-mode \
     test-scan-secrets-adds-baseline-and-omits-missing-ignore-file \
+    test-scan-secrets-adds-baseline-at-an-awkward-path \
     test-scan-secrets-all-runs-three-checks-and-keeps-failure \
     test-scan-secrets-all-keeps-the-status-of-a-failing-first-check \
     test-scan-secrets-all-keeps-the-status-of-a-failing-last-check \
@@ -47,6 +50,7 @@ function main() {
     test-scan-secrets-propagates-leaks \
     test-scan-secrets-isolates-git-config-natively \
     test-scan-secrets-uses-docker-when-forced \
+    test-scan-secrets-uses-docker-at-an-awkward-path \
     test-scan-secrets-uses-docker-with-a-baseline-file \
     test-scan-secrets-stops-when-the-image-pull-fails
 
@@ -75,7 +79,7 @@ function test-scan-secrets-defaults-to-whole-history() {
   test-capture ./scripts/quality/scan-secrets.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "detect --source $r --verbose --redact $(gitleaks-tail)" "$(test-stub-calls gitleaks)" "the only gitleaks call"
+  assert-equal "$(expected-gitleaks-call "$r" whole-history)" "$(test-stub-calls gitleaks)" "the only gitleaks call"
 
   return 0
 }
@@ -83,15 +87,16 @@ function test-scan-secrets-defaults-to-whole-history() {
 function test-scan-secrets-builds-the-command-for-each-mode() {
 
   # Arrange
-  local r="$TEST_TMP/repo" statuses="" expected
+  local r="$TEST_TMP/$AWKWARD_REPO" statuses="" expected
   expected="$(
-    expected-gitleaks-calls staged-changes working-tree-changes branch
-    printf '%s\n' \
-      "detect --source $r --verbose --redact --log-opts dev..HEAD $(gitleaks-tail)" \
-      "detect --source $r --verbose --redact --log-opts origin/v2..HEAD $(gitleaks-tail)" \
-      "detect --source $r --verbose --redact --log-opts -1 $(gitleaks-tail)"
+    expected-gitleaks-call "$r" staged-changes
+    expected-gitleaks-call "$r" working-tree-changes
+    expected-gitleaks-call "$r" branch origin/main..HEAD
+    expected-gitleaks-call "$r" branch dev..HEAD
+    expected-gitleaks-call "$r" branch origin/v2..HEAD
+    expected-gitleaks-call "$r" last-commit
   )"
-  quality-create-fixture-repo a.txt
+  create-awkward-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks "$GITLEAKS_RECORD_ENV"
   git -C "$r" update-ref refs/heads/dev refs/remotes/origin/main
@@ -137,11 +142,33 @@ function test-scan-secrets-adds-baseline-and-omits-missing-ignore-file() {
   return 0
 }
 
+function test-scan-secrets-adds-baseline-at-an-awkward-path() {
+
+  # Arrange
+  local r="$TEST_TMP/$AWKWARD_REPO" expected
+  create-awkward-fixture-repo a.txt
+  printf '[]\n' > "$r/scripts/config/.gitleaks-baseline.json"
+  test-isolate-path
+  test-stub gitleaks "$GITLEAKS_RECORD_ENV"
+  expected="$(quoted-call-line detect --source "$r" --verbose --redact --log-opts -1 \
+    --baseline-path "$r/scripts/config/.gitleaks-baseline.json" \
+    --config "$r/scripts/config/gitleaks.toml" \
+    --gitleaks-ignore-path "$r/scripts/config/.gitleaksignore")"
+  cd "$r"
+  # Act
+  test-capture env check=last-commit ./scripts/quality/scan-secrets.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$expected" "$(test-stub-calls gitleaks)" "Gitleaks arguments with a baseline"
+
+  return 0
+}
+
 function test-scan-secrets-all-runs-three-checks-and-keeps-failure() {
 
   # Arrange
   local expected
-  expected="$(expected-gitleaks-calls staged-changes working-tree-changes branch)"
+  expected="$(expected-gitleaks-calls "$TEST_TMP/repo" staged-changes working-tree-changes branch)"
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks 'if [[ " $* " == *" --no-git "* ]]; then exit 1; fi'
@@ -159,7 +186,7 @@ function test-scan-secrets-all-keeps-the-status-of-a-failing-first-check() {
 
   # Arrange
   local expected
-  expected="$(expected-gitleaks-calls staged-changes working-tree-changes branch)"
+  expected="$(expected-gitleaks-calls "$TEST_TMP/repo" staged-changes working-tree-changes branch)"
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks 'if [[ " $* " == *" --staged "* ]]; then exit 3; fi'
@@ -177,7 +204,7 @@ function test-scan-secrets-all-keeps-the-status-of-a-failing-last-check() {
 
   # Arrange
   local expected
-  expected="$(expected-gitleaks-calls staged-changes working-tree-changes branch)"
+  expected="$(expected-gitleaks-calls "$TEST_TMP/repo" staged-changes working-tree-changes branch)"
   quality-create-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks 'if [[ " $* " == *" --log-opts "* ]]; then exit 5; fi'
@@ -246,7 +273,7 @@ function test-scan-secrets-empty-mode-defaults-to-whole-history() {
   test-capture env check= ./scripts/quality/scan-secrets.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "detect --source $r --verbose --redact $(gitleaks-tail)" "$(test-stub-calls gitleaks)" "gitleaks call for empty check mode"
+  assert-equal "$(expected-gitleaks-call "$r" whole-history)" "$(test-stub-calls gitleaks)" "gitleaks call for empty check mode"
 
   return 0
 }
@@ -306,6 +333,28 @@ function test-scan-secrets-uses-docker-when-forced() {
   return 0
 }
 
+function test-scan-secrets-uses-docker-at-an-awkward-path() {
+
+  # Arrange
+  local r="$TEST_TMP/$AWKWARD_REPO" expected
+  create-awkward-fixture-repo a.txt
+  test-isolate-path
+  test-stub gitleaks
+  test-stub docker
+  expected="$(quoted-call-line run --rm --platform linux/amd64 --network none \
+    --volume "$r:/workdir:ro" --workdir /workdir "$GITLEAKS_IMAGE")"
+  expected="$expected $(expected-gitleaks-call /workdir branch)"
+  cd "$r"
+  # Act
+  test-capture env FORCE_USE_DOCKER=true check=branch BRANCH_NAME=origin/main ./scripts/quality/scan-secrets.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-stub-called docker "$expected"
+  quality-assert-one-docker-run
+
+  return 0
+}
+
 function test-scan-secrets-stops-when-the-image-pull-fails() {
 
   # Arrange
@@ -349,34 +398,70 @@ function test-scan-secrets-uses-docker-with-a-baseline-file() {
 
 # ==============================================================================
 
-# Print the options every native gitleaks call ends with in "$TEST_TMP/repo",
-# when the ignore file exists and no baseline file does.
-function gitleaks-tail() {
+# Create a fixture repository at "$TEST_TMP/$AWKWARD_REPO".
+# Arguments:
+#   $@=[content files, as quality-create-fixture-repo accepts]
+function create-awkward-fixture-repo() {
 
-  local r="$TEST_TMP/repo"
-  echo "--config $r/scripts/config/gitleaks.toml --gitleaks-ignore-path $r/scripts/config/.gitleaksignore"
+  local target="$TEST_TMP/$AWKWARD_REPO"
+  quality-create-fixture-repo "$@" || return "$?"
+  test-mkdir-parent "$target" || return "$?"
+  mv "$TEST_TMP/repo" "$target" || return "$?"
 
   return 0
 }
 
-# Print the expected native gitleaks call in "$TEST_TMP/repo" for each given
-# check mode, one per line.
+# Print the arguments as one line, quoted the way the stub records a call.
 # Arguments:
-#   $@=[check modes, each 'staged-changes', 'working-tree-changes' or 'branch']
+#   $@=[call arguments]
+function quoted-call-line() {
+
+  local line
+  printf -v line '%q ' "$@"
+  printf '%s\n' "${line% }"
+
+  return 0
+}
+
+# Print the expected native gitleaks call for each given check mode, one per
+# line.
+# Arguments:
+#   $1=[project's top-level directory]
+#   $@=[check modes, as expected-gitleaks-call accepts]
 function expected-gitleaks-calls() {
 
-  local r="$TEST_TMP/repo" mode
+  local r="$1" mode
+  shift
   for mode in "$@"; do
-    case "$mode" in
-      staged-changes) echo "protect --source $r --verbose --redact --staged $(gitleaks-tail)" ;;
-      working-tree-changes) echo "detect --no-git --source $r --verbose --redact $(gitleaks-tail)" ;;
-      branch) echo "detect --source $r --verbose --redact --log-opts origin/main..HEAD $(gitleaks-tail)" ;;
-      *)
-        echo "expected-gitleaks-calls: unknown check mode '$mode'" >&2
-        return 1
-        ;;
-    esac
+    expected-gitleaks-call "$r" "$mode" || return "$?"
   done
+
+  return 0
+}
+
+# Print the quoted arguments expected for one Gitleaks check.
+# Arguments:
+#   $1=[project's top-level directory]
+#   $2=[check mode]
+#   $3=[log range for branch mode, default is 'origin/main..HEAD']
+function expected-gitleaks-call() {
+
+  local r="$1" mode="$2" range="${3:-origin/main..HEAD}"
+  local -a args=()
+  case "$mode" in
+    staged-changes) args=(protect --source "$r" --verbose --redact --staged) ;;
+    working-tree-changes) args=(detect --no-git --source "$r" --verbose --redact) ;;
+    branch) args=(detect --source "$r" --verbose --redact --log-opts "$range") ;;
+    whole-history) args=(detect --source "$r" --verbose --redact) ;;
+    last-commit) args=(detect --source "$r" --verbose --redact --log-opts -1) ;;
+    *)
+      echo "expected-gitleaks-call: unknown check mode '$mode'" >&2
+      return 1
+      ;;
+  esac
+  args+=(--config "$r/scripts/config/gitleaks.toml")
+  args+=(--gitleaks-ignore-path "$r/scripts/config/.gitleaksignore")
+  quoted-call-line "${args[@]}" || return "$?"
 
   return 0
 }
