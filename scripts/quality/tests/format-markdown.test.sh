@@ -49,7 +49,9 @@ function main() {
     test-format-markdown-requires-an-exact-prettier-pin-in-docker \
     test-format-markdown-propagates-docker-run-failure \
     test-format-markdown-propagates-prettier-failure \
-    test-format-markdown-stops-when-the-image-pull-fails
+    test-format-markdown-stops-when-the-image-pull-fails \
+    test-format-markdown-skips-paths-in-the-ignore-file \
+    test-format-markdown-does-nothing-when-every-file-is-ignored
 
   return 0
 }
@@ -123,7 +125,7 @@ function test-format-markdown-formats-existing-tracked-files() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal \
-    "--config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write -- README.md docs/my\\ doc.md" \
+    "--config $r/scripts/config/prettierrc.yaml --ignore-path /dev/null --write -- README.md docs/my\\ doc.md" \
     "$(test-stub-calls prettier)" "the only prettier call"
   assert-stub-not-called docker
 
@@ -276,7 +278,7 @@ function test-format-markdown-deduplicates-overlapping-branch-diffs() {
 
   # Arrange
   local repo="$TEST_TMP/repo"
-  local options="--config $repo/scripts/config/prettierrc.yaml --ignore-path $repo/scripts/config/.prettierignore --write --"
+  local options="--config $repo/scripts/config/prettierrc.yaml --ignore-path /dev/null --write --"
   quality-create-fixture-repo docs/a.md docs/b.md
   test-isolate-path
   test-stub prettier
@@ -299,7 +301,7 @@ function test-format-markdown-deduplicates-overlapping-branch-diffs() {
 function test-format-markdown-uses-docker-when-forced() {
 
   # Arrange
-  local options="--config /workdir/scripts/config/prettierrc.yaml --ignore-path /workdir/scripts/config/.prettierignore --write"
+  local options="--config /workdir/scripts/config/prettierrc.yaml --ignore-path /dev/null --write"
   quality-create-fixture-repo README.md "$DOC_WITH_SPACE" gone.md
   test-isolate-path
   test-stub prettier
@@ -386,7 +388,7 @@ function test-format-markdown-propagates-prettier-failure() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called prettier \
-    "--config $r/scripts/config/prettierrc.yaml --ignore-path $r/scripts/config/.prettierignore --write -- README.md"
+    "--config $r/scripts/config/prettierrc.yaml --ignore-path /dev/null --write -- README.md"
 
   return 0
 }
@@ -406,6 +408,46 @@ function test-format-markdown-stops-when-the-image-pull-fails() {
   assert-equal 23 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "docker: pull access denied" "pull error on stderr"
   assert-equal "" "$(test-stub-calls docker | grep '^run ' || true)" "no docker run call"
+
+  return 0
+}
+
+function test-format-markdown-skips-paths-in-the-ignore-file() {
+
+  # Arrange
+  local r="$TEST_TMP/repo"
+  quality-create-fixture-repo README.md vendor/skill/SKILL.md "docs/[draft].md" -dash/d.md
+  test-isolate-path
+  test-stub prettier
+  test-stub docker
+  cd "$r"
+  printf 'vendor/\ndocs/\\[draft\\].md\n-dash/\n' >> scripts/config/.prettierignore
+  # Act
+  test-capture env check=all ./scripts/quality/format-markdown.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal \
+    "--config $r/scripts/config/prettierrc.yaml --ignore-path /dev/null --write -- README.md" \
+    "$(test-stub-calls prettier)" "only the file the ignore file does not match"
+
+  return 0
+}
+
+function test-format-markdown-does-nothing-when-every-file-is-ignored() {
+
+  # Arrange
+  quality-create-fixture-repo vendor/skill/SKILL.md
+  test-isolate-path
+  test-stub prettier
+  test-stub docker
+  cd "$TEST_TMP/repo"
+  printf 'vendor/\n' >> scripts/config/.prettierignore
+  # Act
+  test-capture env check=all ./scripts/quality/format-markdown.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-stub-not-called prettier
+  assert-stub-not-called docker
 
   return 0
 }

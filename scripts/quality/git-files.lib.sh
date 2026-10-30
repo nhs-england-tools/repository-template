@@ -21,6 +21,8 @@ set -euo pipefail
 #   2) Checks read each returned path from the working tree, so in
 #      'staged-changes' mode they also see unstaged edits to a staged file.
 #      pre-commit stashes those edits before its hooks run.
+#   3) 'quality-remove-ignored-paths' drops the paths that a check's ignore
+#      file matches, with Git's ignore rules read from the repository root.
 
 # ==============================================================================
 
@@ -107,6 +109,38 @@ function quality-collect-git-files() {
     fi
   done < "$list_file"
   rm -f "$list_file"
+
+  return 0
+}
+
+# Remove from an array the tracked paths that an ignore file matches. The file
+# uses Git's ignore syntax, read from the repository root, unlike tools such as
+# Prettier that read patterns relative to the ignore file. A missing file
+# removes nothing. Paths keep the form they had, including a leading './'.
+# Arguments:
+#   $1=[name reference of the path array]
+#   $2=[ignore file, relative to the repository root]
+function quality-remove-ignored-paths() {
+
+  local -n quality_filtered_paths="$1" || return "$?"
+  local ignore_file="$2" path list_file rc=0
+  local -a kept=()
+  local -A ignored=()
+  [[ -f "$ignore_file" && ${#quality_filtered_paths[@]} -gt 0 ]] || return 0
+  list_file="$(mktemp)" || return "$?"
+  quality-git-paths ls-files -z --cached --ignored \
+    --exclude-from="$ignore_file" > "$list_file" || rc=$?
+  if [[ $rc -eq 0 ]]; then
+    while IFS= read -r -d '' path; do
+      ignored["$path"]=1
+    done < "$list_file"
+  fi
+  rm -f "$list_file"
+  [[ $rc -eq 0 ]] || return "$rc"
+  for path in "${quality_filtered_paths[@]}"; do
+    [[ -n "${ignored["${path#./}"]:-}" ]] || kept+=("$path")
+  done
+  quality_filtered_paths=("${kept[@]}")
 
   return 0
 }

@@ -361,6 +361,11 @@ mode. It counts bytes, so a non-ASCII character counts as more than one. The
 shebang and comment lines that contain a URL are exempt. Code lines are not
 limited.
 
+To exempt files such as vendored scripts from the comment check, list them in
+`scripts/config/.commentlengthignore` with `.gitignore` rules, relative to the
+repository root. ShellCheck still lints them. A scoped mode that changes that
+file checks the comments of every script and Make file.
+
 For a one-file diagnostic, run ShellCheck directly:
 
 ```shell

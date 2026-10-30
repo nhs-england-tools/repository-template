@@ -1,2 +1,3 @@
 # Paths excluded from `make format` (Prettier markdown table formatting).
-# Add generated or vendored markdown here.
+# Add generated or vendored markdown here. Patterns follow .gitignore rules,
+# relative to the repository root, not to this directory.

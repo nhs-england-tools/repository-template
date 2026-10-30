@@ -1,0 +1,3 @@
+# Paths excluded from the 80-character comment check of `make lint-shell`, for
+# example scripts vendored from another repository. ShellCheck still lints
+# them. Patterns follow .gitignore rules, relative to the repository root.

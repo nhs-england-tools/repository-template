@@ -85,7 +85,11 @@ function main() {
     test-check-shell-lint-all-keeps-the-shellcheck-status-with-a-long-comment \
     test-check-shell-lint-all-checks-comments-in-docker-mode \
     test-check-shell-lint-all-reads-a-file-named-like-an-awk-assignment \
-    test-check-shell-lint-counts-bytes-in-comments
+    test-check-shell-lint-counts-bytes-in-comments \
+    test-check-shell-lint-all-skips-comments-of-paths-in-the-ignore-file \
+    test-check-shell-lint-ignore-file-uses-git-ignore-rules \
+    test-check-shell-lint-scoped-mode-skips-comments-of-paths-in-the-ignore-file \
+    test-check-shell-lint-scoped-mode-checks-every-comment-when-the-ignore-file-changes
 
   return 0
 }
@@ -1152,6 +1156,92 @@ function test-check-shell-lint-counts-bytes-in-comments() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "scripts/x.sh:1: comment is 82 characters, the limit is 80" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
+function test-check-shell-lint-all-skips-comments-of-paths-in-the-ignore-file() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh vendor/tool/y.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  mkdir -p scripts/config
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" > vendor/tool/y.sh
+  printf '# Vendored scripts\r\n\r\nvendor/\r\n' > scripts/config/.commentlengthignore
+  # Act
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-contains "$(test-stub-calls shellcheck)" "vendor/tool/y.sh" "ShellCheck still lints the ignored script"
+
+  return 0
+}
+
+function test-check-shell-lint-ignore-file-uses-git-ignore-rules() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh vendor/a.sh vendor/b.sh lib/vendor/c.sh
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  mkdir -p scripts/config
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" | tee vendor/a.sh vendor/b.sh > lib/vendor/c.sh
+  printf '/vendor/*.sh\n!vendor/b.sh\n' > scripts/config/.commentlengthignore
+  # Act
+  test-capture env check=all ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal $'lib/vendor/c.sh:1: comment is 81 characters, the limit is 80\nvendor/b.sh:1: comment is 81 characters, the limit is 80' \
+    "$TEST_STDERR" "only the files the entries do not match"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-skips-comments-of-paths-in-the-ignore-file() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh vendor/tool/y.sh scripts/vendor.mk
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  mkdir -p scripts/config
+  printf 'vendor/\nscripts/vendor.mk\n' > scripts/config/.commentlengthignore
+  git add scripts/config/.commentlengthignore
+  git commit -q -m 'ignore vendored files'
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" | tee vendor/tool/y.sh > scripts/vendor.mk
+  git add vendor/tool/y.sh scripts/vendor.mk
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-contains "$(test-stub-calls shellcheck)" "vendor/tool/y.sh" "ShellCheck still lints the changed script"
+
+  return 0
+}
+
+function test-check-shell-lint-scoped-mode-checks-every-comment-when-the-ignore-file-changes() {
+
+  # Arrange
+  quality-create-fixture-repo scripts/x.sh vendor/tool/y.sh scripts/vendor.mk
+  test-isolate-path
+  test-stub shellcheck
+  cd "$TEST_TMP/repo"
+  mkdir -p scripts/config
+  printf 'vendor/\nscripts/vendor.mk\n' > scripts/config/.commentlengthignore
+  printf '# %s\n' "$(printf 'a%.0s' {1..79})" | tee vendor/tool/y.sh > scripts/vendor.mk
+  git add -A
+  git commit -q -m 'vendored files with long comments'
+  printf 'vendor/\n' > scripts/config/.commentlengthignore
+  git add scripts/config/.commentlengthignore
+  # Act
+  test-capture env check=staged-changes ./scripts/quality/check-shell-lint.sh
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "scripts/vendor.mk:1: comment is 81 characters, the limit is 80" "$TEST_STDERR" "the file the ignore list no longer matches"
 
   return 0
 }

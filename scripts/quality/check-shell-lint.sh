@@ -53,6 +53,11 @@ set -euo pipefail
 #   5) A line counts as a comment when its first non-blank character is '#',
 #      including such lines in heredocs and embedded awk or Python code. A
 #      comment line containing '://' is exempt, so a long URL never fails.
+#   6) Paths that './scripts/config/.commentlengthignore' matches, with Git's
+#      ignore rules from the repository root, skip the comment length check,
+#      for example scripts vendored from another repository. ShellCheck still
+#      lints them. A scoped mode that changes this file checks the comments of
+#      every script and Make file.
 
 # ==============================================================================
 
@@ -67,16 +72,24 @@ function main() {
   source ./scripts/quality/git-files.lib.sh
   local rc=0
   local -a files=() graph_files=() make_files=() changed=() deleted=()
+  local -a comment_paths=()
   # shellcheck disable=SC2034
   local -a dependencies=() callers=()
-  local tracked_count settings_changed=false
+  local tracked_count settings_changed=false ignore_list_changed=false
   quality-collect-git-files graph_files all '*.sh' || return "$?"
   tracked_count=${#graph_files[@]}
   if [[ "$check_mode" == all ]]; then
     changed=("${graph_files[@]}")
     quality-collect-git-files make_files all '*.mk' || return "$?"
+    comment_paths=("${changed[@]}" "${make_files[@]}")
   else
-    collect-changed-paths changed make_files deleted settings_changed "$check_mode" || return "$?"
+    collect-changed-paths changed make_files deleted settings_changed ignore_list_changed "$check_mode" || return "$?"
+    comment_paths=("${changed[@]}" "${make_files[@]}")
+    if [[ "$ignore_list_changed" == true ]]; then
+      # A shorter ignore list can bring any script back into the check
+      comment_paths=("${graph_files[@]}")
+      quality-collect-git-files comment_paths all '*.mk' || return "$?"
+    fi
     # Deleted scripts join the graph only to select the scripts that name them
     graph_files+=("${deleted[@]}")
   fi
@@ -95,25 +108,28 @@ function main() {
       run-shellcheck-in-docker-all graph_files dependencies "${files[@]}" || rc=$?
     fi
   fi
-  check-comment-length "${changed[@]}" "${make_files[@]}" || [[ $rc -ne 0 ]] || rc=1
+  quality-remove-ignored-paths comment_paths ./scripts/config/.commentlengthignore || return "$?"
+  check-comment-length "${comment_paths[@]}" || [[ $rc -ne 0 ]] || rc=1
 
   return "$rc"
 }
 
 # Collect the changed shell scripts and Make files of a scoped check mode, the
-# shell scripts it deletes, and whether it changes a ShellCheck setting.
+# shell scripts it deletes, and whether it changes a ShellCheck setting or the
+# comment length ignore list.
 # Arguments:
 #   $1=[name reference of the changed shell scripts]
 #   $2=[name reference of the changed Make files]
 #   $3=[name reference of the deleted shell scripts]
 #   $4=[name reference of a flag, set to 'true' when a ShellCheck setting
 #     changes]
-#   $5=[check mode]
+#   $5=[name reference of a flag, set to 'true' when the ignore list changes]
+#   $6=[check mode]
 function collect-changed-paths() {
 
   # shellcheck disable=SC2178
-  local -n changed_scripts="$1" changed_make_files="$2" deleted_scripts="$3" shellcheck_settings_changed="$4" || return "$?"
-  local check_mode="$5" path
+  local -n changed_scripts="$1" changed_make_files="$2" deleted_scripts="$3" shellcheck_settings_changed="$4" ignore_list_changed_flag="$5" || return "$?"
+  local check_mode="$6" path
   local -a selected=() gone=()
   # One call without a pathspec, so branch mode resolves its base only once
   quality-collect-git-files selected "$check_mode" '' gone || return "$?"
@@ -131,6 +147,10 @@ function collect-changed-paths() {
       .shellcheckrc | */.shellcheckrc | shellcheckrc | */shellcheckrc | mise.toml)
         # shellcheck disable=SC2034
         shellcheck_settings_changed=true
+        ;;
+      scripts/config/.commentlengthignore)
+        # shellcheck disable=SC2034
+        ignore_list_changed_flag=true
         ;;
     esac
   done

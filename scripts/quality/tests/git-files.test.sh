@@ -35,7 +35,10 @@ function main() {
     test-quality-collect-git-files-working-tree-changes-lists-a-deleted-file \
     test-quality-collect-git-files-branch-lists-a-deleted-file \
     test-quality-collect-git-files-ignores-deletions-without-a-deleted-array \
-    test-quality-collect-git-files-rejects-an-unknown-mode
+    test-quality-collect-git-files-rejects-an-unknown-mode \
+    test-quality-remove-ignored-paths-uses-git-ignore-rules-from-the-root \
+    test-quality-remove-ignored-paths-keeps-every-path-without-an-ignore-file \
+    test-quality-remove-ignored-paths-fails-when-git-fails
 
   return 0
 }
@@ -240,6 +243,64 @@ function test-quality-collect-git-files-rejects-an-unknown-mode() {
   assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "accepted modes"
   assert-equal "" "$TEST_STDOUT" "$SELECTION_LABEL"
+
+  return 0
+}
+
+function test-quality-remove-ignored-paths-uses-git-ignore-rules-from-the-root() {
+
+  # Arrange
+  git-files-test-create-repo vendor/a.md docs/x.gen.md docs/keep.gen.md \
+    "docs/my doc.md" "docs/[draft].md" -dash/d.md config/vendor/b.md
+  cd "$TEST_TMP/repo"
+  printf '%s\r\n' '# Generated' '/vendor/' '*.gen.md' '!keep.gen.md' \
+    'docs/\[draft\].md' '-dash/' > config/.ignore
+  local -a paths=(vendor/a.md docs/x.gen.md docs/keep.gen.md "docs/my doc.md"
+    "docs/[draft].md" ./-dash/d.md config/vendor/b.md)
+  source ./scripts/quality/git-files.lib.sh
+  # Act
+  quality-remove-ignored-paths paths config/.ignore
+  # Assert
+  assert-equal $'docs/keep.gen.md\ndocs/my doc.md\nconfig/vendor/b.md' \
+    "$(printf '%s\n' "${paths[@]}")" "kept paths"
+
+  return 0
+}
+
+function test-quality-remove-ignored-paths-keeps-every-path-without-an-ignore-file() {
+
+  # Arrange
+  git-files-test-create-repo a.md b.md
+  cd "$TEST_TMP/repo"
+  local -a paths=(a.md b.md) empty=()
+  source ./scripts/quality/git-files.lib.sh
+  # Act
+  quality-remove-ignored-paths paths missing/.ignore
+  printf 'a.md\n' > .ignore
+  quality-remove-ignored-paths empty .ignore
+  # Assert
+  assert-equal $'a.md\nb.md' "$(printf '%s\n' "${paths[@]}")" "kept paths"
+  assert-equal 0 "${#empty[@]}" "empty array"
+
+  return 0
+}
+
+function test-quality-remove-ignored-paths-fails-when-git-fails() {
+
+  # Arrange
+  git-files-test-create-repo a.md
+  cd "$TEST_TMP/repo"
+  printf 'a.md\n' > .ignore
+  local -a paths=(a.md)
+  local rc=0
+  source ./scripts/quality/git-files.lib.sh
+  test-isolate-path
+  test-stub git 'exit 7'
+  # Act, without a subshell, so the assertions see the caller's array
+  quality-remove-ignored-paths paths .ignore || rc=$?
+  # Assert
+  assert-equal 7 "$rc" "$EXIT_STATUS_LABEL"
+  assert-equal a.md "${paths[*]}" "paths are unchanged"
 
   return 0
 }

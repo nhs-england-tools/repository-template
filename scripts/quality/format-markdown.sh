@@ -34,6 +34,9 @@ set -euo pipefail
 #      'npm:prettier' entry in the '[tools]' table of 'mise.toml', which
 #      'make config' installs. In Docker, npx downloads that version at run
 #      time, so the container needs network access.
+#   3) Files that match './scripts/config/.prettierignore', read with Git's
+#      ignore rules from the repository root, are never formatted. Prettier
+#      itself does not read that file, or any other ignore file.
 
 # ==============================================================================
 
@@ -47,6 +50,8 @@ function main() {
   local check_mode=${check:-working-tree-changes}
   local -a files=()
   quality-collect-git-files files "$check_mode" '*.md' || return "$?"
+  # Prettier would read the patterns relative to 'scripts/config/'
+  quality-remove-ignored-paths files ./scripts/config/.prettierignore || return "$?"
 
   if [[ ${#files[@]} -eq 0 ]]; then
     return 0
@@ -67,9 +72,10 @@ function main() {
 function run-prettier-natively() {
 
   local rc=0
+  # 'main' already applied the ignore file
   prettier \
     --config "$PWD/scripts/config/prettierrc.yaml" \
-    --ignore-path "$PWD/scripts/config/.prettierignore" \
+    --ignore-path /dev/null \
     --write \
     -- \
     "$@" || rc=$?
@@ -96,14 +102,14 @@ function run-prettier-in-docker() {
 
   local rc=0
   # No '--network none' or read-only mount: npx downloads Prettier at run time,
-  # which then rewrites files
+  # which then rewrites files. 'main' already applied the ignore file.
   docker run --rm --platform linux/amd64 \
     --volume "$PWD":/workdir \
     --workdir /workdir \
     "$image" \
     npx --yes "prettier@$version" \
       --config /workdir/scripts/config/prettierrc.yaml \
-      --ignore-path /workdir/scripts/config/.prettierignore \
+      --ignore-path /dev/null \
       --write \
       -- \
       "$@" || rc=$?
