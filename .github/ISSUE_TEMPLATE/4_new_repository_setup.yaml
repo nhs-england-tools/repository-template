@@ -1,0 +1,42 @@
+name: New repository setup
+description: Track the initial setup of a repository created from this template
+title: "[Setup]: Complete repository setup"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open this issue in the new repository and assign it to a maintainer.
+        Complete the checklist in an initial setup pull request before accepting contributions.
+        Ask a maintainer and the relevant security or policy owner to review that pull request.
+        Do not include private reports, personal data, or sensitive contact details in this issue.
+  - type: checkboxes
+    id: documentation
+    attributes:
+      label: Repository setup
+      description: Check each item when complete. Record any approved exceptions to other items in the setup pull request.
+      options:
+        - label: Replace template repository URLs and support links in the README and issue forms with the new project's details.
+        - label: Update the README with the project's configuration and contribution workflow.
+        - label: Confirm the Code of Conduct reporting routes and escalation process with the responsible policy owner.
+        - label: Confirm the security policy's scope, supported versions, private reporting route, and response process with the responsible security owner.
+        - label: Tailor the contributing guide with the project's setup, tests, review rules, and release process.
+        - label: Record applicable information governance, accessibility, security, and clinical safety requirements in the project documentation.
+        - label: Resolve the documentation TODOs and verify that links and published contact routes work.
+        - label: Implement the recipes for every TODO-marked target in the Makefile. Keep the existing target names.
+        - label: Review dependency sources, Dependabot, cooldown and update ownership using docs/guides/Update_Dependencies.md. Record project-specific changes.
+        - label: Configure the required SonarQube Cloud integration using docs/guides/Configure_SonarQube_Cloud.md. Verify a pull request scan and quality gate result.
+  - type: checkboxes
+    id: approval
+    attributes:
+      label: Review before closing
+      description: Keep this issue open until the setup pull request has the relevant approvals.
+      options:
+        - label: A project maintainer has reviewed and approved the setup pull request.
+        - label: The relevant security or policy owner has reviewed and approved the reporting routes and policies.
+  - type: input
+    id: setup-pr
+    attributes:
+      label: Setup pull request
+      description: Add a link to the setup pull request when one is open.
+    validations:
+      required: false

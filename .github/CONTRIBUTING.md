@@ -86,7 +86,11 @@ template.
 ## Tailor this guide when adopting the template 🧩
 
 Before accepting contributions to an NHS project created from this template,
-maintainers should:
+open a [New repository setup issue](ISSUE_TEMPLATE/4_new_repository_setup.yaml)
+in the new repository and assign it to a maintainer. Complete its checklist in an
+initial setup pull request. Ask a project maintainer and the relevant security
+or policy owner to review the changes before closing the issue and accepting
+contributions. Maintainers should:
 
 - Replace the `nhs-england-tools/repository-template` URLs with the adopted
   repository's URLs. GitHub requires absolute URLs in the Code of Conduct links
@@ -100,5 +104,7 @@ maintainers should:
   and release process.
 - Record applicable information governance, accessibility, security, and
   clinical safety requirements in the project documentation.
-- Remove or resolve template TODOs and verify that links and contact routes
-  point to the adopted project.
+- Implement the recipes for every TODO-marked target in the
+  [Makefile](../Makefile), keeping the target names intact.
+- Resolve documentation TODOs and verify that links and contact routes point to
+  the adopted project.
