@@ -17,7 +17,7 @@ body:
     attributes:
       label: Summary
       description: A short summary of the help you need.
-      placeholder: e.g. Unable to run make config on macOS
+      placeholder: e.g. Unable to run make config
     validations:
       required: true
   - type: textarea

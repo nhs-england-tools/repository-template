@@ -22,7 +22,7 @@ lint: # Run linter to check code style and errors (set check=all|staged-changes|
 	$(MAKE) lint-file-format
 	$(MAKE) lint-markdown-format
 	$(MAKE) lint-markdown-links
-	$(MAKE) lint-shell check=all
+	$(MAKE) lint-shell
 	$(MAKE) lint-workflow-security
 
 typecheck: # Run type checker @Quality

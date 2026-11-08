@@ -1,11 +1,11 @@
-# Contributing
+# Contributing 🤝
 
 Thank you for helping improve this project. This repository template provides a
 starting point, not a complete contribution process for every NHS project.
 Project maintainers should tailor the guidance below to the adopted repository
 before inviting contributions.
 
-## Before you contribute
+## Before you contribute 📋
 
 - Read the [Code of Conduct](CODE_OF_CONDUCT.md).
 - Check the repository's GitHub Issues for an existing report or discussion
@@ -17,7 +17,7 @@ before inviting contributions.
 - Follow the project's documented requirements for approvals, accessibility,
   information governance, security, and clinical safety where they apply.
 
-## Protect sensitive information
+## Protect sensitive information 🔒
 
 Do not add patient information, personal data, credentials, security-sensitive
 details, or other confidential information to issues, pull requests, source
@@ -26,7 +26,7 @@ examples. Review output before sharing it, and follow the applicable
 [NHS data safety guidance](https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public)
 and your organisation's policies.
 
-## Set up your environment
+## Set up your environment 🛠️
 
 Start with the prerequisites and setup steps in the [README](../README.md). In
 this template, configure the development tools from the repository root with:
@@ -38,7 +38,7 @@ make config
 If the adopted project needs additional dependencies or setup, document and
 maintain those steps in its README and Makefile.
 
-## Make a focused change
+## Make a focused change 🎯
 
 - Keep each change focused on one problem or outcome.
 - Discuss larger or breaking changes with the maintainers before investing in
@@ -49,7 +49,7 @@ maintain those steps in its README and Makefile.
 - Keep changes reviewable. Do not include generated files or unrelated clean-up
   unless the project requires them.
 
-## Run checks
+## Run checks ✅
 
 Run the available checks from the repository root before opening a pull request:
 
@@ -65,7 +65,7 @@ tests for an adopted project's application. Extend the Makefile and CI workflow
 to run the project's build, tests, type checks, security checks, and other
 required quality gates.
 
-## Open a pull request
+## Open a pull request 🔀
 
 Use the [pull request template](PULL_REQUEST_TEMPLATE.md) and:
 
@@ -83,7 +83,7 @@ Maintainers apply the project's review, approval, and protected-branch rules.
 These rules should be documented by the project team after adopting this
 template.
 
-## Tailor this guide when adopting the template
+## Tailor this guide when adopting the template 🧩
 
 Before accepting contributions to an NHS project created from this template,
 maintainers should:

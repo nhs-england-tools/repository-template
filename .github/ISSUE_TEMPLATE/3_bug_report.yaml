@@ -25,7 +25,7 @@ body:
     attributes:
       label: Summary
       description: A short summary of the bug.
-      placeholder: e.g. make lint fails on macOS
+      placeholder: e.g. make lint fails
     validations:
       required: true
   - type: textarea

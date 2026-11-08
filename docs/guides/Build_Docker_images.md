@@ -1,20 +1,20 @@
-# Build Docker images
+# Build Docker images 🐳
 
-- [Build Docker images](#build-docker-images)
-  - [Overview](#overview)
-  - [Key files](#key-files)
-  - [Usage](#usage)
+- [Build Docker images 🐳](#build-docker-images-)
+  - [Overview 🧭](#overview-)
+  - [Key files 📁](#key-files-)
+  - [Usage 📖](#usage-)
     - [Quick start](#quick-start)
     - [Build with a pinned base image](#build-with-a-pinned-base-image)
     - [Pin a new base image](#pin-a-new-base-image)
     - [Testing your image](#testing-your-image)
-  - [Conventions](#conventions)
+  - [Conventions 📏](#conventions-)
     - [Versioning](#versioning)
     - [Variables](#variables)
     - [Platform architecture](#platform-architecture)
     - [`Dockerignore` file](#dockerignore-file)
 
-## Overview
+## Overview 🧭
 
 The [Docker Make targets](../../scripts/docker/docker.mk) build, lint, run and
 push images from a project Dockerfile. The functions in
@@ -24,7 +24,7 @@ push images from a project Dockerfile. The functions in
 include GNU tools and a container runtime. Review and trust `mise.toml`, then
 run `make config` to install the pinned tools before building an image.
 
-## Key files
+## Key files 📁
 
 - Scripts
   - [`docker.lib.sh`](../../scripts/docker/docker.lib.sh): A library code loaded
@@ -48,7 +48,7 @@ run `make config` to install the pinned tools before building an image.
   - [`VERSION`](../../scripts/docker/tests/VERSION): Version patterns for the
     test suite
 
-## Usage
+## Usage 📖
 
 ### Quick start
 
@@ -240,7 +240,7 @@ Good project-specific image tests:
 - Check behaviour through the application's real interface
 - Run the tests after building the image, before publishing it
 
-## Conventions
+## Conventions 📏
 
 ### Versioning
 

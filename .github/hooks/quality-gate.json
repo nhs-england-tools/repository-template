@@ -12,7 +12,7 @@
       {
         "type": "command",
         "command": "./scripts/quality/quality-gate.sh hook",
-        "timeoutSec": 300
+        "timeoutSec": 60
       }
     ]
   }

@@ -1,18 +1,21 @@
-# Use Bash and Make
+# Use Bash and Make 🐚
 
-- [Use Bash and Make](#use-bash-and-make)
-  - [Using Make](#using-make)
+- [Use Bash and Make 🐚](#use-bash-and-make-)
+  - [Using Make 🧰](#using-make-)
     - [Make extensions](#make-extensions)
       - [Root lifecycle target map](#root-lifecycle-target-map)
       - [Compose with root lifecycle targets](#compose-with-root-lifecycle-targets)
-  - [Using Bash](#using-bash)
-  - [Make and Bash working together](#make-and-bash-working-together)
-  - [Conventions](#conventions)
+  - [Clean up files and Docker resources 🧹](#clean-up-files-and-docker-resources-)
+    - [Git cleanup options](#git-cleanup-options)
+    - [Docker cleanup](#docker-cleanup)
+  - [Using Bash 🐚](#using-bash-)
+  - [Make and Bash working together 🔗](#make-and-bash-working-together-)
+  - [Conventions 📏](#conventions-)
     - [Debugging](#debugging)
     - [Scripts](#scripts)
     - [Shell lint](#shell-lint)
 
-## Using Make
+## Using Make 🧰
 
 Use GNU Make 3.82 or later. Make resolves the first `bash` on `PATH` when it
 starts and uses that executable for recipes. Keep GNU Bash 5.2 or later ahead of
@@ -206,7 +209,103 @@ cleanup recipes. Do not use double-colon rules as an override for a single-colon
 target. A target cannot mix `:` and `::` rules, and double-colon rules run
 separate recipes rather than merging prerequisites.
 
-## Using Bash
+## Clean up files and Docker resources 🧹
+
+`make clean` runs the separate `clean::` recipes in
+[docker.mk](../../scripts/docker/docker.mk), [init.mk](../../scripts/init.mk),
+the root Makefile and any extensions. The shared Git recipe previews file
+cleanup by default. The Docker recipe removes image tags and generated files
+immediately, even without `CONFIRM=true`.
+
+Preview the commands from every recipe with `make -n clean` before running
+cleanup. Check any project extensions too. `CONFIRM` is not a preview switch for
+the whole target.
+
+### Git cleanup options
+
+These options control the shared Git recipe:
+
+| Option           | Default            | Effect                                                                                                          |
+| ---------------- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `CONFIRM=true`   | Preview only       | Deletes selected files and empty directories. Enables restoring tracked files when `UNSTAGED=true` is also set. |
+| `UNTRACKED=true` | Ignored files only | Includes other untracked files as well as ignored files. Files in the index are kept.                           |
+| `UNSTAGED=true`  | Keep tracked edits | Restores tracked files from the index, discarding their unstaged changes. Staged changes are kept.              |
+
+The default selection uses `git clean -d -X`. With `UNTRACKED=true`, it uses
+`git clean -d -x`. Both can include local configuration, caches and virtual
+environments. Confirmed cleanup also removes empty directories outside Git's
+metadata. `UNSTAGED=true` uses `git restore -- .`, so a partially staged file
+returns to its staged contents, not necessarily to `HEAD`.
+
+The following examples assume the `my-shiny-app` image directory from
+[Build Docker images](Build_Docker_images.md#quick-start) exists. Each command
+also runs the Docker cleanup described below. `dir` selects the image directory
+only. Git cleanup still covers the repository.
+
+Inspect the commands without executing the cleanup recipes:
+
+```shell
+make -n clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app
+```
+
+Preview ignored-file cleanup, then apply it after reviewing the output:
+
+```shell
+make clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app
+make clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app CONFIRM=true
+```
+
+To include other untracked files, use the same selection for preview and apply:
+
+```shell
+make clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app UNTRACKED=true
+make clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app UNTRACKED=true CONFIRM=true
+```
+
+To also discard unstaged edits, first review `git diff` and `git diff --cached`.
+The following selection includes ignored files and tracked edits, while keeping
+other untracked files:
+
+```shell
+make clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app UNSTAGED=true
+make clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app UNSTAGED=true CONFIRM=true
+```
+
+Combine `UNTRACKED=true` and `UNSTAGED=true` only when both sets of changes
+should be removed. Git cannot recover deleted untracked files or discarded
+unstaged content that was never committed or otherwise saved.
+
+### Docker cleanup
+
+The Docker recipe attempts to remove the selected image's tags listed in its
+`.version` file, plus `latest`. It ignores image-removal failures, for example
+when a container still uses the image. It then removes these generated files
+from the selected directory:
+
+- `.version`
+- `Dockerfile.effective`
+- `Dockerfile.effective.dockerignore`
+
+The source `Dockerfile` and `VERSION` are kept. Use `DOCKER_IMAGE` and an
+existing `dir` or `docker_dir` to select the image. Without a directory option,
+the wrapper resolves `infrastructure/images/$DOCKER_IMAGE`. A missing directory
+can fail the Docker recipe before the Git cleanup runs. In a project without an
+image directory, `dir=.` selects the repository root, where generated files with
+the names above will still be removed.
+
+To run just the image cleanup, call the internal wrapper explicitly:
+
+```shell
+make _docker docker_fn=clean DOCKER_IMAGE=my-shiny-app dir=infrastructure/images/my-shiny-app
+```
+
+This command acts immediately and does not use the Git cleanup options. Compose
+has its own `make docker-compose-clean` target, which removes the selected
+stack's containers and network while retaining volumes. It does not run through
+`make clean`. See
+[Run services with Docker Compose](Run_Docker_Compose_services.md).
+
+## Using Bash 🐚
 
 Repository scripts use `#!/usr/bin/env bash`, so direct execution also selects
 the first Bash on `PATH`. On macOS, put Homebrew's `bin` before `/bin` in your
@@ -277,7 +376,7 @@ easier to debug. Here is a breakdown of each option switch:
   a non-zero exit status), then the entire pipeline will return that non-zero
   status. By default, a pipeline returns the exit status of the last command.
 
-## Make and Bash working together
+## Make and Bash working together 🔗
 
 Sample make target calling a Bash function. Notice that `baz` is going to be
 accessible to the function as it is executed in the same operating system
@@ -306,7 +405,7 @@ Run it from a terminal:
 foo=bar make some-target
 ```
 
-## Conventions
+## Conventions 📏
 
 ### Debugging
 

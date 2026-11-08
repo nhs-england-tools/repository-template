@@ -1,4 +1,4 @@
-name: "CI/CD publish"
+name: "📦 CI/CD publish"
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions: {}
 
 jobs:
   metadata:
-    name: "Set CI/CD metadata"
+    name: "🏷️ Set CI/CD metadata"
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -26,11 +26,11 @@ jobs:
       python_version: ${{ steps.variables.outputs.python_version }}
       version: ${{ steps.variables.outputs.version }}
     steps:
-      - name: "Checkout code"
+      - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: "Set CI/CD variables"
+      - name: "🔧 Set CI/CD variables"
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
@@ -44,7 +44,7 @@ jobs:
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
           # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
-      - name: "List variables"
+      - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
           BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
@@ -57,7 +57,7 @@ jobs:
         run: |
           make list-variables
   publish:
-    name: "Publish packages"
+    name: "📦 Publish packages"
     runs-on: ubuntu-26.04
     permissions:
       contents: write
@@ -74,11 +74,11 @@ jobs:
       PYTHON_VERSION: ${{ needs.metadata.outputs.python_version }}
       VERSION: ${{ needs.metadata.outputs.version }}
     steps:
-      - name: "Get the artefacts"
+      - name: "📥 Get the artefacts"
         run: |
           echo "Getting the artefacts created by the build stage ..."
           # Template placeholder: connect the project's build artifact handoff.
-      - name: "Create release"
+      - name: "🚀 Create release"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.metadata.outputs.version }}
@@ -88,25 +88,25 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Release $VERSION" \
             --notes "Release of $VERSION"
-      # - name: "Upload release asset"
+      # - name: "📤 Upload release asset"
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #     VERSION: ${{ needs.metadata.outputs.version }}
       #   run: gh release upload "$VERSION" "./repository-template-$VERSION.tar.gz"
   success:
-    name: "Success notification"
+    name: "📣 Success notification"
     runs-on: ubuntu-26.04
     permissions:
       contents: read
     needs: [publish]
     steps:
-      - name: "Check prerequisites for notification"
+      - name: "🔎 Check prerequisites for notification"
         id: check
         env:
           TEAMS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
         run: |
           printf 'secret_exist=%s\n' "$TEAMS_WEBHOOK_CONFIGURED" >> "$GITHUB_OUTPUT"
-      - name: "Notify on publishing packages"
+      - name: "📣 Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
         uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
         with:

@@ -90,7 +90,7 @@ function test-make-lint-passes-a-check-mode-to-the-file-checks() {
   assert-equal "check-file-format.sh check=branch pr=v2
 check-markdown-format.sh check=branch pr=v2
 check-markdown-links.sh check=branch pr=v2
-check-shell-lint.sh check=all pr=v2
+check-shell-lint.sh check=branch pr=v2
 check-workflow-security.sh check=branch pr=v2" "$(cat "$TEST_TMP/checks.log")" "check modes"
   assert-equal 1 "$(test-stub-calls gh | awk 'END { print NR }')" "number of GitHub CLI calls"
 

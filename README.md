@@ -1,9 +1,9 @@
-# Repository Template
+# Repository Template 🧰
 
 A repository template that provides a baseline structure and quality checks for
 new projects.
 
-## Why this project exists
+## Why this project exists 🎯
 
 **Purpose** Provide a reliable starting point for new repositories by including
 a concise, self-documented structure and a small, essential tooling set.
@@ -19,7 +19,7 @@ standardises that starting point.
 Makefile with quality targets, scripts for common checks, and documentation
 guides so teams can configure and extend them for their needs.
 
-## Quick start
+## Quick start 🚀
 
 ### Prerequisites
 
@@ -109,7 +109,7 @@ shell lint: ok
 workflow security checks: ok
 ```
 
-## What it does
+## What it does ⚙️
 
 **Key features**
 
@@ -130,7 +130,7 @@ workflow security checks: ok
 - Formatting automation for project source code beyond Markdown. The template
   formatter covers Markdown files only.
 
-## How it solves the problem
+## How it solves the problem 🧩
 
 1. A team clones the repository and installs the documented prerequisites.
 2. The `make config` target sets up the development tooling entry points.
@@ -146,7 +146,7 @@ Key terms:
 - **Makefile targets**: standard entry points in [Makefile](Makefile) for
   configuration, linting, and testing tasks.
 
-## How to use
+## How to use 📖
 
 ### Configuration
 
@@ -237,12 +237,12 @@ follow [Update Dependencies](docs/guides/Update_Dependencies.md).
 
 ### Examples
 
-- Guides live in [docs/guides](docs/guides). The agent quality gate is described
-  in
+- The [guide index](docs/guides/README.md) groups tasks and gives a recommended
+  onboarding order. The agent quality gate is described in
   [Run the quality gate when the agent stops](docs/guides/Run_quality_gate_on_agent_stop.md).
 - ADR templates are stored in [docs/adr](docs/adr).
 
-## Design notes
+## Design notes 📝
 
 ### Diagrams
 
@@ -258,16 +258,16 @@ Aim for modular, configurable components so projects can extend or replace parts
 without large rewrites. TODO: add project-specific modularity guidance when this
 template is adopted.
 
-## Security
+## Security 🔒
 
 For vulnerability reporting guidance, see [SECURITY.md](.github/SECURITY.md).
 
-## Support
+## Support 💬
 
 For help using this project,
 [open a support request in GitHub Issues](https://github.com/nhs-england-tools/repository-template/issues/new?template=1_support_request.yaml).
 
-## Contributing
+## Contributing 🤝
 
 See the contributing guide at [CONTRIBUTING.md](.github/CONTRIBUTING.md). Please
 follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md) when participating.
@@ -280,7 +280,7 @@ At a high level:
 - TODO: confirm the contribution workflow (issues, pull requests, and review
   expectations).
 
-## Repository layout
+## Repository layout 🗂️
 
 - [.github/workflows](.github/workflows) — CI/CD workflow definitions for the
   template.
@@ -296,6 +296,6 @@ At a high level:
 - [Makefile](Makefile) — primary entry point for quality and configuration
   tasks.
 
-## Licence
+## Licence 📜
 
 Released under the [MIT Licence](LICENCE.md)

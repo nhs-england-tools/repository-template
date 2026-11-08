@@ -1,13 +1,13 @@
-# Scan secrets
+# Scan secrets 🔐
 
-- [Scan secrets](#scan-secrets)
-  - [Overview](#overview)
-  - [Key files](#key-files)
-  - [Configuration checklist](#configuration-checklist)
-  - [Testing](#testing)
-  - [Removing sensitive data](#removing-sensitive-data)
+- [Scan secrets 🔐](#scan-secrets-)
+  - [Overview 🧭](#overview-)
+  - [Key files 📁](#key-files-)
+  - [Configuration checklist 📋](#configuration-checklist-)
+  - [Testing 🧪](#testing-)
+  - [Removing sensitive data 🧹](#removing-sensitive-data-)
 
-## Overview
+## Overview 🧭
 
 Scanning a repository for hard-coded secrets is a crucial security practice.
 "Hard-coded secrets" pertain to sensitive data such as passwords, API keys and
@@ -20,7 +20,7 @@ repositories. This template's scanner checks commit history by default. Set
 `check=all` to check staged changes, the working tree and commits on the current
 branch instead.
 
-## Key files
+## Key files 📁
 
 - [`scan-secrets.sh`](../../scripts/quality/scan-secrets.sh): A shell script
   that scans the codebase for hard-coded secrets
@@ -33,7 +33,7 @@ branch instead.
 - [`pre-commit.yaml`](../../scripts/config/pre-commit.yaml): Run the secret
   scanner as a pre-commit git hook
 
-## Configuration checklist
+## Configuration checklist 📋
 
 - [Add custom secret patterns](../../scripts/config/gitleaks.toml) to the
   configuration file to align with your project's specific requirements
@@ -48,7 +48,7 @@ branch instead.
   [NHS Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework/tree/main/tools/nhsd-git-secrets)
   shows an alternative tool
 
-## Testing
+## Testing 🧪
 
 You can scan every commit on every branch locally from the repository root:
 
@@ -62,7 +62,7 @@ To check only staged changes, working-tree files and commits on your branch:
 check=all ./scripts/quality/scan-secrets.sh
 ```
 
-## Removing sensitive data
+## Removing sensitive data 🧹
 
 Here are some tools that can help in removing sensitive data, such as passwords
 or API keys, from the Git history

@@ -1,17 +1,17 @@
-# Sign Git commits
+# Sign Git commits 📝
 
-- [Sign Git commits](#sign-git-commits)
-  - [Sign with GPG](#sign-with-gpg)
+- [Sign Git commits 📝](#sign-git-commits-)
+  - [Sign with GPG 🔑](#sign-with-gpg-)
     - [Generate GPG key](#generate-gpg-key)
     - [Back up, import or remove a GPG key](#back-up-import-or-remove-a-gpg-key)
     - [Configure Git for GPG](#configure-git-for-gpg)
     - [Add the GPG key to GitHub](#add-the-gpg-key-to-github)
     - [Troubleshoot and configure GPG agent](#troubleshoot-and-configure-gpg-agent)
-  - [Sign with SSH](#sign-with-ssh)
+  - [Sign with SSH 🔐](#sign-with-ssh-)
     - [Generate or select an SSH key](#generate-or-select-an-ssh-key)
     - [Configure Git for SSH](#configure-git-for-ssh)
     - [Add the SSH signing key to GitHub](#add-the-ssh-signing-key-to-github)
-  - [Verify signing](#verify-signing)
+  - [Verify signing ✅](#verify-signing-)
 
 This template does not configure commit signing or manage signing keys. Git
 signs commits locally, and GitHub verifies signatures made with a key on your
@@ -27,7 +27,7 @@ for account-specific requirements.
 > expiry, and `git config --global` changes signing for all repositories. Choose
 > settings that meet your organisation's policy.
 
-## Sign with GPG
+## Sign with GPG 🔑
 
 ### Generate GPG key
 
@@ -204,7 +204,7 @@ gpgconf --kill gpg-agent
 `git config --global credential.helper cache` is a separate optional setting for
 Git authentication credentials. It does not cache your GPG signing passphrase.
 
-## Sign with SSH
+## Sign with SSH 🔐
 
 ### Generate or select an SSH key
 
@@ -261,7 +261,7 @@ If Git cannot prompt for your key's passphrase, follow GitHub's
 [ssh-agent setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 to load the key securely.
 
-## Verify signing
+## Verify signing ✅
 
 After your next normal commit and push, check that GitHub shows **Verified**
 beside the commit. This confirms that GitHub recognised the signature and its

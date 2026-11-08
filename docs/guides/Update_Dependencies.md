@@ -1,22 +1,22 @@
-# Update Dependencies
+# Update Dependencies 🔄
 
-- [Update Dependencies](#update-dependencies)
-  - [Dependency Sources](#dependency-sources)
-  - [Ground Rules](#ground-rules)
-  - [Update by Source](#update-by-source)
+- [Update Dependencies 🔄](#update-dependencies-)
+  - [Dependency Sources 📦](#dependency-sources-)
+  - [Ground Rules 📏](#ground-rules-)
+  - [Update by Source 🔧](#update-by-source-)
     - [mise Tools](#mise-tools)
     - [Docker Images](#docker-images)
     - [GitHub Actions and Runners](#github-actions-and-runners)
     - [Application Packages](#application-packages)
     - [Homebrew Tools](#homebrew-tools)
-  - [Verify the Update](#verify-the-update)
+  - [Verify the Update ✅](#verify-the-update-)
 
 Keeping dependencies current brings security fixes and compatibility
 improvements. Exact pins and lockfiles make builds repeatable, while verified
 checksums, provenance and image digests help establish where downloaded software
 came from. Review updates and run the repository checks before merging them.
 
-## Dependency Sources
+## Dependency Sources 📦
 
 - **mise tools and mise itself:** exact tool versions and the minimum mise CLI
   version are in [mise.toml](../../mise.toml). Resolved tool versions, checksums
@@ -45,7 +45,7 @@ The pre-commit configuration currently runs repository-owned Make targets. Its
 `pre-commit` executable is a mise tool, so there are no separate third-party
 hook revisions to update.
 
-## Ground Rules
+## Ground Rules 📏
 
 - **Wait seven days.** Updates applied by hand follow the same seven-day
   cooldown that mise (`minimum_release_age`) and Dependabot (`cooldown`) apply
@@ -68,7 +68,7 @@ hook revisions to update.
   the error. Report it and investigate the upstream release first, see the mise
   [checksum mismatch guidance](https://mise.jdx.dev/dev-tools/mise-lock.html#checksum-mismatch).
 
-## Update by Source
+## Update by Source 🔧
 
 ### mise Tools
 
@@ -217,7 +217,7 @@ brew upgrade FORMULA
 
 Homebrew changes are local to your machine and are not part of the pull request.
 
-## Verify the Update
+## Verify the Update ✅
 
 Review all version, SHA, digest and lockfile changes. Confirm that every
 `[_.docker]` version matches its `[tools]` entry. Run the repository checks

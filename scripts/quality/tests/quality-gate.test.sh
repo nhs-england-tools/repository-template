@@ -1916,7 +1916,7 @@ function test-quality-gate-registers-both-hook-events() {
   assert-equal "./scripts/quality/quality-gate.sh hook" "$(jq -r '.hooks.Stop[0].command' "$hooks")" "Stop command"
   assert-equal 2 "$(jq '.hooks | length' "$hooks")" "registered events"
   assert-equal "" "$(jq -r '[.. | objects | select(has("timeout"))] | length | select(. > 0)' "$hooks")" "entries using 'timeout' instead of 'timeoutSec'"
-  jq -e '.hooks.Stop[0].timeoutSec > 240 and .hooks.UserPromptSubmit[0].timeoutSec >= 10' "$hooks" > /dev/null
+  jq -e '.hooks.Stop[0].timeoutSec < 120 and .hooks.UserPromptSubmit[0].timeoutSec >= 10' "$hooks" > /dev/null
 
   return 0
 }

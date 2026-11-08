@@ -1,21 +1,21 @@
-# Harden repository security
+# Harden repository security 🔒
 
-- [Harden repository security](#harden-repository-security)
-  - [Overview](#overview)
-  - [Trust boundaries](#trust-boundaries)
-  - [GitHub Actions](#github-actions)
+- [Harden repository security 🔒](#harden-repository-security-)
+  - [Overview 🧭](#overview-)
+  - [Trust boundaries 🧱](#trust-boundaries-)
+  - [GitHub Actions 🤖](#github-actions-)
     - [Workflow security check](#workflow-security-check)
     - [Fix a failing check](#fix-a-failing-check)
     - [Publish and deploy](#publish-and-deploy)
-  - [Secrets](#secrets)
-  - [Dependencies and images](#dependencies-and-images)
-  - [Tool containers](#tool-containers)
+  - [Secrets 🔐](#secrets-)
+  - [Dependencies and images 📦](#dependencies-and-images-)
+  - [Tool containers 🐳](#tool-containers-)
     - [Use the containers on a workstation](#use-the-containers-on-a-workstation)
-  - [Making a security-sensitive change](#making-a-security-sensitive-change)
-  - [Testing](#testing)
-  - [Limits and responsibilities](#limits-and-responsibilities)
+  - [Making a security-sensitive change 🚦](#making-a-security-sensitive-change-)
+  - [Testing 🧪](#testing-)
+  - [Limits and responsibilities 📏](#limits-and-responsibilities-)
 
-## Overview
+## Overview 🧭
 
 This template runs repository code, third-party tools and GitHub Actions on
 developer machines and CI runners. Treat pull request content, workflow inputs,
@@ -27,7 +27,7 @@ The template provides toolchain, workflow and quality-check defaults, not an
 application security policy. Teams that add services must assess their own
 authentication, data handling, network exposure and deployment controls.
 
-## Trust boundaries
+## Trust boundaries 🧱
 
 - **Workflow input to a CI script:** A branch name, pull request title or
   dispatch input becomes code when a workflow expression inserts it into a
@@ -44,7 +44,7 @@ authentication, data handling, network exposure and deployment controls.
   available after it is deleted. Secret scanning checks every commit, and an
   exposed credential must be rotated.
 
-## GitHub Actions
+## GitHub Actions 🤖
 
 Every [workflow](../../.github/workflows/) sets `permissions: {}`, so each job
 starts with no `GITHUB_TOKEN` permissions and declares the ones it needs. Most
@@ -82,7 +82,7 @@ require:
 - No `${{` expressions in `run` scripts or `actions/github-script` scripts.
 - `FORCE_USE_DOCKER=true` on the five container-based quality actions, and no
   `jdx/mise-action` step in their commit-stage jobs. See
-  [Tool containers](#tool-containers).
+  [Tool containers](#tool-containers-).
 
 Each rule in the jq file has a short description and an example of passing and
 failing YAML. The check runs in `make lint`, as a pre-commit hook and in the
@@ -124,7 +124,7 @@ in the repository settings.
 The build, publish, deploy and acceptance steps are template placeholders.
 Implement and review them before relying on them.
 
-## Secrets
+## Secrets 🔐
 
 [scan-secrets.sh](../../scripts/quality/scan-secrets.sh) runs Gitleaks with
 redacted output. The pre-commit hook and the commit-stage CI job use
@@ -141,7 +141,7 @@ from logging, forwarding or misusing it. If a credential is exposed, revoke or
 rotate it first, then assess history, logs and downstream copies. Add an ignore
 rule only for a reviewed false positive, never to accept a real credential.
 
-## Dependencies and images
+## Dependencies and images 📦
 
 [mise.toml](../../mise.toml) pins every native tool to an exact version and
 every helper image to a tag and SHA-256 digest in its `[_.docker]` table. Its
@@ -168,7 +168,7 @@ version pinned as `npm:prettier` in `[tools]`. Natively it runs the copy that
 `npx --yes prettier@<version>` in the pinned `node` image, which downloads that
 exact version from npm at run time without checking it against `mise.lock`.
 
-## Tool containers
+## Tool containers 🐳
 
 Apart from the workflow security check, each check runs its tool natively when
 the tool is installed. Otherwise, or when `FORCE_USE_DOCKER=true`, it runs the
@@ -226,7 +226,7 @@ the most time in both modes, though it runs in parallel, one container for each
 group of related scripts in Docker. A first image pull adds time, and x64 CI
 runners have no emulation cost.
 
-## Making a security-sensitive change
+## Making a security-sensitive change 🚦
 
 1. Identify who controls each input, dependency, token, file and network path.
    Include CI jobs and native runs, not only Docker runs.
@@ -238,10 +238,10 @@ runners have no emulation cost.
    dependencies at run time unless the risk is reviewed.
 4. Add a failing test for the policy or wrapper behaviour you are changing, make
    the change and rerun the test. Keep local and CI paths aligned.
-5. Run the checks in [Testing](#testing) and review the diff, including new
+5. Run the checks in [Testing](#testing-) and review the diff, including new
    files, generated output and the GitHub settings that cannot be tested here.
 
-## Testing
+## Testing 🧪
 
 Review and trust `mise.toml`, then run `make config` as the
 [README](../../README.md) describes. From the repository root, run:
@@ -266,7 +266,7 @@ directories directly, so it includes new files. Git hooks run only where
 `make config` installed them, and `git commit --no-verify` skips them.
 [Run Git hooks on commit](Run_Git_hooks_on_commit.md) describes the hooks.
 
-## Limits and responsibilities
+## Limits and responsibilities 📏
 
 The workflow security check enforces specific YAML rules. It does not audit
 shell code, action behaviour, repository settings or external integrations.

@@ -1,4 +1,4 @@
-name: "CI/CD deploy"
+name: "🚀 CI/CD deploy"
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions: {}
 
 jobs:
   metadata:
-    name: "Set CI/CD metadata"
+    name: "🏷️ Set CI/CD metadata"
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -27,7 +27,7 @@ jobs:
       version: ${{ steps.variables.outputs.version }}
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - name: "Validate tag"
+      - name: "🔖 Validate tag"
         id: tag
         env:
           TAG: ${{ inputs.tag }}
@@ -35,12 +35,12 @@ jobs:
           git check-ref-format "refs/tags/$TAG" || { printf 'Invalid tag: %q\n' "$TAG" >&2; exit 1; }
           [[ "$TAG" != "latest" ]] || { echo "The 'latest' tag cannot be deployed, use a release tag" >&2; exit 1; }
           printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
-      - name: "Checkout code"
+      - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ steps.tag.outputs.tag }}
           persist-credentials: false
-      - name: "Set CI/CD variables"
+      - name: "🔧 Set CI/CD variables"
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
@@ -54,7 +54,7 @@ jobs:
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
           # Template placeholder: use the version output from the caller workflow.
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
-      - name: "List variables"
+      - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
           BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
@@ -68,7 +68,7 @@ jobs:
         run: |
           make list-variables
   deploy:
-    name: "Deploy to an environment"
+    name: "🚀 Deploy to an environment"
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -84,26 +84,26 @@ jobs:
       PYTHON_VERSION: ${{ needs.metadata.outputs.python_version }}
       VERSION: ${{ needs.metadata.outputs.version }}
     steps:
-      - name: "Checkout code"
+      - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ needs.metadata.outputs.tag }}
           persist-credentials: false
   # Template placeholder: add project-specific deployment jobs and steps here.
   # success:
-  #   name: "Success notification"
+  #   name: "📣 Success notification"
   #   runs-on: ubuntu-26.04
   #   permissions:
   #     contents: read
   #   needs: [deploy]
   #   steps:
-  #     - name: "Check prerequisites for notification"
+  #     - name: "🔎 Check prerequisites for notification"
   #       id: check
   #       env:
   #         TEAMS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
   #       run: |
   #         printf 'secret_exist=%s\n' "$TEAMS_WEBHOOK_CONFIGURED" >> "$GITHUB_OUTPUT"
-  #     - name: "Notify on deployment to an environment"
+  #     - name: "📣 Notify on deployment to an environment"
   #       if: steps.check.outputs.secret_exist == 'true'
   #       uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
   #       with:

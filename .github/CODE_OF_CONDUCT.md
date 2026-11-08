@@ -1,11 +1,11 @@
-# Code of Conduct
+# Code of Conduct 🤝
 
 This Code of Conduct sets expectations for everyone who participates in this
 project. It is a template. Before adopting it, maintainers must replace the
-reporting placeholders and confirm that the process matches their organisation's
+reporting placeholders and confirm that the process matches their team's
 policies.
 
-## Our commitment
+## Our commitment 🫶
 
 We aim to maintain a respectful, inclusive, and safe project community. We work
 with professionalism, compassion, and openness, and treat people with dignity.
@@ -14,7 +14,7 @@ Where applicable, these aims reflect the values in the
 They do not replace an organisation's employment policies, professional
 standards, or statutory duties.
 
-## Expected behaviour
+## Expected behaviour ✅
 
 - Treat everyone with respect, fairness, and consideration, regardless of role,
   seniority, identity, background, or level of experience.
@@ -28,7 +28,7 @@ standards, or statutory duties.
 - Protect patient, personal, and confidential information. Use synthetic
   examples and approved channels when discussing sensitive matters.
 
-## Unacceptable behaviour
+## Unacceptable behaviour 🚫
 
 Unacceptable behaviour includes:
 
@@ -43,7 +43,7 @@ Unacceptable behaviour includes:
 - Knowingly making a malicious or fabricated report. A report is not misconduct
   simply because it cannot be substantiated.
 
-## Scope
+## Scope 🌐
 
 This policy applies to project spaces, including repositories, issues, pull
 requests, code reviews, discussions, project-managed communication channels, and
@@ -55,7 +55,7 @@ NHS or employer processes for employment concerns, whistleblowing, safeguarding,
 patient safety, clinical safety, information governance, data breaches, or
 security incidents. Use the appropriate organisational route for those matters.
 
-## Reporting a conduct concern
+## Reporting a conduct concern 📣
 
 Report concerns privately using this project's approved route:
 
@@ -74,7 +74,7 @@ the approved route specifically requires them. Do not use this Code of Conduct
 as a route for reporting security vulnerabilities. Follow
 [SECURITY.md](SECURITY.md) instead.
 
-## How reports are handled
+## How reports are handled 🔍
 
 The designated contact will review reports as promptly as practicable and
 explain the next steps. Reports will be handled sensitively. Information will be
@@ -91,7 +91,7 @@ The project does not tolerate retaliation against someone who raises a concern
 in good faith or participates in a review. If you believe retaliation has
 occurred, report it through the same private route or its alternative.
 
-## Possible outcomes
+## Possible outcomes ⚖️
 
 Maintainers or the designated organisation may take action proportionate to the
 behaviour, its impact, and any relevant pattern. Actions may include a private
@@ -104,7 +104,7 @@ Where practicable, the person affected may ask for a review by someone not
 involved in the original decision. Do not publish private report details or
 enforcement discussions in project spaces.
 
-## Before adopting this template
+## Before adopting this template 🛠️
 
 Replace every `[TODO: ...]` above with approved, monitored routes. Confirm who
 receives reports, how conflicts of interest are handled, how records are
@@ -112,7 +112,7 @@ protected, and what response process the project can support. Check this policy
 against the adopting organisation's current requirements and make it clear to
 contributors where this project process ends and organisational processes begin.
 
-## Further guidance
+## Further guidance 📚
 
 - [NHS Constitution for England: NHS values](https://www.gov.uk/government/publications/the-nhs-constitution-for-england/the-nhs-constitution-for-england#nhs-values)
 - [Contributor Covenant 3.0](https://www.contributor-covenant.org/version/3/0/code_of_conduct/)

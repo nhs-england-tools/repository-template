@@ -1,4 +1,4 @@
-name: "CI/CD pull request"
+name: "🔀 CI/CD pull request"
 
 # The total recommended execution time for the "CI/CD Pull Request" workflow is around 20 minutes.
 
@@ -13,7 +13,7 @@ permissions: {}
 
 jobs:
   metadata:
-    name: "Set CI/CD metadata"
+    name: "🏷️ Set CI/CD metadata"
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -30,11 +30,11 @@ jobs:
       version: ${{ steps.variables.outputs.version }}
       does_pull_request_exist: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
     steps:
-      - name: "Checkout code"
+      - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: "Set CI/CD variables"
+      - name: "🔧 Set CI/CD variables"
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
@@ -48,7 +48,7 @@ jobs:
           echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
-      - name: "Check if pull request exists for this branch"
+      - name: "🔎 Check if pull request exists for this branch"
         id: pr_exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +62,7 @@ jobs:
             echo "Pull request doesn't exist"
             echo "does_pull_request_exist=false" >> $GITHUB_OUTPUT
           fi
-      - name: "List variables"
+      - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
           BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
@@ -76,7 +76,7 @@ jobs:
         run: |
           make list-variables
   commit-stage: # Recommended maximum execution time is 2 minutes
-    name: "Commit stage"
+    name: "🔍 Commit stage"
     permissions:
       contents: read
     needs: [metadata]
@@ -91,7 +91,7 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
   test-stage: # Recommended maximum execution time is 5 minutes
-    name: "Test stage"
+    name: "🧪 Test stage"
     permissions:
       contents: read
     needs: [metadata, commit-stage]
@@ -108,7 +108,7 @@ jobs:
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   build-stage: # Recommended maximum execution time is 3 minutes
-    name: "Build stage"
+    name: "🏗️ Build stage"
     permissions:
       contents: read
     needs: [metadata, test-stage]
@@ -124,7 +124,7 @@ jobs:
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
   acceptance-stage: # Recommended maximum execution time is 10 minutes
-    name: "Acceptance stage"
+    name: "✅ Acceptance stage"
     permissions:
       contents: read
     needs: [metadata, build-stage]

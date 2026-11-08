@@ -10,7 +10,7 @@ diff, linked issues or design documents, and command output as evidence. Do not
 infer or invent details. Say when something is unknown or has not been verified.
 -->
 
-## Context and approach
+## Context and approach 🧭
 
 <!--
 Explain the problem and why this approach was chosen. Include only context a
@@ -18,10 +18,9 @@ reviewer or future maintainer needs beyond the summary.
 
 Link the related issue, specification, ADR, or discussion where available. Add
 enough explanation for a reader who cannot access a linked internal source.
-If there is no related work item, say so rather than inventing an identifier.
 -->
 
-## Changes and impact
+## Changes and impact 🔄
 
 <!--
 Expand on the summary with the substantive changes, grouped by area or file.
@@ -32,7 +31,7 @@ effects on compatibility, security, privacy, accessibility, deployment, or
 operations. State when an area was not assessed or is not applicable.
 -->
 
-## Validation
+## Validation ✅
 
 <!--
 List the checks actually run and the observed result. Do not report a check as
@@ -54,7 +53,7 @@ Number additional checks in the order they should be run. Omit fields that do
 not apply rather than filling them with boilerplate.
 -->
 
-## Type of changes
+## Type of changes 🏷️
 
 <!--
 What types of changes does your code introduce? Put an `x` in all the boxes that
@@ -66,7 +65,7 @@ apply.
 - [ ] Breaking change (fix or feature that would change existing functionality)
 - [ ] Bug fix (non-breaking change which fixes an issue)
 
-## Checklist
+## Checklist 📋
 
 <!--
 Go over all the following points, and put an `x` in all the boxes that apply.
@@ -82,7 +81,7 @@ Go over all the following points, and put an `x` in all the boxes that apply.
 
 ---
 
-## Sensitive information
+## Sensitive information 🔒
 
 Please do not include credentials, PII/PID, or other sensitive data. See [NHS
 data safety guidance]. Check the PR description, commits, code changes, logs,
@@ -92,5 +91,4 @@ and contact maintainers privately.
 
 - [ ] I confirm this pull request does not include PII/PID or sensitive data.
 
-[NHS data safety guidance]:
-  https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public
+[NHS data safety guidance]: https://digital.nhs.uk/data-and-information/keeping-data-safe-and-benefitting-the-public

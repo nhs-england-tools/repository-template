@@ -1,17 +1,17 @@
-# Run the quality gate when the agent stops
+# Run the quality gate when the agent stops 🚦
 
-- [Run the quality gate when the agent stops](#run-the-quality-gate-when-the-agent-stops)
-  - [Overview](#overview)
-  - [Key files](#key-files)
-  - [When the gate runs](#when-the-gate-runs)
-  - [Add or change a gate](#add-or-change-a-gate)
-  - [Pause and resume](#pause-and-resume)
-  - [Limits and cost](#limits-and-cost)
-  - [Gates that cannot run](#gates-that-cannot-run)
-  - [Troubleshooting](#troubleshooting)
-  - [Testing](#testing)
+- [Run the quality gate when the agent stops 🚦](#run-the-quality-gate-when-the-agent-stops-)
+  - [Overview 🧭](#overview-)
+  - [Key files 📁](#key-files-)
+  - [When the gate runs 🕒](#when-the-gate-runs-)
+  - [Add or change a gate 🔧](#add-or-change-a-gate-)
+  - [Pause and resume 🔁](#pause-and-resume-)
+  - [Limits and cost 📏](#limits-and-cost-)
+  - [Gates that cannot run 🚫](#gates-that-cannot-run-)
+  - [Troubleshooting 🔍](#troubleshooting-)
+  - [Testing 🧪](#testing-)
 
-## Overview
+## Overview 🧭
 
 A GitHub Copilot agent may say it is done while `make lint` or `make test` still
 fails. The quality gate closes that gap. When the agent tries to finish a turn,
@@ -26,7 +26,7 @@ Copilot, and Copilot CLI read the same file and payload format, but they are not
 tested. The hook does nothing in GitHub Actions, which also runs Copilot cloud
 agent, because the gates need tools and network access that its sandbox lacks.
 
-## Key files
+## Key files 📁
 
 - Scripts
   - [`quality-gate.sh`](../../scripts/quality/quality-gate.sh): hook handler and
@@ -42,7 +42,7 @@ agent, because the gates need tools and network access that its sandbox lacks.
 - Tests
   - [`quality-gate.test.sh`](../../scripts/quality/tests/quality-gate.test.sh)
 
-## When the gate runs
+## When the gate runs 🕒
 
 - **Prompt submitted.** A turn starts with the first prompt after the agent last
   finished. The hook records a baseline of the working tree then. It stores the
@@ -70,7 +70,7 @@ hook still runs the script, the Make targets and the tests from the working
 tree, so review changes to those too. `make quality-gate` and
 `make quality-gate-list` read the working tree.
 
-## Add or change a gate
+## Add or change a gate 🔧
 
 A gate is a Make target. Exit status 0 passes it. Put project gates in
 `scripts/config/quality-gates.d/*.yaml` so template updates do not conflict:
@@ -102,7 +102,7 @@ stands for itself, so `docs/**/*.md` matches `docs/README.md` and
 A gate can read the changed paths from the NUL-separated file named by
 `QUALITY_GATE_CHANGED_FILES`.
 
-## Pause and resume
+## Pause and resume 🔁
 
 ```shell
 make quality-gate-pause hours=2
@@ -114,7 +114,7 @@ made while the agent works does not change the current turn. It expires after
 the given hours, from 1 to 8. Use it for long refactors where a failing gate is
 expected.
 
-## Limits and cost
+## Limits and cost 📏
 
 - `max_blocks` is the number of times the hook may block one turn. It is 1 by
   default and at most 5. Each block starts another agent turn that costs AI
@@ -124,14 +124,15 @@ expected.
   there. A hook that times out does not block.
 - Each gate has a `timeout`. The hook stops a gate that runs over, and the
   report names it. Every process of the gate first gets `TERM`, so it can clean
-  up, and any still running a second later gets `KILL`. The hook has a 300
-  second limit that covers all the gates. When the editor stops the hook, at
+  up, and any still running a second later gets `KILL`. The hook has a 60
+  second limit for all the gates combined, so the editor may stop it before an
+  individual gate reaches its own timeout. When the editor stops the hook, at
   that limit or when you cancel the turn, the hook stops the running gate in the
   same way. A forced kill cannot be caught, so a gate may then outlive the hook.
 - The report is cut to the last lines of each failing gate and about 8 KB in
   total.
 
-## Gates that cannot run
+## Gates that cannot run 🚫
 
 When a gate cannot run for a reason that is not the code, it should print
 `PREREQUISITE: <how to fix it>`. The Docker test suite's
@@ -140,7 +141,7 @@ such a gate. It tells you what to fix and that the gate's result is unknown, and
 it tells the agent not to change the environment. `make quality-gate` still
 fails, because the gate did not pass.
 
-## Troubleshooting
+## Troubleshooting 🔍
 
 - **The gate does not run.** In the Local harness, check that `chat.useHooks` is
   on. In the Copilot harness, check that `disableAllHooks` is not set in a hook
@@ -155,7 +156,7 @@ fails, because the gate did not pass.
 - **It blocks on a gate you do not want.** Set `enabled: false` in a drop-in, or
   pause it.
 
-## Testing
+## Testing 🧪
 
 ```shell
 ./scripts/quality/tests/quality-gate.test.sh
