@@ -113,6 +113,8 @@ pull request:
    [Docker Images](#docker-images).
 5. Run `make test` and `make lint`. Review the workflow results and the
    `mise.toml`, `mise.lock` and `.mise/locks/` changes together.
+   Stage any newly created `.mise/locks/` sidecars first, because lint checks
+   tracked files only.
 
 No Make target updates the CLI or `min_version`. See the
 [mise update instructions](https://mise.jdx.dev/installing-mise.html#updating).

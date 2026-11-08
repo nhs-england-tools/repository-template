@@ -1,5 +1,5 @@
 # Minimum mise CLI version for developers; CI/CD pins the exact same version, SEE: .github/workflows/cicd-1-pull-request.yaml
-min_version = "2026.10.9"
+min_version = "2026.10.25"
 
 [settings]
 lockfile = true
@@ -16,11 +16,11 @@ gitleaks = "8.30.1"
 hadolint = "2.15.1"
 jq = "1.8.2"
 lychee = "0.24.2"
-node = "26.12.0"
-"npm:markdownlint-cli" = "0.49.1"
+node = "26.13.0"
+"npm:markdownlint-cli" = "0.50.0"
 "npm:prettier" = "3.9.10"
 pre-commit = "4.7.0"
-python = "3.15.0"
+python = "3.15.2"
 shellcheck = "0.11.0"
 yq = "4.54.1"
 
@@ -32,7 +32,7 @@ yq = "4.54.1"
 # gitleaks, SEE: https://github.com/gitleaks/gitleaks/pkgs/container/gitleaks keep in sync with the gitleaks version above
 "ghcr.io/gitleaks/gitleaks" = "v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
 # markdownlint-cli, SEE: https://github.com/igorshubovych/markdownlint-cli/pkgs/container/markdownlint-cli keep in sync with the markdownlint-cli version above
-"ghcr.io/igorshubovych/markdownlint-cli" = "v0.49.1@sha256:905baf9f6bd11da2ede8c394882c616509385f24b8b8d54fff6e111be88f39de"
+"ghcr.io/igorshubovych/markdownlint-cli" = "v0.50.0@sha256:db7dcb73cd3163cc45854b60fc21eefe1ebe7fa52aad758706010b64a4778900"
 # hadolint, SEE: https://hub.docker.com/r/hadolint/hadolint/tags keep in sync with the hadolint version above
 "hadolint/hadolint" = "v2.15.1-alpine@sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552"
 # shellcheck, SEE: https://hub.docker.com/r/koalaman/shellcheck/tags keep in sync with the shellcheck version above
@@ -42,6 +42,6 @@ yq = "4.54.1"
 # editorconfig-checker, SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags keep in sync with the editorconfig-checker version above
 "mstruebing/editorconfig-checker" = "4.0.2@sha256:2ba6232bfa0058f72f5f7d7816711590aa764afab1542af30b3ecb4553587918"
 # node, SEE: https://hub.docker.com/_/node/tags keep in sync with the node version above
-"node" = "26.12.0-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11"
+"node" = "26.13.0-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072"
 # python, SEE: https://hub.docker.com/_/python/tags keep in sync with the python version above
-"python" = "3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58"
+"python" = "3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928"
