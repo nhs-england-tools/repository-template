@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Open this issue in the new repository and assign it to a maintainer.
-        Follow the [repository setup guide](https://github.com/nhs-england-tools/repository-template/blob/main/docs/guides/Set_up_a_new_repository.md) for detailed steps.
+        Follow the [repository setup guide](https://github.com/nhs-england-tools/repository-template/blob/main/docs/guides/template/Set_up_a_new_repository.md) for detailed steps.
         Complete the checklist in an initial setup pull request before accepting contributions.
         Ask a maintainer and the relevant security or policy owner to review that pull request.
         Do not include private reports, personal data, or sensitive contact details in this issue.
@@ -24,8 +24,8 @@ body:
         - label: Record applicable information governance, accessibility, security, and clinical safety requirements in the project documentation.
         - label: Resolve the documentation TODOs and verify that links and published contact routes work.
         - label: Implement the recipes for every TODO-marked target in the Makefile. Keep the existing target names.
-        - label: Review dependency sources, Dependabot, cooldown and update ownership using docs/guides/Update_Dependencies.md. Record project-specific changes.
-        - label: Configure the required SonarQube Cloud integration using docs/guides/Configure_SonarQube_Cloud.md. Verify a pull request scan and quality gate result.
+        - label: Review dependency sources, Dependabot, cooldown and update ownership using docs/guides/template/Update_Dependencies.md. Record project-specific changes.
+        - label: Configure the required SonarQube Cloud integration using docs/guides/template/Configure_SonarQube_Cloud.md. Verify a pull request scan and quality gate result.
   - type: checkboxes
     id: approval
     attributes:

@@ -63,7 +63,8 @@ installed and configured:
 On GitHub, choose **New repository** and select
 `nhs-england-tools/repository-template` from **Choose a template**. Choose the
 owner, name and visibility, then create the repository. Follow the
-[repository setup guide](docs/guides/Set_up_a_new_repository.md) to tailor it.
+[repository setup guide](docs/guides/template/Set_up_a_new_repository.md) to
+tailor it.
 
 Clone your new repository using its **Code** URL, replacing `OWNER` and
 `REPOSITORY` with its details:
@@ -129,9 +130,10 @@ workflow security checks: ok
 
 1. The template provides common tooling, quality checks and guidance that teams
    would otherwise set up for each new repository.
-2. Teams tailor the [Makefile](Makefile) and [guides](docs/guides/README.md)
-   to their project and use the time saved on setup to deliver product features
-   that meet user needs and create business value.
+2. Teams tailor the [Makefile](Makefile) and
+   [guides](docs/guides/template/README.md) to their project and use the time
+   saved on setup to deliver product features that meet user needs and create
+   business value.
 
 ## How to use 📖
 
@@ -153,8 +155,9 @@ make test
 ```
 
 `make lint` checks tracked files. It does not run the test suites or secret
-scan. The [pre-commit hooks](docs/guides/Run_Git_hooks_on_commit.md) also run
-`make test` and `make scan-secrets`. To scan repository history yourself:
+scan. The [pre-commit hooks](docs/guides/template/Run_Git_hooks_on_commit.md)
+also run `make test` and `make scan-secrets`. To scan repository history
+yourself:
 
 ```shell
 make scan-secrets
@@ -173,18 +176,21 @@ To limit the file checks to changes on your branch while developing:
 make lint check=branch
 ```
 
-The [quality-check guide](docs/guides/Run_and_configure_quality_checks.md)
+The
+[quality-check guide](docs/guides/template/Run_and_configure_quality_checks.md)
 covers individual targets, file scopes, tool fallbacks and project checks.
-Follow [Harden repository security](docs/guides/Harden_repository_security.md)
+Follow
+[Harden repository security](docs/guides/template/Harden_repository_security.md)
 for workflow permissions and
-[Update Dependencies](docs/guides/Update_Dependencies.md) for tool, image,
-action and package updates.
+[Update Dependencies](docs/guides/template/Update_Dependencies.md) for tool,
+image, action and package updates.
 
 ### Examples
 
-Use the [guide index](docs/guides/README.md) to find task-specific instructions
-and the [ADR template](docs/adr/ADR-nnn_Any_Decision_Record_Template.md) to
-record technology decisions.
+Use the [guide index](docs/guides/template/README.md) to find task-specific
+instructions and the
+[ADR template](docs/adr/ADR-nnn_Any_Decision_Record_Template.md) to record
+technology decisions.
 
 ## Design notes 📝
 
@@ -219,7 +225,8 @@ At a high level:
 ## Repository layout 🗂️
 
 - [.github/workflows](.github/workflows): CI workflows.
-- [docs/guides](docs/guides): task-specific setup, testing and tooling guides.
+- [docs/guides/template](docs/guides/template): task-specific setup, testing and
+  tooling guides.
 - [docs/adr](docs/adr): Architecture Decision Record template.
 - [scripts](scripts): configuration, quality checks, Docker helpers and tests.
 - [Makefile](Makefile): entry point for setup, checks and tests.

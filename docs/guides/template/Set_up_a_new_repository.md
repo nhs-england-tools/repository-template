@@ -18,8 +18,8 @@
    cd REPOSITORY
    ```
 
-3. Check the [prerequisites](../../README.md#prerequisites) and review
-   [`mise.toml`](../../mise.toml). From the new repository, run:
+3. Check the [prerequisites](../../../README.md#prerequisites) and review
+   [`mise.toml`](../../../mise.toml). From the new repository, run:
 
    ```shell
    mise trust mise.toml
@@ -42,33 +42,35 @@ contributions. Record approved exceptions in the pull request, not in the issue.
 
 Make these changes on a branch for the initial setup pull request:
 
-1. Replace template URLs and support links in the [root README](../../README.md)
-   and [issue forms](../../.github/ISSUE_TEMPLATE/), including the
-   [issue form configuration](../../.github/ISSUE_TEMPLATE/config.yml). Update
-   the README with the project's configuration and contribution workflow, and
-   tailor the [contributing guide](../../.github/CONTRIBUTING.md) to cover
-   setup, tests, review rules and releases.
+1. Replace template URLs and support links in the
+   [root README](../../../README.md) and
+   [issue forms](../../../.github/ISSUE_TEMPLATE/), including the
+   [issue form configuration](../../../.github/ISSUE_TEMPLATE/config.yml).
+   Update the README with the project's configuration and contribution workflow,
+   and tailor the [contributing guide](../../../.github/CONTRIBUTING.md) to
+   cover setup, tests, review rules and releases.
 2. Confirm reporting routes with the relevant owners. In the
-   [Code of Conduct](../../.github/CODE_OF_CONDUCT.md), set a monitored private
-   route, an alternative for conflicts of interest and the approved escalation
-   process. In the [security policy](../../.github/SECURITY.md), define the
-   project's scope, supported versions, private reporting route, response
-   process and security update policy. Verify published contacts and links
-   before inviting reports.
+   [Code of Conduct](../../../.github/CODE_OF_CONDUCT.md), set a monitored
+   private route, an alternative for conflicts of interest and the approved
+   escalation process. In the [security policy](../../../.github/SECURITY.md),
+   define the project's scope, supported versions, private reporting route,
+   response process and security update policy. Verify published contacts and
+   links before inviting reports.
 3. Document the project's applicable information governance, accessibility,
    security and clinical safety requirements. Assign the appropriate owners and
    link to approved processes rather than publishing sensitive details.
-4. Implement every TODO-marked recipe in the [Makefile](../../Makefile) without
-   renaming its targets. Add the project's checks to `lint` and `typecheck`, and
-   its fast project and system tests, such as unit tests, to `test` alongside
-   the template's Bash tests. Keep slower test tiers separate, and keep `check`
-   running the project's format, lint, type and quick-feedback test targets. Follow
+4. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
+   without renaming its targets. Add the project's checks to `lint` and
+   `typecheck`, and its fast project and system tests, such as unit tests, to
+   `test` alongside the template's Bash tests. Keep slower test tiers separate,
+   and keep `check` running the project's format, lint, type and quick-feedback
+   test targets. Follow
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
    for extension patterns. Run `make help` to inspect the available targets.
 5. Review dependency sources, the
-   [Dependabot configuration](../../.github/dependabot.yaml), the update
+   [Dependabot configuration](../../../.github/dependabot.yaml), the update
    cooldown and who owns updates. Check pinned tools and images in
-   [`mise.toml`](../../mise.toml), then record project-specific decisions and
+   [`mise.toml`](../../../mise.toml), then record project-specific decisions and
    changes using [Update Dependencies](Update_Dependencies.md).
 6. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and

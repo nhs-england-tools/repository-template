@@ -46,9 +46,9 @@ some-target: # Target description - mandatory: foo=[description]; optional: baz=
 - `Recipe implementation`: This section defines the actual commands or steps the
   target will execute. **Do not exceed 5 lines of effective code**. For more
   complex operations, use a shell script. Refer to the `docker-build`
-  implementation in the [docker.mk](../../scripts/docker/docker.mk) file. More
-  complex operations are implemented in the
-  [docker.sh](../../scripts/docker/docker.lib.sh) script for readability and
+  implementation in the [docker.mk](../../../scripts/docker/docker.mk) file.
+  More complex operations are implemented in the
+  [docker.sh](../../../scripts/docker/docker.lib.sh) script for readability and
   simplicity.
 
 Run make target from a terminal:
@@ -79,7 +79,7 @@ To see all available make targets, run `make help`.
 ### Make extensions
 
 Add team targets without editing the main `Makefile`. The
-[init.mk](../../scripts/init.mk) file loads every `*.ext.mk` file under
+[init.mk](../../../scripts/init.mk) file loads every `*.ext.mk` file under
 `scripts/` and its subdirectories, sorted by path. Its targets work with
 `make <target>` and appear in `make help`. The example below assumes you also
 create `scripts/backend/lambda-invoke.sh` in your project.
@@ -212,10 +212,10 @@ separate recipes rather than merging prerequisites.
 ## Clean up files and Docker resources 🧹
 
 `make clean` runs the separate `clean::` recipes in
-[docker.mk](../../scripts/docker/docker.mk), [init.mk](../../scripts/init.mk),
-the root Makefile and any extensions. The shared Git recipe previews file
-cleanup by default. The Docker recipe removes image tags and generated files
-immediately, even without `CONFIRM=true`.
+[docker.mk](../../../scripts/docker/docker.mk),
+[init.mk](../../../scripts/init.mk), the root Makefile and any extensions. The
+shared Git recipe previews file cleanup by default. The Docker recipe removes
+image tags and generated files immediately, even without `CONFIRM=true`.
 
 Preview the commands from every recipe with `make -n clean` before running
 cleanup. Check any project extensions too. `CONFIRM` is not a preview switch for
@@ -326,7 +326,7 @@ function some-shell-function() {
 Run Bash function from a terminal:
 
 The function and script names in these examples are placeholders. See
-[docker.lib.sh](../../scripts/docker/docker.lib.sh) for a bundled function
+[docker.lib.sh](../../../scripts/docker/docker.lib.sh) for a bundled function
 library.
 
 ```shell

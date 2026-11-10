@@ -16,9 +16,9 @@
 A GitHub Copilot agent may say it is done while `make lint` or `make test` still
 fails. The quality gate closes that gap. When the agent tries to finish a turn,
 a Stop hook runs the gates in
-[`quality-gates.yaml`](../../scripts/config/quality-gates.yaml). If a blocking
-gate fails, the hook sends the report back and the agent continues. The same
-gates run on demand with `make quality-gate`.
+[`quality-gates.yaml`](../../../scripts/config/quality-gates.yaml). If a
+blocking gate fails, the hook sends the report back and the agent continues. The
+same gates run on demand with `make quality-gate`.
 
 Only GitHub Copilot is supported. The hook was checked in the VS Code Local
 harness. The Copilot harness, which VS Code uses when the Session Target is
@@ -29,18 +29,19 @@ agent, because the gates need tools and network access that its sandbox lacks.
 ## Key files 📁
 
 - Scripts
-  - [`quality-gate.sh`](../../scripts/quality/quality-gate.sh): hook handler and
-    command line
-  - [`quality-gate.jq`](../../scripts/quality/quality-gate.jq): validates and
+  - [`quality-gate.sh`](../../../scripts/quality/quality-gate.sh): hook handler
+    and command line
+  - [`quality-gate.jq`](../../../scripts/quality/quality-gate.jq): validates and
     merges the gate configuration
 - Configuration
-  - [`quality-gates.yaml`](../../scripts/config/quality-gates.yaml): the gates
+  - [`quality-gates.yaml`](../../../scripts/config/quality-gates.yaml): the
+    gates
   - `scripts/config/quality-gates.d/*.yaml`: optional project gates
-  - [`quality-gate.json`](../../.github/hooks/quality-gate.json): registers the
-    hook
-  - [`init.mk`](../../scripts/init.mk): make targets
+  - [`quality-gate.json`](../../../.github/hooks/quality-gate.json): registers
+    the hook
+  - [`init.mk`](../../../scripts/init.mk): make targets
 - Tests
-  - [`quality-gate.test.sh`](../../scripts/quality/tests/quality-gate.test.sh)
+  - [`quality-gate.test.sh`](../../../scripts/quality/tests/quality-gate.test.sh)
 
 ## When the gate runs 🕒
 
@@ -59,7 +60,7 @@ agent, because the gates need tools and network access that its sandbox lacks.
   `scope=all` to run them for every file.
 
 The gate does not run on commit. The Git pre-commit hooks in
-[`pre-commit.yaml`](../../scripts/config/pre-commit.yaml) do that, including
+[`pre-commit.yaml`](../../../scripts/config/pre-commit.yaml) do that, including
 `make test`, so an agent that commits runs the tests at both points.
 
 The hook reads the gate list and its rules from the commit at the start of the
@@ -124,8 +125,8 @@ expected.
   there. A hook that times out does not block.
 - Each gate has a `timeout`. The hook stops a gate that runs over, and the
   report names it. Every process of the gate first gets `TERM`, so it can clean
-  up, and any still running a second later gets `KILL`. The hook has a 60
-  second limit for all the gates combined, so the editor may stop it before an
+  up, and any still running a second later gets `KILL`. The hook has a 60 second
+  limit for all the gates combined, so the editor may stop it before an
   individual gate reaches its own timeout. When the editor stops the hook, at
   that limit or when you cancel the turn, the hook stops the running gate in the
   same way. A forced kill cannot be caught, so a gate may then outlive the hook.

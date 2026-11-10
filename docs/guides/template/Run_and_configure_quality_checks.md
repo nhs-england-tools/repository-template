@@ -11,7 +11,7 @@
 ## Prerequisites 📋
 
 Run commands from the repository root after completing the
-[quick start](../../README.md#quick-start-). The scripts need GNU Bash 5.2 or
+[quick start](../../../README.md#quick-start-). The scripts need GNU Bash 5.2 or
 later and GNU userland tools. Run `make toolchain-verify-gnu` to check `PATH`.
 
 ## Choose a command 🧭
@@ -91,24 +91,26 @@ The base must exist locally. The scripts do not fetch history.
 
 Edit the relevant tool's rules and exclusions. Exclusion formats differ:
 
-- EditorConfig: [`.editorconfig`](../../.editorconfig) sets rules.
-  [`editorconfig-checker.json`](../../scripts/config/editorconfig-checker.json)
+- EditorConfig: [`.editorconfig`](../../../.editorconfig) sets rules.
+  [`editorconfig-checker.json`](../../../scripts/config/editorconfig-checker.json)
   excludes paths using Go/RE2 expressions.
-- Markdown lint: [`markdownlint.yaml`](../../scripts/config/markdownlint.yaml)
-  sets rules. [`.markdownlintignore`](../../scripts/config/.markdownlintignore)
-  excludes paths.
-- Markdown formatter: [`prettierrc.yaml`](../../scripts/config/prettierrc.yaml)
-  sets rules. [`.prettierignore`](../../scripts/config/.prettierignore) uses Git
-  ignore patterns.
-- Markdown links: [`lychee.toml`](../../scripts/config/lychee.toml) checks local
-  links by default. Its `exclude` expressions match links, not files.
+- Markdown lint:
+  [`markdownlint.yaml`](../../../scripts/config/markdownlint.yaml) sets rules.
+  [`.markdownlintignore`](../../../scripts/config/.markdownlintignore) excludes
+  paths.
+- Markdown formatter:
+  [`prettierrc.yaml`](../../../scripts/config/prettierrc.yaml) sets rules.
+  [`.prettierignore`](../../../scripts/config/.prettierignore) uses Git ignore
+  patterns.
+- Markdown links: [`lychee.toml`](../../../scripts/config/lychee.toml) checks
+  local links by default. Its `exclude` expressions match links, not files.
 - Shell lint: ShellCheck directives set rules.
-  [`.commentlengthignore`](../../scripts/config/.commentlengthignore) only
+  [`.commentlengthignore`](../../../scripts/config/.commentlengthignore) only
   excludes comment-length checks.
 - Workflow security:
-  [`check-workflow-security.jq`](../../scripts/quality/check-workflow-security.jq)
+  [`check-workflow-security.jq`](../../../scripts/quality/check-workflow-security.jq)
   sets rules.
-  [`workflow-security.yaml`](../../scripts/config/workflow-security.yaml)
+  [`workflow-security.yaml`](../../../scripts/config/workflow-security.yaml)
   records approved write permissions.
 
 Exclusions apply to individual checks. `.gitignore` does not exclude tracked

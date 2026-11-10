@@ -19,26 +19,26 @@ came from. Review updates and run the repository checks before merging them.
 ## Dependency Sources 📦
 
 - **mise tools and mise itself:** exact tool versions and the minimum mise CLI
-  version are in [mise.toml](../../mise.toml). Resolved tool versions, checksums
-  and supported provenance are recorded in [mise.lock](../../mise.lock) and
-  `.mise/locks/`.
+  version are in [mise.toml](../../../mise.toml). Resolved tool versions,
+  checksums and supported provenance are recorded in
+  [mise.lock](../../../mise.lock) and `.mise/locks/`.
 - **Docker images:** the custom `[_.docker]` table in
-  [mise.toml](../../mise.toml) pins helper images by version tag and SHA-256
+  [mise.toml](../../../mise.toml) pins helper images by version tag and SHA-256
   digest. When a `FROM` uses an `ARG` for its version, the Docker helpers
   resolve a matching `[_.docker]` pin (or a `[tools]` fallback).
 - **GitHub Actions:** external actions are referenced in
-  [workflow files](../../.github/workflows/) by full commit SHA, with a release
-  tag comment. Workflows also select the GitHub-hosted runner image with
+  [workflow files](../../../.github/workflows/) by full commit SHA, with a
+  release tag comment. Workflows also select the GitHub-hosted runner image with
   `runs-on`.
 - **Application packages:** the expected dependencies are Python and npm
   (TypeScript) packages, as these language ecosystems are supported by
   Engineering and approved on the NHS Tech Radar, see
-  [Technology Recommendations](../adr/Technology_Recommendations.md). This
+  [Technology Recommendations](../../adr/Technology_Recommendations.md). This
   template currently has no application dependency manifests.
-  [Dependabot](../../.github/dependabot.yaml) is configured for npm (including
-  pnpm) and uv if those manifests are added.
+  [Dependabot](../../../.github/dependabot.yaml) is configured for npm
+  (including pnpm) and uv if those manifests are added.
 - **Host prerequisites:** the macOS GNU tools installed by
-  [install-gnu-macos.sh](../../scripts/toolchain/install-gnu-macos.sh) are
+  [install-gnu-macos.sh](../../../scripts/toolchain/install-gnu-macos.sh) are
   Homebrew-managed and are not version-pinned here.
 
 The pre-commit configuration currently runs repository-owned Make targets. Its
@@ -112,9 +112,9 @@ pull request:
 4. Update the matching `[_.docker]` entries for any tool that changed, see
    [Docker Images](#docker-images).
 5. Run `make test` and `make lint`. Review the workflow results and the
-   `mise.toml`, `mise.lock` and `.mise/locks/` changes together.
-   Stage any newly created `.mise/locks/` sidecars first, because lint checks
-   tracked files only.
+   `mise.toml`, `mise.lock` and `.mise/locks/` changes together. Stage any newly
+   created `.mise/locks/` sidecars first, because lint checks tracked files
+   only.
 
 No Make target updates the CLI or `min_version`. See the
 [mise update instructions](https://mise.jdx.dev/installing-mise.html#updating).
@@ -132,7 +132,7 @@ matching `[tools]` entry, allowing for the image's tag spelling (for example a
 `v` prefix or a `-slim` suffix). The comment beside each pin names the matching
 tool. Tools with no `[_.docker]` entry need nothing. The Dockerfile base images
 are resolved from `[_.docker]` by
-[docker.lib.sh](../../scripts/docker/docker.lib.sh).
+[docker.lib.sh](../../../scripts/docker/docker.lib.sh).
 
 For each changed tool, find the matching image tag and obtain its digest:
 
@@ -173,7 +173,7 @@ checks.
 ### GitHub Actions and Runners
 
 Dependabot checks GitHub Actions daily, with a seven-day cooldown configured in
-[dependabot.yaml](../../.github/dependabot.yaml). It can update SHA-pinned
+[dependabot.yaml](../../../.github/dependabot.yaml). It can update SHA-pinned
 actions when the same-line comment records the release tag. Review the proposed
 commit SHA and upstream release notes, and keep the full SHA and version comment
 together. GitHub recommends full-length commit SHA pins in its

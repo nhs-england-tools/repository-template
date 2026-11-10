@@ -48,4 +48,4 @@ the [ADR template](../docs/adr/ADR-nnn_Any_Decision_Record_Template.md).
 
 Use the newest eligible stable language, runtime and framework versions that
 meet project constraints, including the cooldown in
-[Update Dependencies](../docs/guides/Update_Dependencies.md).
+[Update Dependencies](../docs/guides/template/Update_Dependencies.md).

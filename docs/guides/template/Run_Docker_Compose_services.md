@@ -8,13 +8,13 @@
   - [Overrides and environment variables 🧩](#overrides-and-environment-variables-)
   - [Troubleshooting 🔍](#troubleshooting-)
 
-The targets in [docker.mk](../../scripts/docker/docker.mk) wrap Docker Compose
-for a project's local services. The template supplies the commands. Add your own
-Compose file and application configuration.
+The targets in [docker.mk](../../../scripts/docker/docker.mk) wrap Docker
+Compose for a project's local services. The template supplies the commands. Add
+your own Compose file and application configuration.
 
 ## Prerequisites 📋
 
-Complete the [quick start](../../README.md#quick-start-). Compose operations
+Complete the [quick start](../../../README.md#quick-start-). Compose operations
 require a working `docker` executable on `PATH` and a Compose provider that
 supports Docker Compose v2 commands, including `up --wait`. Start the Docker
 daemon, or start the Podman machine where needed. For Podman, provide a `docker`
@@ -77,7 +77,8 @@ services:
     build:
       context: .
       args:
-        PYTHON_IMAGE: ${COMPOSE_PYTHON_IMAGE:?Export the pinned Python image first}
+        PYTHON_IMAGE:
+          ${COMPOSE_PYTHON_IMAGE:?Export the pinned Python image first}
     ports:
       - "127.0.0.1:8080:8000"
     healthcheck:

@@ -16,36 +16,37 @@
 
 ## Overview 🧭
 
-The [Docker Make targets](../../scripts/docker/docker.mk) build, lint, run and
-push images from a project Dockerfile. The functions in
-[docker.lib.sh](../../scripts/docker/docker.lib.sh) bake a
+The [Docker Make targets](../../../scripts/docker/docker.mk) build, lint, run
+and push images from a project Dockerfile. The functions in
+[docker.lib.sh](../../../scripts/docker/docker.lib.sh) bake a
 `Dockerfile.effective`, apply metadata and tag images using an optional
-`VERSION` file. The [quick-start prerequisites](../../README.md#prerequisites)
-include GNU tools and a container runtime. Review and trust `mise.toml`, then
-run `make config` to install the pinned tools before building an image.
+`VERSION` file. The
+[quick-start prerequisites](../../../README.md#prerequisites) include GNU tools
+and a container runtime. Review and trust `mise.toml`, then run `make config` to
+install the pinned tools before building an image.
 
 ## Key files 📁
 
 - Scripts
-  - [`docker.lib.sh`](../../scripts/docker/docker.lib.sh): A library code loaded
-    by custom make targets and CLI scripts
-  - [`docker.mk`](../../scripts/docker/docker.mk): Customised implementation of
-    the Docker routines loaded by the `scripts/init.mk` file
-  - [`dockerfile-linter.sh`](../../scripts/docker/dockerfile-linter.sh):
+  - [`docker.lib.sh`](../../../scripts/docker/docker.lib.sh): A library code
+    loaded by custom make targets and CLI scripts
+  - [`docker.mk`](../../../scripts/docker/docker.mk): Customised implementation
+    of the Docker routines loaded by the `scripts/init.mk` file
+  - [`dockerfile-linter.sh`](../../../scripts/docker/dockerfile-linter.sh):
     `Dockerfile` linter
 - Configuration
-  - [`mise.toml`](../../mise.toml): Stores toolchain pins and, in its
+  - [`mise.toml`](../../../mise.toml): Stores toolchain pins and, in its
     `[_.docker]` table, Docker image versions
-  - [`hadolint.yaml`](../../scripts/config/hadolint.yaml): `Dockerfile` linter
-    configuration file
-  - [`Dockerfile.metadata`](../../scripts/docker/Dockerfile.metadata): Labels
+  - [`hadolint.yaml`](../../../scripts/config/hadolint.yaml): `Dockerfile`
+    linter configuration file
+  - [`Dockerfile.metadata`](../../../scripts/docker/Dockerfile.metadata): Labels
     added to image definition as specified by the spec
 - Test suite
-  - [`docker.test.sh`](../../scripts/docker/tests/docker.test.sh): Main file
+  - [`docker.test.sh`](../../../scripts/docker/tests/docker.test.sh): Main file
     containing all the tests
-  - [`Dockerfile`](../../scripts/docker/tests/Dockerfile): Image definition for
-    the test suite
-  - [`VERSION`](../../scripts/docker/tests/VERSION): Version patterns for the
+  - [`Dockerfile`](../../../scripts/docker/tests/Dockerfile): Image definition
+    for the test suite
+  - [`VERSION`](../../../scripts/docker/tests/VERSION): Version patterns for the
     test suite
 
 ## Usage 📖
@@ -170,8 +171,8 @@ quickly, without needing to learn a new set of conventions each time.
 
 ### Build with a pinned base image
 
-The template pins the `node` image in [mise.toml](../../mise.toml). To use that
-pin in a new image:
+The template pins the `node` image in [mise.toml](../../../mise.toml). To use
+that pin in a new image:
 
 Create `infrastructure/images/node-tool/Dockerfile`:
 
@@ -212,7 +213,7 @@ docker buildx imagetools inspect IMAGE:TAG --format '{{.Manifest.Digest}}'
 ```
 
 Replace `IMAGE` and `TAG` with the image name and tag you chose. Add the exact
-image name as a key in [mise.toml](../../mise.toml)'s `[_.docker]` table with
+image name as a key in [mise.toml](../../../mise.toml)'s `[_.docker]` table with
 the value `TAG@sha256:DIGEST`. Keep a real tag as the Dockerfile `ARG` default,
 and use that argument in `FROM IMAGE:${BASE_VERSION}`. The helper matches the
 `FROM` image name to `[_.docker]` and rewrites the argument in
@@ -257,8 +258,8 @@ containing effective content like `20230601153000-123abcd`. See
 for what template substitutions are available.
 
 This file is then used by functions defined in
-[docker.lib.sh](../../scripts/docker/docker.lib.sh) but is ignored by Git, and
-is not checked in with other files.
+[docker.lib.sh](../../../scripts/docker/docker.lib.sh) but is ignored by Git,
+and is not checked in with other files.
 
 Support for multiple version entries is provided. For instance, if the `VERSION`
 file contains:
@@ -290,7 +291,7 @@ day.
 > with a cadence of multiple deployments per day. This is compatible with the
 > [Calendar Versioning / CalVer](https://calver.org/) convention.
 
-Base image versions are maintained in the [mise.toml](../../mise.toml) file's
+Base image versions are maintained in the [mise.toml](../../../mise.toml) file's
 `[_.docker]` table, located in the project's top-level directory. The format is
 as follows:
 
@@ -310,7 +311,7 @@ example turning `ARG PYTHON_VERSION=3.11.0` into
 `ARG PYTHON_VERSION=1.0.0@sha256:1234567890...abcdef` for a
 `FROM python:${PYTHON_VERSION}` instruction if you add a `python` image pin.
 Additionally, the
-[Dockerfile.metadata](../../scripts/docker/Dockerfile.metadata) file will be
+[Dockerfile.metadata](../../../scripts/docker/Dockerfile.metadata) file will be
 appended to the end of the `Dockerfile.effective` created by the process.
 
 The reason we do this is so that the deployment version is source-controlled,

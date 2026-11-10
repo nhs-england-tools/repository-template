@@ -22,20 +22,20 @@ branch instead.
 
 ## Key files 📁
 
-- [`scan-secrets.sh`](../../scripts/quality/scan-secrets.sh): A shell script
+- [`scan-secrets.sh`](../../../scripts/quality/scan-secrets.sh): A shell script
   that scans the codebase for hard-coded secrets
-- [`gitleaks.toml`](../../scripts/config/gitleaks.toml): A configuration file
+- [`gitleaks.toml`](../../../scripts/config/gitleaks.toml): A configuration file
   for the secret scanner
-- [`.gitleaksignore`](../../scripts/config/.gitleaksignore): A list of
+- [`.gitleaksignore`](../../../scripts/config/.gitleaksignore): A list of
   fingerprints to ignore by the secret scanner
-- [`scan-secrets/action.yaml`](../../.github/actions/scan-secrets/action.yaml):
+- [`scan-secrets/action.yaml`](../../../.github/actions/scan-secrets/action.yaml):
   GitHub action to run the scripts as part of the CI/CD pipeline
-- [`pre-commit.yaml`](../../scripts/config/pre-commit.yaml): Run the secret
+- [`pre-commit.yaml`](../../../scripts/config/pre-commit.yaml): Run the secret
   scanner as a pre-commit git hook
 
 ## Configuration checklist 📋
 
-- [Add custom secret patterns](../../scripts/config/gitleaks.toml) to the
+- [Add custom secret patterns](../../../scripts/config/gitleaks.toml) to the
   configuration file to align with your project's specific requirements
 - [Create a secret scan baseline](https://github.com/gitleaks/gitleaks/blob/master/README.md#gitleaksignore)
   for your repository by adding false-positive fingerprints to the ignore list

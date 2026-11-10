@@ -87,7 +87,8 @@ template.
 ## Tailor this guide when adopting the template 🧩
 
 Before accepting contributions to an NHS project created from this template,
-follow [Set up a new repository](../docs/guides/Set_up_a_new_repository.md) to
+follow
+[Set up a new repository](../docs/guides/template/Set_up_a_new_repository.md) to
 open the setup issue in the new repository and complete its checklist in an
 initial setup pull request. Ask a project maintainer and the relevant security
 or policy owner to review the changes before closing the issue and accepting

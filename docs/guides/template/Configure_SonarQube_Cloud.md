@@ -10,10 +10,11 @@
 
 ## Overview 🧭
 
-The [test workflow](../../.github/workflows/stage-2-test.yaml) runs a SonarQube
-Cloud scan when the token and both project variables are available. The
-`🔬 Perform static analysis` job reports success when the scan is not configured.
-When configured, it waits for the quality gate and fails if the gate fails.
+The [test workflow](../../../.github/workflows/stage-2-test.yaml) runs a
+SonarQube Cloud scan when the token and both project variables are available.
+The `🔬 Perform static analysis` job reports success when the scan is not
+configured. When configured, it waits for the quality gate and fails if the gate
+fails.
 
 ## Configure workflow credentials 🔐
 
@@ -78,13 +79,12 @@ exception because GitHub withholds secrets from them.
 
 ## Verify the integration ✅
 
-Open a pull request from a branch in the repository and confirm that
-**🧪 Test stage / 🔬 Perform static analysis** runs the scan, reports the
-quality gate, and publishes pull request decoration. If the job says
-SonarQube Cloud is not configured, check the token and both variables. If the
-scan fails because
+Open a pull request from a branch in the repository and confirm that **🧪 Test
+stage / 🔬 Perform static analysis** runs the scan, reports the quality gate,
+and publishes pull request decoration. If the job says SonarQube Cloud is not
+configured, check the token and both variables. If the scan fails because
 Automatic Analysis is enabled, ask the admins to turn it off as described above.
 
 Project teams maintain any project-specific coverage report paths and source
 exclusions in the scan arguments in
-[stage-2-test.yaml](../../.github/workflows/stage-2-test.yaml).
+[stage-2-test.yaml](../../../.github/workflows/stage-2-test.yaml).

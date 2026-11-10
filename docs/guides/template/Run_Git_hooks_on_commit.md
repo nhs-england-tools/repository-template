@@ -20,15 +20,15 @@ capabilities.
 ## Key files 📁
 
 - Scripts
-  - [`check-file-format.sh`](../../scripts/quality/check-file-format.sh)
-  - [`check-markdown-format.sh`](../../scripts/quality/check-markdown-format.sh)
-  - [`check-markdown-links.sh`](../../scripts/quality/check-markdown-links.sh)
-  - [`check-shell-lint.sh`](../../scripts/quality/check-shell-lint.sh)
-  - [`check-workflow-security.sh`](../../scripts/quality/check-workflow-security.sh)
-  - [`scan-secrets.sh`](../../scripts/quality/scan-secrets.sh)
+  - [`check-file-format.sh`](../../../scripts/quality/check-file-format.sh)
+  - [`check-markdown-format.sh`](../../../scripts/quality/check-markdown-format.sh)
+  - [`check-markdown-links.sh`](../../../scripts/quality/check-markdown-links.sh)
+  - [`check-shell-lint.sh`](../../../scripts/quality/check-shell-lint.sh)
+  - [`check-workflow-security.sh`](../../../scripts/quality/check-workflow-security.sh)
+  - [`scan-secrets.sh`](../../../scripts/quality/scan-secrets.sh)
 - Configuration
-  - [`pre-commit.yaml`](../../scripts/config/pre-commit.yaml)
-  - [`init.mk`](../../scripts/init.mk): make targets
+  - [`pre-commit.yaml`](../../../scripts/config/pre-commit.yaml)
+  - [`init.mk`](../../../scripts/init.mk): make targets
 
 ## Testing 🧪
 
