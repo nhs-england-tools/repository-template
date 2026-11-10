@@ -21,8 +21,10 @@
 Run failing tests and focused checks while working. After edits, the Stop hook
 runs `make lint` and `make test`. Since `make lint` checks tracked files only,
 stage newly created files so they are included. Do not stage existing files just
-for the hook. Do not rerun the full gates manually unless diagnosing a failure
-or the hook is unavailable.
+to satisfy the hook. If one of your changes becomes staged while you work,
+assume it was staged intentionally as part of the review and leave it staged. Do
+not rerun the full gates manually unless diagnosing a failure or the hook is
+unavailable.
 
 ## Communication style 💬
 

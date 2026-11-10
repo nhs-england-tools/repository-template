@@ -59,11 +59,12 @@ make test
 ```
 
 `make lint` checks file formats, Markdown formatting and links, and shell
-scripts. `make test` runs this template's own script test suites. Some
-integration tests require a running Docker daemon. These checks do not replace
-tests for an adopted project's application. Extend the Makefile and CI workflow
-to run the project's build, tests, type checks, security checks, and other
-required quality gates.
+scripts. `make test` is the quick-feedback target for development. It currently
+runs this template's own script test suites, and some integration tests require
+a running Docker daemon. Add fast project and system tests, such as unit tests,
+to this target. Keep slower test tiers separate. Extend the Makefile and CI
+workflow to run the project's build, full test suite, type checks, security
+checks, and other required quality gates.
 
 ## Open a pull request 🔀
 

@@ -132,8 +132,8 @@ name stable either way.
 | `format`                                      | Formats Markdown files.                                           | Add language formatters as prerequisites.                                     |
 | `lint`                                        | Runs common file, Markdown, shell and workflow checks.            | Add language or domain linters as prerequisites.                              |
 | `typecheck`                                   | Placeholder for project type checking.                            | Add the selected static type checker.                                         |
-| `test`                                        | Runs the template's shell test suites.                            | Add unit, integration or domain test targets.                                 |
-| `test-unit` / `test-integration` / `test-all` | Optional; no core default.                                        | Add slower integration or end-to-end tiers to the fast `test` target.         |
+| `test`                                        | Fast development feedback; template suites run here               | Add fast project/system tests, such as unit tests                             |
+| `test-unit` / `test-integration` / `test-all` | Optional; no core default.                                        | Add slower integration and end-to-end tiers as separate targets.              |
 | `check`                                       | Runs `format`, `lint`, `typecheck` and `test`.                    | Extend component targets; keep ordered aggregate semantics stable.            |
 | `build`                                       | Placeholder for project artefact creation.                        | Build the package, binary, image or other artefact.                           |
 | `run`                                         | Optional; no core default.                                        | Run the application in the foreground for local development.                  |

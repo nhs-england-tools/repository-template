@@ -37,10 +37,13 @@ individual target to work on a particular finding:
 | `make lint-workflow-security` | Checks GitHub Actions workflows and local actions against the security rules.   |
 
 Adapt the root lifecycle targets for your project. `make format` currently
-formats Markdown, and `make typecheck` is a placeholder. `make test` is the
-project's full test target. It currently runs the template's
-[Bash suites](Write_and_run_Bash_tests.md), so add the project's other tests to
-it. `make check` runs `format`, `lint`, `typecheck` and `test`, in that order.
+formats Markdown, and `make typecheck` is a placeholder. Treat `make test` as
+the quick-feedback target for development, not necessarily the project's full
+test suite. It currently runs the template's
+[Bash suites](Write_and_run_Bash_tests.md). Add fast project and system tests,
+such as unit tests, to it. Keep slower integration and end-to-end tests in
+separate targets. `make check` runs `format`, `lint`, `typecheck` and `test`, in
+that order.
 
 The lint targets validate files without rewriting them. `make format` and
 `make check` can change files. Neither stages the results. Review `git diff`

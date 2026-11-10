@@ -118,8 +118,10 @@ workflow security checks: ok
 
 - Project-specific dependency installation, build, publish, and deploy steps
   (they are marked as TODOs in the Makefile).
-- Tests for a project's own code. `make test` only covers the template's own
-  scripts.
+- Project-specific tests are not included by default. `make test` is the
+  quick-feedback target for development and currently runs the template's own
+  scripts. Add fast project and system tests, such as unit tests, when adopting
+  the template.
 - Formatting automation for project source code beyond Markdown. The template
   formatter covers Markdown files only.
 

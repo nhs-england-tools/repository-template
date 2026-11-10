@@ -11,8 +11,9 @@
 The template provides a Bash test harness in
 [test.lib.sh](../../scripts/tests/test.lib.sh) and a suite runner in
 [run-test-suites.sh](../../scripts/tests/run-test-suites.sh). Use them for
-repository scripts and Make wrappers. Add your application's tests to the
-appropriate lifecycle targets as described in
+repository scripts and Make wrappers. The template runs these suites through
+the quick-feedback `make test` target. Add fast project and system tests, such
+as unit tests, to that target. Keep slower tests in separate targets. See
 [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets).
 
 ## Prerequisites and discovery 🔍

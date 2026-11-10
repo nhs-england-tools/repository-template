@@ -60,8 +60,9 @@ Make these changes on a branch for the initial setup pull request:
    link to approved processes rather than publishing sensitive details.
 4. Implement every TODO-marked recipe in the [Makefile](../../Makefile) without
    renaming its targets. Add the project's checks to `lint` and `typecheck`, and
-   its full test suite to `test`, alongside the template's Bash tests. Keep
-   `check` running the project's format, lint, type and test targets. Follow
+   its fast project and system tests, such as unit tests, to `test` alongside
+   the template's Bash tests. Keep slower test tiers separate, and keep `check`
+   running the project's format, lint, type and quick-feedback test targets. Follow
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
    for extension patterns. Run `make help` to inspect the available targets.
 5. Review dependency sources, the
