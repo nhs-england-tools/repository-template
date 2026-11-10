@@ -56,10 +56,13 @@ Make these changes on a branch for the initial setup pull request:
    define the project's scope, supported versions, private reporting route,
    response process and security update policy. Verify published contacts and
    links before inviting reports.
-3. Document the project's applicable information governance, accessibility,
+3. Replace the example owner in [CODEOWNERS](../../../.github/CODEOWNERS) with
+   the GitHub users or teams responsible for the project. Each owner needs write
+   access to the repository. Cover every file, including the workflows.
+4. Document the project's applicable information governance, accessibility,
    security and clinical safety requirements. Assign the appropriate owners and
    link to approved processes rather than publishing sensitive details.
-4. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
+5. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
    without renaming its targets. Add the project's checks to `lint` and
    `typecheck`, and its fast project and system tests, such as unit tests, to
    `test` alongside the template's Bash tests. Keep slower test tiers separate,
@@ -67,12 +70,12 @@ Make these changes on a branch for the initial setup pull request:
    test targets. Follow
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
    for extension patterns. Run `make help` to inspect the available targets.
-5. Review dependency sources, the
+6. Review dependency sources, the
    [Dependabot configuration](../../../.github/dependabot.yaml), the update
    cooldown and who owns updates. Check pinned tools and images in
    [`mise.toml`](../../../mise.toml), then record project-specific decisions and
    changes using [Update Dependencies](Update_Dependencies.md).
-6. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
+7. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and
    `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
 

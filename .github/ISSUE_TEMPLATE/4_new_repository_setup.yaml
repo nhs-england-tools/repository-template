@@ -21,6 +21,7 @@ body:
         - label: Confirm the Code of Conduct reporting routes and escalation process with the responsible policy owner.
         - label: Confirm the security policy's scope, supported versions, private reporting route, and response process with the responsible security owner.
         - label: Tailor the contributing guide with the project's setup, tests, review rules, and release process.
+        - label: Replace the example owner in .github/CODEOWNERS with the GitHub users or teams responsible for the project. Each owner needs write access.
         - label: Record applicable information governance, accessibility, security, and clinical safety requirements in the project documentation.
         - label: Resolve the documentation TODOs and verify that links and published contact routes work.
         - label: Implement the recipes for every TODO-marked target in the Makefile. Keep the existing target names.
