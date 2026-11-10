@@ -86,8 +86,8 @@ template.
 ## Tailor this guide when adopting the template 🧩
 
 Before accepting contributions to an NHS project created from this template,
-open a [New repository setup issue](ISSUE_TEMPLATE/4_new_repository_setup.yaml)
-in the new repository and assign it to a maintainer. Complete its checklist in an
+follow [Set up a new repository](../docs/guides/Set_up_a_new_repository.md) to
+open the setup issue in the new repository and complete its checklist in an
 initial setup pull request. Ask a project maintainer and the relevant security
 or policy owner to review the changes before closing the issue and accepting
 contributions. Maintainers should:

@@ -5,19 +5,10 @@ new projects.
 
 ## Why this project exists 🎯
 
-**Purpose** Provide a reliable starting point for new repositories by including
-a concise, self-documented structure and a small, essential tooling set.
-
-**Benefit to the engineers** Reduce the time spent on initial setup and
-documentation, while encouraging clarity and maintainability from the outset.
-
-**Problem it solves** New projects often need consistent structure, tooling, and
-documentation patterns before any delivery work can begin. This template
-standardises that starting point.
-
-**How it solves it (high level)** It bundles a minimal project layout, a
-Makefile with quality targets, scripts for common checks, and documentation
-guides so teams can configure and extend them for their needs.
+New projects need a consistent structure, tooling and documentation before
+delivery work can begin. This template brings them together through a project
+layout, Make-based quality checks and developer guides. Engineers can spend less
+time on initial setup and tailor the starting point to their project.
 
 ## Quick start 🚀
 
@@ -26,33 +17,16 @@ guides so teams can configure and extend them for their needs.
 The following software packages, or their equivalents, are expected to be
 installed and configured:
 
-- [GNU make](https://www.gnu.org/software/make/) 3.82 or later
+- [GNU Make](https://www.gnu.org/software/make/) 3.82 or later
 - GNU Bash 5.2 or later, with `bash` on `PATH` before older system versions
 - [Docker](https://www.docker.com/) container runtime or a compatible tool, for
-  example [Podman](https://podman.io/)
+  example [Podman](https://podman.io/). The quick start requires a runtime for
+  `make toolchain-verify-gnu`. `make config` pulls helper images only when a
+  runtime is available.
 - [mise](https://mise.jdx.dev/) toolchain manager, installed with
-  `curl https://mise.run | sh` and activated in your shell profile, for example
-  `echo 'eval "$(mise activate zsh)"' >> ~/.zshrc`. Review this repository's
-  `mise.toml` and trust it with `mise trust mise.toml` before you run
-  `make config`, which installs every pinned native tool, including
-  [Python](https://www.python.org/) (needed to run Git hooks) and
-  [`jq`](https://jqlang.github.io/jq/). The `make` targets find the pinned
-  toolchain tools without activation, but running them directly needs it.
-
-> [!NOTE]<br> The GNU Make and Bash versions supplied by macOS are too old.
-> Install [Homebrew](https://brew.sh/), then install both tools:
->
-> ```shell
-> brew install make bash
-> ```
->
-> Put Homebrew's `bin` and GNU Make's `libexec/gnubin` before system directories
-> on
-> [`PATH`](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl).
-> Make and directly executed scripts then use Homebrew Bash. If you use
-> [dotfiles](https://github.com/nhs-england-tools/dotfiles), this may already be
-> configured.
-
+  `curl https://mise.run | sh`. Activate it in your shell profile to run pinned
+  tools directly, for example `echo 'eval "$(mise activate zsh)"' >> ~/.zshrc`.
+  Make targets find pinned tools without shell activation.
 - [GNU sed](https://www.gnu.org/software/sed/),
   [GNU grep](https://www.gnu.org/software/grep/),
   [GNU awk](https://www.gnu.org/software/gawk/),
@@ -66,28 +40,47 @@ installed and configured:
   installation. `mise` installs a prebuilt Python where available, so this
   compilation step is now the fallback case rather than the default.
 
-> [!NOTE]<br> On macOS, run `make toolchain-install-gnu-macos` to install Bash
-> and the other GNU tools via Homebrew, then add the `PATH` line it prints to
-> your shell profile (it can also offer to append it for you). Run
-> `make toolchain-verify-gnu` on any OS to check GNU Make 3.82+, Bash 5.2+, the
-> other GNU tools and a Docker or Podman runtime. The verifier reports missing
-> tools without installing them. See the
+> [!NOTE]<br> macOS supplies older Make and Bash versions. Install
+> [Homebrew](https://brew.sh/). After cloning your new repository, run:
+>
+> ```shell
+> brew install make
+> make toolchain-install-gnu-macos
+> ```
+>
+> Homebrew's `make` formula provides `gmake`. The target installs Bash and the
+> other GNU tools, but not GNU Make. Add GNU Make's `libexec/gnubin` and the
+> `PATH` line printed by the target to your shell profile before system paths.
+> The target can offer to append its line for you. If you use
+> [dotfiles](https://github.com/nhs-england-tools/dotfiles), its
+> [`PATH` configuration](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl)
+> may already cover this. See its
 > [base packages script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh)
-> if you use dotfiles.
+> for its installation flow.
 
 ### Set up
 
-Clone the repository:
+On GitHub, choose **New repository** and select
+`nhs-england-tools/repository-template` from **Choose a template**. Choose the
+owner, name and visibility, then create the repository. Follow the
+[repository setup guide](docs/guides/Set_up_a_new_repository.md) to tailor it.
+
+Clone your new repository using its **Code** URL, replacing `OWNER` and
+`REPOSITORY` with its details:
 
 ```shell
-git clone https://github.com/nhs-england-tools/repository-template.git
-cd repository-template
+git clone https://github.com/OWNER/REPOSITORY.git
+cd REPOSITORY
 ```
 
-Review `mise.toml`, trust it, then install and configure tooling:
+Review `mise.toml`, then trust it, verify the system tools and configure the
+toolchain. `make config` installs pinned native tools, including
+[Python](https://www.python.org/) for Git hooks and
+[`jq`](https://jqlang.github.io/jq/):
 
 ```shell
 mise trust mise.toml
+make toolchain-verify-gnu
 make config
 ```
 
@@ -132,131 +125,73 @@ workflow security checks: ok
 
 ## How it solves the problem 🧩
 
-1. A team clones the repository and installs the documented prerequisites.
-2. The `make config` target sets up the development tooling entry points.
-3. Quality checks are run through Makefile targets that call scripts in
-   [scripts/quality](scripts/quality).
-4. Documentation templates and guides in [docs](docs) are used to capture design
-   and delivery decisions.
-
-Key terms:
-
-- **Quality checks**: the scripts in [scripts/quality](scripts/quality) that
-  validate formatting, linting, links, and secrets scanning.
-- **Makefile targets**: standard entry points in [Makefile](Makefile) for
-  configuration, linting, and testing tasks.
+1. The template provides common tooling, quality checks and guidance that teams
+   would otherwise set up for each new repository.
+2. Teams tailor the [Makefile](Makefile) and [guides](docs/guides/README.md)
+   to their project and use the time saved on setup to deliver product features
+   that meet user needs and create business value.
 
 ## How to use 📖
 
 ### Configuration
 
-- After you review and trust `mise.toml`, run `make config` to install the
-  pinned native toolchain, pull pinned Docker helper images and configure the
-  local development environment. It stops with a message while `mise.toml` is
-  untrusted.
-- Tooling configuration files live in [scripts/config](scripts/config); update
-  these to match your project needs.
-- TODO: confirm any additional configuration steps required for new projects.
+`make config` installs pinned native tools and Git hooks. When Docker or Podman
+is available, it also pulls pinned helper images. Adapt the configuration in
+[scripts/config](scripts/config) to your project.
+
+TODO: confirm any additional configuration steps required for new projects.
 
 ### Common workflows
 
-Run the standard quality checks:
+Run the template's lint checks and tests before opening a pull request:
 
 ```shell
 make lint
-```
-
-Run specific checks when you only need one:
-
-```shell
-make lint-file-format
-make lint-markdown-format
-make lint-markdown-links
-make lint-shell
-make lint-workflow-security
-```
-
-Format Markdown files, including tables:
-
-```shell
-make format-markdown
-```
-
-`make lint` stops at the first failing check.
-
-`make lint` checks every tracked file, as the pre-commit hook and CI do, so a
-local pass predicts theirs. In a large repository, or one with existing
-findings, limit the file checks to the changes on your branch with
-`make lint check=branch`. Shell lint always covers the whole repository.
-
-The branch-scoped mode resolves its base automatically. In GitHub Actions,
-`GITHUB_BASE_REF` selects the pull request target. Locally, the base of the
-branch's open pull request is read with GitHub CLI when it is installed and
-authenticated, once for all the checks. Without an open pull request, checks use
-`origin/HEAD` and then `origin/main`. If GitHub CLI is unavailable, finds no
-open pull request or does not answer within 5 seconds, the check reports that
-and uses the default branch. `BRANCH_NAME` is an optional local override, used
-exactly as given, for example `BRANCH_NAME=origin/v2 make lint check=branch`. No
-repository configuration is needed.
-
-Each check uses its native tool when it is installed and otherwise falls back to
-the image pinned in `mise.toml`. The workflow security check is the exception.
-It has no container fallback and needs the `yq` and `jq` versions that
-`make config` installs. To force the container path, for example to reproduce a
-result with the pinned image, run:
-
-```shell
-FORCE_USE_DOCKER=true make lint
-```
-
-This requires a running Docker daemon reachable through the `docker` command. On
-Apple silicon, images run as `linux/amd64` under emulation, so checks are
-slower.
-
-The workflow security check enforces the GitHub Actions baseline listed in
-[check-workflow-security.jq](scripts/quality/check-workflow-security.jq). A job
-that needs a write permission must be listed in
-[workflow-security.yaml](scripts/config/workflow-security.yaml) after a security
-review. [Harden repository security](docs/guides/Harden_repository_security.md)
-explains the controls and how to fix a failing check.
-
-Run the tests:
-
-```shell
 make test
 ```
 
-`make test` runs every `*.test.sh` suite under [scripts](scripts) in parallel
-through [run-test-suites.sh](scripts/tests/run-test-suites.sh). The Docker
-integration suite needs a running Docker daemon. A new suite is picked up
-automatically when it is executable and git does not ignore it. Keep it in a
-`tests/` directory next to the scripts it tests.
+`make lint` checks tracked files. It does not run the test suites or secret
+scan. The [pre-commit hooks](docs/guides/Run_Git_hooks_on_commit.md) also run
+`make test` and `make scan-secrets`. To scan repository history yourself:
 
-To update mise tools, Docker images, GitHub Actions and application packages,
-follow [Update Dependencies](docs/guides/Update_Dependencies.md).
+```shell
+make scan-secrets
+```
+
+Format Markdown in tracked working-tree changes, then review the diff:
+
+```shell
+make format check=working-tree-changes
+git diff
+```
+
+To limit the file checks to changes on your branch while developing:
+
+```shell
+make lint check=branch
+```
+
+The [quality-check guide](docs/guides/Run_and_configure_quality_checks.md)
+covers individual targets, file scopes, tool fallbacks and project checks.
+Follow [Harden repository security](docs/guides/Harden_repository_security.md)
+for workflow permissions and
+[Update Dependencies](docs/guides/Update_Dependencies.md) for tool, image,
+action and package updates.
 
 ### Examples
 
-- The [guide index](docs/guides/README.md) groups tasks and gives a recommended
-  onboarding order. The agent quality gate is described in
-  [Run the quality gate when the agent stops](docs/guides/Run_quality_gate_on_agent_stop.md).
-- ADR templates are stored in [docs/adr](docs/adr).
+Use the [guide index](docs/guides/README.md) to find task-specific instructions
+and the [ADR template](docs/adr/ADR-nnn_Any_Decision_Record_Template.md) to
+record technology decisions.
 
 ## Design notes 📝
 
-### Diagrams
-
-The [C4 model](https://c4model.com/) provides a simple, consistent way to
-capture architecture diagrams. Keep diagram sources under version control.
-Suggested tools are [Structurizr](https://structurizr.com/),
-[LikeC4](https://likec4.dev/), [Mermaid](https://github.com/mermaid-js/mermaid)
-and [draw.io](https://app.diagrams.net/).
-
-### Modularity
-
-Aim for modular, configurable components so projects can extend or replace parts
-without large rewrites. TODO: add project-specific modularity guidance when this
-template is adopted.
+The recommended approach for architecture diagrams is the
+[C4 model](https://c4model.com/), supported by [LikeC4](https://likec4.dev/).
+Use [Mermaid](https://github.com/mermaid-js/mermaid) for diagrams embedded in
+Markdown. Keep diagram sources under version control. Aim for modular,
+configurable components that projects can extend or replace. TODO: add
+project-specific modularity guidance when this template is adopted.
 
 ## Security 🔒
 
@@ -275,27 +210,18 @@ follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md) when participating.
 At a high level:
 
 - Configure your environment with `make config`.
-- Run quality checks using `make lint` before raising a change.
-- Run the test entry point with `make test`.
+- Run `make lint` and `make test` before raising a change.
 - TODO: confirm the contribution workflow (issues, pull requests, and review
   expectations).
 
 ## Repository layout 🗂️
 
-- [.github/workflows](.github/workflows) — CI/CD workflow definitions for the
-  template.
-- [docs/adr](docs/adr) — Architecture Decision Record template.
-- [docs/guides](docs/guides) — guides for developers and users (for example Bash
-  and Make, Git hooks, secrets scanning).
-- [scripts/config](scripts/config) — configuration for quality and tooling
-  checks.
-- [scripts/quality](scripts/quality) — scripts for file format, markdown, shell
-  linting, secrets scanning, and workflow security.
-- [scripts/docker](scripts/docker) — Docker helper scripts and related test
-  assets.
-- [Makefile](Makefile) — primary entry point for quality and configuration
-  tasks.
+- [.github/workflows](.github/workflows): CI workflows.
+- [docs/guides](docs/guides): task-specific setup, testing and tooling guides.
+- [docs/adr](docs/adr): Architecture Decision Record template.
+- [scripts](scripts): configuration, quality checks, Docker helpers and tests.
+- [Makefile](Makefile): entry point for setup, checks and tests.
 
 ## Licence 📜
 
-Released under the [MIT Licence](LICENCE.md)
+Released under the [MIT Licence](LICENCE.md).

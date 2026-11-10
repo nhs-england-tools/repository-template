@@ -15,16 +15,23 @@ Compose file and application configuration.
 ## Prerequisites 📋
 
 Complete the [quick start](../../README.md#quick-start-). Compose operations
-require a working `docker` command, a running daemon and Docker Compose v2 with
-support for `up --wait`. Check both before starting:
+require a working `docker` executable on `PATH` and a Compose provider that
+supports Docker Compose v2 commands, including `up --wait`. Start the Docker
+daemon, or start the Podman machine where needed. For Podman, provide a `docker`
+executable as described in [Build Docker images](Build_Docker_images.md), and
+install an external Compose provider such as `docker-compose` or
+`podman-compose` as described in
+[Podman's Compose documentation](https://docs.podman.io/en/latest/markdown/podman-compose.1.html).
+Check both commands before starting:
 
 ```shell
 docker info
 docker compose version
 ```
 
-These targets call `docker compose` directly. The Podman fallback used to pull
-toolchain images does not apply to them.
+These targets call `docker compose` directly. A shell alias does not apply to
+Make recipes, and the Podman fallback used to pull toolchain images does not
+apply to Compose.
 
 ## Start a small service 🚀
 

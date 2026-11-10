@@ -330,8 +330,15 @@ operational it prints a warning and succeeds, so `make config` still works on a
 machine without a container runtime. When a runtime is operational, the first
 failed pull or tag fails the target with that command's exit status and the
 remaining images are not pulled. Only this pull step falls back to Podman. The
-scripts that run the helper images call `docker` directly, so on a Podman-only
-machine provide a `docker` command, for example through `podman-docker`.
+scripts that run the helper images call `docker` directly. Podman's
+[CLI reference](https://docs.podman.io/en/latest/markdown/podman.1.html)
+supports `alias docker=podman` for interactive shell commands, but that alias is
+not available to Make recipes or scripts. On a Podman-only machine, provide a
+`docker` executable on `PATH`, such as the wrapper supplied by
+[`podman-docker`](https://packages.fedoraproject.org/pkgs/podman/podman-docker/)
+where available. Check `docker info` before running Docker-based helpers. For
+Compose, see
+[Run services with Docker Compose](Run_Docker_Compose_services.md#prerequisites-).
 
 ### Variables
 

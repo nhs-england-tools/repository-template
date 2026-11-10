@@ -1,34 +1,32 @@
 # Developer guides 📚
 
-- [Developer guides 📚](#developer-guides-)
-  - [Recommended onboarding order 🧭](#recommended-onboarding-order-)
-  - [Find a guide by task 🔎](#find-a-guide-by-task-)
-  - [Related documentation 🔗](#related-documentation-)
+Use these guides to configure a repository from this template and work with its
+tooling. To create a repository, start with
+[Set up a new repository](Set_up_a_new_repository.md). For day-to-day work,
+follow the onboarding order below or find a guide for your task.
 
 ## Recommended onboarding order 🧭
 
-1. Complete the [repository quick start](../../README.md#quick-start-). Review
-   and trust `mise.toml`, configure the pinned tools with `make config`, and
-   verify the GNU prerequisites.
-2. Read [Use Bash and Make](Use_Bash_and_Make.md) for the command conventions,
-   lifecycle targets and extension points. Run `make help` to see available
-   targets.
-3. Follow
-   [Run and configure quality checks](Run_and_configure_quality_checks.md) to
-   validate a change, format Markdown and understand check scopes.
-4. Read [Run Git hooks on commit](Run_Git_hooks_on_commit.md) to understand the
-   checks installed by `make config`. Follow [Scan secrets](Scan_secrets.md) for
-   the additional scan modes.
-5. Use [Write and run Bash tests](Write_and_run_Bash_tests.md) when changing
-   repository scripts. Run the relevant suite during development and the full
-   suite when its prerequisites are available.
-6. Choose the task-specific guides below. Container development, agent hooks and
-   SonarQube configuration are needed only when they apply to your work.
+1. Complete the [repository quick start](../../README.md#quick-start-): review
+   and trust `mise.toml`, verify GNU prerequisites with
+   `make toolchain-verify-gnu`, then run `make config`.
+2. Read [Use Bash and Make](Use_Bash_and_Make.md) for command conventions and
+   extension points. Run `make help` to see the available targets.
+3. Use [Run and configure quality checks](Run_and_configure_quality_checks.md)
+   to validate changes. Read
+   [Run Git hooks on commit](Run_Git_hooks_on_commit.md) to understand the
+   checks installed by `make config`, and [Scan secrets](Scan_secrets.md) for
+   additional scan modes.
+4. When changing repository scripts, use
+   [Write and run Bash tests](Write_and_run_Bash_tests.md). Run the relevant
+   suite during development and the full suite when its prerequisites are
+   available.
 
 ## Find a guide by task 🔎
 
 | I want to…                                                | Guide                                                                          |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Set up a new repository                                   | [Set up a new repository](Set_up_a_new_repository.md)                          |
 | Set up the development tools                              | [Quick start](../../README.md#quick-start-)                                    |
 | Add a Make target or script                               | [Use Bash and Make](Use_Bash_and_Make.md)                                      |
 | Remove generated files or local Docker resources          | [Cleanup options](Use_Bash_and_Make.md#clean-up-files-and-docker-resources-)   |

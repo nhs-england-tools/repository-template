@@ -6,6 +6,7 @@ body:
     attributes:
       value: |
         Open this issue in the new repository and assign it to a maintainer.
+        Follow the [repository setup guide](https://github.com/nhs-england-tools/repository-template/blob/main/docs/guides/Set_up_a_new_repository.md) for detailed steps.
         Complete the checklist in an initial setup pull request before accepting contributions.
         Ask a maintainer and the relevant security or policy owner to review that pull request.
         Do not include private reports, personal data, or sensitive contact details in this issue.
