@@ -1,4 +1,19 @@
 .version
 *.code-workspace
 
-# You can add project-specific ignore rules below this line as needed.
+.env
+.env.*
+!.env.example
+
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+tmp/
+temp/
+logs/
+
+.DS_Store
+Thumbs.db
