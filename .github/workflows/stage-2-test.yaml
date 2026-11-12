@@ -55,7 +55,7 @@ jobs:
         with:
           persist-credentials: false
       - name: "🧰 Set up mise"
-        uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: ${{ inputs.mise_version }}
           install: true
@@ -88,7 +88,7 @@ jobs:
           persist-credentials: false
       - name: "🔬 Perform static analysis"
         if: env.HAS_SONAR_CONFIGURATION == 'true'
-        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
