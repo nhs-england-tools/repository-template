@@ -27,6 +27,7 @@ body:
         - label: Implement the recipes for every TODO-marked target in the Makefile. Keep the existing target names.
         - label: Review dependency sources, Dependabot, cooldown and update ownership using docs/guides/template/Update_Dependencies.md. Record project-specific changes.
         - label: Configure the required SonarQube Cloud integration using docs/guides/template/Configure_SonarQube_Cloud.md. Verify a pull request scan and quality gate result.
+        - label: Set the TEAMS_NOTIFICATION_WEBHOOK_URL Actions secret to a Teams Workflows webhook, as docs/guides/template/Set_up_a_new_repository.md describes, so the team is told when main breaks.
   - type: checkboxes
     id: approval
     attributes:

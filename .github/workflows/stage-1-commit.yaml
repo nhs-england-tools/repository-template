@@ -130,3 +130,25 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: "🔒 Check workflow security"
         run: make lint-workflow-security check=all
+  check-pipeline-contract:
+    name: "📜 Check pipeline contract"
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    timeout-minutes: 2
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: "🧰 Set up mise"
+        uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: ${{ inputs.mise_version }}
+          install: true
+          install_args: "yq jq"
+          persist_github_token: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "📜 Check pipeline contract"
+        run: make lint-pipeline-contract check=all
