@@ -78,6 +78,15 @@ Make these changes on a branch for the initial setup pull request:
 7. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and
    `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
+8. Connect the pipeline to the team's Microsoft Teams channel, so the team is
+   told when `main` breaks, when it is green again, and when a release is
+   published or deployed. In the channel menu,
+   open **Workflows** and create a workflow from the **Send webhook alerts to a
+   channel** template. Add a co-owner, as a workflow stops when its only owner
+   leaves. Set the workflow's webhook URL as the
+   `TEAMS_NOTIFICATION_WEBHOOK_URL` Actions secret. Without it, a failed run
+   only shows a warning in its summary. Office 365 connector webhooks no longer
+   work.
 
 You are ready to verify when the setup branch contains the project's updated
 documentation, policies, Make targets and dependency decisions, and the required

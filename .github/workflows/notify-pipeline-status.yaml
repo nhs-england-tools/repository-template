@@ -1,0 +1,95 @@
+name: "📣 Notify pipeline status"
+
+# Tells the team in Microsoft Teams when a CI/CD run fails, when a run that
+# guards the trunk is green again and, when asked, when a run passes. Call it
+# from a job whose 'if:' starts with '!cancelled()' and that needs every other
+# job, which the pipeline contract check enforces for the cicd-* workflows.
+# Without the TEAMS_NOTIFICATION_WEBHOOK_URL secret it only warns and writes
+# the step summary.
+
+on:
+  workflow_call:
+    inputs:
+      needs:
+        description: "Results of the jobs to report on, set to toJSON(needs) by the calling job"
+        required: true
+        type: string
+      stop_the_line:
+        description: "Treat a failure as a broken trunk, ask the team to stop merging and announce the recovery"
+        required: false
+        type: boolean
+        default: false
+      commit:
+        description: "Commit SHA or tag the run is about, default is the commit that triggered the run"
+        required: false
+        type: string
+        default: ""
+      details:
+        description: "Extra 'Label: value' facts to show in the message, one per line"
+        required: false
+        type: string
+        default: ""
+      success_title:
+        description: "Title of a message for a passing run, default is no message"
+        required: false
+        type: string
+        default: ""
+      success_text:
+        description: "Text of the message for a passing run"
+        required: false
+        type: string
+        default: ""
+      success_link:
+        description: "https link of the message for a passing run, default is the run"
+        required: false
+        type: string
+        default: ""
+    secrets:
+      TEAMS_NOTIFICATION_WEBHOOK_URL:
+        description: "Microsoft Teams webhook URL, the message is not sent when it is not set"
+        required: false
+
+permissions: {}
+
+jobs:
+  notify:
+    name: "📣 Notify the team"
+    runs-on: ubuntu-26.04
+    permissions:
+      actions: read
+      contents: read
+    timeout-minutes: 2
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/cicd
+          persist-credentials: false
+      - name: "🔎 Work out the pipeline status"
+        id: status
+        env:
+          NEEDS: ${{ inputs.needs }}
+          STOP_THE_LINE: ${{ inputs.stop_the_line }}
+          COMMIT_REF: ${{ inputs.commit }}
+          DETAILS: ${{ inputs.details }}
+          SUCCESS_TITLE: ${{ inputs.success_title }}
+          SUCCESS_TEXT: ${{ inputs.success_text }}
+          SUCCESS_LINK: ${{ inputs.success_link }}
+          WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/cicd/notify-pipeline-status.sh
+      # A failed post must not change the run's result, which the next run reads
+      - name: "📣 Notify Microsoft Teams"
+        if: steps.status.outputs.status != 'none' && steps.status.outputs.webhook_configured == 'true'
+        continue-on-error: true
+        uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
+          message-title: ${{ steps.status.outputs.title }}
+          message-text: ${{ steps.status.outputs.text }}
+          message-colour: ${{ steps.status.outputs.colour }}
+          link: ${{ steps.status.outputs.link }}
+          link-title: ${{ steps.status.outputs.link_title }}
+          facts: ${{ steps.status.outputs.facts }}
+          commit: ${{ steps.status.outputs.commit }}

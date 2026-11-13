@@ -24,6 +24,7 @@ lint: # Run linter to check code style and errors (set check=all|staged-changes|
 	$(MAKE) lint-markdown-links
 	$(MAKE) lint-shell
 	$(MAKE) lint-workflow-security
+	$(MAKE) lint-pipeline-contract
 
 typecheck: # Run type checker @Quality
 	# TODO: Implement type checking required for this repository

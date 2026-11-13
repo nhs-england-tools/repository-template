@@ -93,25 +93,20 @@ jobs:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #     VERSION: ${{ needs.metadata.outputs.version }}
       #   run: gh release upload "$VERSION" "./repository-template-$VERSION.tar.gz"
-  success:
-    name: "📣 Success notification"
-    runs-on: ubuntu-26.04
+  # Report the outcome of every job in needs, including failures.
+  notify:
+    name: "📣 Notify pipeline status"
     permissions:
+      actions: read
       contents: read
-    needs: [publish]
-    steps:
-      - name: "🔎 Check prerequisites for notification"
-        id: check
-        env:
-          TEAMS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
-        run: |
-          printf 'secret_exist=%s\n' "$TEAMS_WEBHOOK_CONFIGURED" >> "$GITHUB_OUTPUT"
-      - name: "📣 Notify on publishing packages"
-        if: steps.check.outputs.secret_exist == 'true'
-        uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
-          message-title: "Notification title"
-          message-text: "This is a notification body"
-          link: ${{ github.event.pull_request.html_url }}
+    needs: [metadata, publish]
+    if: ${{ !cancelled() && github.event.pull_request.merged == true }}
+    uses: ./.github/workflows/notify-pipeline-status.yaml
+    with:
+      needs: ${{ toJSON(needs) }}
+      details: "Version: ${{ needs.metadata.outputs.version }}"
+      success_title: "PUBLISHED: Release ${{ needs.metadata.outputs.version }}"
+      success_text: "Release ${{ needs.metadata.outputs.version }} is published. It holds the changes merged in pull request #${{ github.event.pull_request.number }}."
+      success_link: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.metadata.outputs.version }}
+    secrets:
+      TEAMS_NOTIFICATION_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}

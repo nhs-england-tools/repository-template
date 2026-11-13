@@ -1596,7 +1596,7 @@ function test-quality-gate-reports-gates-the-time-budget-did-not-allow() {
   # Arrange
   gate-create-repo
   gate-make 'if [[ "${*: -1}" == lint ]]; then sleep 30; fi'
-  export QUALITY_GATE_BUDGET=4
+  export QUALITY_GATE_BUDGET=8
   # Act
   # Without a baseline every gate runs, which skips a prompt on this slow test
   test-capture gate-send "$(gate-stop-json)"

@@ -25,6 +25,7 @@ capabilities.
   - [`check-markdown-links.sh`](../../../scripts/quality/check-markdown-links.sh)
   - [`check-shell-lint.sh`](../../../scripts/quality/check-shell-lint.sh)
   - [`check-workflow-security.sh`](../../../scripts/quality/check-workflow-security.sh)
+  - [`check-pipeline-contract.sh`](../../../scripts/quality/check-pipeline-contract.sh)
   - [`scan-secrets.sh`](../../../scripts/quality/scan-secrets.sh)
 - Configuration
   - [`pre-commit.yaml`](../../../scripts/config/pre-commit.yaml)

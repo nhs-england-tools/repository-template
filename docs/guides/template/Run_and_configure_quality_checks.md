@@ -35,6 +35,7 @@ individual target to work on a particular finding:
 | `make lint-markdown-links`    | Checks local Markdown links with Lychee.                                        |
 | `make lint-shell`             | Runs ShellCheck and checks comment length in shell and Make include files.      |
 | `make lint-workflow-security` | Checks GitHub Actions workflows and local actions against the security rules.   |
+| `make lint-pipeline-contract` | Checks that each CI/CD workflow keeps the delivery rules, such as notification. |
 
 Adapt the root lifecycle targets for your project. `make format` currently
 formats Markdown, and `make typecheck` is a placeholder. Treat `make test` as
@@ -112,6 +113,9 @@ Edit the relevant tool's rules and exclusions. Exclusion formats differ:
   sets rules.
   [`workflow-security.yaml`](../../../scripts/config/workflow-security.yaml)
   records approved write permissions.
+- Pipeline contract:
+  [`check-pipeline-contract.jq`](../../../scripts/quality/check-pipeline-contract.jq)
+  sets rules.
 
 Exclusions apply to individual checks. `.gitignore` does not exclude tracked
 files from these checks.
