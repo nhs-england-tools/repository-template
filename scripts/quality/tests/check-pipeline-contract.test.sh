@@ -18,6 +18,7 @@ set -euo pipefail
 readonly NOTIFY_IF="\${{ !cancelled() && github.ref == 'refs/heads/main' }}"
 readonly SILENT_WORKFLOW=$'name: test\non: push\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest'
 readonly EXIT_STATUS_LABEL='exit status'
+readonly DIAGNOSTIC_LABEL='diagnostic'
 readonly NOTIFY_ERROR='workflow must call ./.github/workflows/notify-pipeline-status.yaml'
 readonly NOTIFY_IF_ERROR='job notify must start its if: condition with !cancelled(), so it reports failures and stays cancellable'
 
@@ -115,7 +116,7 @@ function test-pipeline-contract-rejects-cicd-workflow-without-notification() {
   pipeline-contract-run-check
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: $NOTIFY_ERROR" "$TEST_STDERR" "diagnostic"
+  assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: $NOTIFY_ERROR" "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -130,7 +131,7 @@ function test-pipeline-contract-rejects-notification-skipped-on-failure() {
   pipeline-contract-run-check
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: $NOTIFY_IF_ERROR" "$TEST_STDERR" "diagnostic"
+  assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: $NOTIFY_IF_ERROR" "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -163,7 +164,7 @@ function test-pipeline-contract-rejects-notification-that-misses-a-job() {
   pipeline-contract-run-check
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: job notify must need every other job, missing: build, test" "$TEST_STDERR" "diagnostic"
+  assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: job notify must need every other job, missing: build, test" "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -191,7 +192,7 @@ function test-pipeline-contract-rejects-notification-from-another-workflow() {
   pipeline-contract-run-check
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "$NOTIFY_ERROR" "diagnostic"
+  assert-contains "$TEST_STDERR" "$NOTIFY_ERROR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -221,7 +222,7 @@ function test-pipeline-contract-rejects-unparseable-file() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "did not find expected node content" "YAML parser diagnostic"
-  assert-contains "$TEST_STDERR" "file is not a valid YAML mapping" "diagnostic"
+  assert-contains "$TEST_STDERR" "file is not a valid YAML mapping" "$DIAGNOSTIC_LABEL"
 
   return 0
 }

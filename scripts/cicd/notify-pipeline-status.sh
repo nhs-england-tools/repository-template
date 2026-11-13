@@ -222,12 +222,11 @@ function notify-broken-since() {
   local runs="$2" attempt='[]' previous=$((GITHUB_RUN_ATTEMPT - 1)) response now
   broken_since_out=null
   [[ "$runs" != null ]] || return 0
-  if [[ "$previous" -gt 0 ]]; then
-    if ! response="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$previous")" ||
-      ! attempt="$(jq -c '[{conclusion, number: .run_number, url: .html_url, createdAt: .created_at}]' <<< "$response")"; then
-      echo "::warning title=Previous attempt not found::The GitHub API did not return attempt $previous of this run, so its result is not checked"
-      attempt='[]'
-    fi
+  if [[ "$previous" -gt 0 ]] &&
+    { ! response="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$previous")" ||
+      ! attempt="$(jq -c '[{conclusion, number: .run_number, url: .html_url, createdAt: .created_at}]' <<< "$response")"; }; then
+    echo "::warning title=Previous attempt not found::The GitHub API did not return attempt $previous of this run, so its result is not checked"
+    attempt='[]'
   fi
   now="$(date -u +%s)" || return "$?"
   broken_since_out="$(
