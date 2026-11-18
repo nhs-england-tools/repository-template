@@ -55,9 +55,9 @@ agent, because the gates need tools and network access that its sandbox lacks.
 - **Agent stops.** The hook compares the tree with the baseline. It skips the
   gates when nothing changed in the turn, so a question never costs a run. It
   runs only the gates whose `paths` match the changed files. A change inside a
-  nested repository, such as a submodule, counts. When it cannot read the tree
-  or compare it, it runs every enabled gate and says so. So a gate can run even
-  when the agent changed nothing.
+  nested repository, such as a submodule, counts. When it cannot read the tree,
+  compare it or find the turn's baseline, it runs every enabled gate and records
+  why. So a gate can run even when the agent changed nothing.
 - **On demand.** `make quality-gate` runs the gates for the changed files. Use
   `scope=all` to run them for every file.
 
@@ -123,7 +123,10 @@ expected.
   default and at most 5. Each block starts another agent turn that costs AI
   credits.
 - After a block, the hook runs the gates again only if the agent changed
-  something. If it did not, the turn ends and the failures stand.
+  something. If it did not, the turn ends and the failures stand. The turn also
+  ends if the hook cannot read how many times it has blocked.
+- If a gate cannot start, the hook still blocks on failures it has already
+  found and reports the remaining gates as unknown.
 - The Copilot harness and Copilot CLI override a hook after eight blocks in a
   row. The Local harness documents no such limit, so `max_blocks` is the limit
   there. A hook that times out does not block.
@@ -135,7 +138,8 @@ expected.
   that limit or when you cancel the turn, the hook stops the running gate in the
   same way. A forced kill cannot be caught, so a gate may then outlive the hook.
 - The report is cut to the last lines of each failing gate and about 8 KB in
-  total.
+  total. If even the list of gates does not fit, the report says how many it
+  left out and where to find the full results.
 
 ## Gates that cannot run 🚫
 
@@ -170,6 +174,10 @@ The hook does not give the agent permission to change files or the environment.
   file or a Copilot settings file. The last event is in
   `.git/quality-gate/last-hook.json`, the last run in `last-run.json` and each
   session's gate logs in `logs/<session>/`.
+- **Gates ran during a review.** Check `selection_reason` in `last-run.json`.
+  `changed-files` means files differ from the start of the turn, not that the
+  agent changed them. Any other value means the hook could not tell, so it ran
+  every gate. Either way, report the failures rather than fixing them.
 - **It runs twice.** User level hooks in `~/.copilot/hooks` run in addition to
   this one. Keep only one Stop hook that runs the gates.
 - **It cannot run `jq` or `yq`.** Run `mise trust` and `make config`. A mise
@@ -177,6 +185,27 @@ The hook does not give the agent permission to change files or the environment.
   must be mikefarah yq version 4, not the Python `yq`.
 - **It blocks on a gate you do not want.** Set `enabled: false` in a drop-in, or
   pause it.
+
+To see what the hook decided, read its records before the next run replaces
+them:
+
+```shell
+state="$(git rev-parse --git-path quality-gate)"
+jq . "$state/last-hook.json" "$state/last-run.json"
+```
+
+Each record has these fields:
+
+- `action`: what the hook did, for example `blocked`, `allowed` or `unchanged`.
+- `selection_reason`: why it chose the gates, for example `changed-files`, or a
+  fallback such as `missing-baseline` when it could not tell what changed.
+- `scope`: `changed`, `all` or `none`.
+- `session_status`: whether the editor sent a usable session ID.
+
+The hook also keeps the last 50 events of each session in
+`history/sessions/<session>/` and deletes state older than a week. The history
+never holds prompts or test output. The next run replaces a gate's log, so copy
+it if you need to keep it.
 
 ## Testing 🧪
 

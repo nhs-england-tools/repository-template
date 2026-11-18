@@ -325,8 +325,8 @@ function pipeline-contract-write-fixture() {
 function pipeline-contract-create-repo() {
 
   local repo="$TEST_TMP/repo"
-  # shellcheck disable=SC2119
-  quality-create-fixture-repo
+  cp -Rp "$SUITE_TMP/quality-fixture-base" "$repo"
+  cp "$TEST_REPO_ROOT/scripts/quality/tests/mise.toml.test" "$repo/mise.toml"
   mkdir -p "$repo/.github"
   cp -R "$TEST_TMP/workflows" "$repo/.github/workflows"
   git -C "$repo" add -A

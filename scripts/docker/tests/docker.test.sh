@@ -46,7 +46,7 @@ function main() {
     test-docker-run-executes-the-command \
     test-docker-check-test-passes-and-fails \
     test-docker-clean-removes-every-tag-and-generated-file \
-    test-docker-teardown-warns-when-test-images-cannot-be-removed
+    test-docker-teardown-fails-when-test-images-cannot-be-removed
 
   return 0
 }
@@ -58,6 +58,7 @@ function main() {
 function test-suite-setup() {
 
   local rc suffix
+  DOCKER_TEST_BUILD_ATTEMPTED=false
   suffix="$(basename "$SUITE_TMP" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')"
   export DOCKER_IMAGE="repository-template/docker-test-$suffix"
   CLEAN_IMAGE="repository-template/docker-test-clean-$suffix"
@@ -72,37 +73,50 @@ function test-suite-setup() {
   fi
   mkdir "$SUITE_TMP/image"
   cp Dockerfile VERSION "$SUITE_TMP/image/"
+  DOCKER_TEST_BUILD_ATTEMPTED=true
   set +e
   ( set -e; dir="$SUITE_TMP/image" docker-build ) > "$SUITE_TMP/build.log" 2>&1
   rc=$?
   set -e
   if [[ $rc -ne 0 ]]; then
     cat "$SUITE_TMP/build.log" >&2
-    echo "ERROR: docker-build failed in the suite setup" >&2
+    echo "ERROR: docker-build failed in the suite setup (exit $rc). Tests did not run. Review the build output above, then rerun: bash scripts/docker/tests/docker.test.sh" >&2
     return 1
   fi
 
   return 0
 }
 
-# Remove this run's test images, never failing.
+# Remove this run's test images only when a build could have created them.
 function test-suite-teardown() {
 
-  remove-test-images || true
+  [[ "${DOCKER_TEST_BUILD_ATTEMPTED:-false}" == true ]] || return 0
+  remove-test-images || return "$?"
 
   return 0
 }
 
-# Remove every local tag of this run's test images, ignoring anything already
-# gone and only warning when an image cannot be removed.
+# Remove every local tag of this run's test images and report cleanup failures.
 function remove-test-images() {
 
+  local images tag
   local -a tags=()
-  mapfile -t tags < <(docker images --format '{{.Repository}}:{{.Tag}}' 2> /dev/null \
-    | awk -v a="$DOCKER_IMAGE" -v b="$CLEAN_IMAGE" -F: '$1 == a || $1 == b')
+  images="$(docker images --format '{{.Repository}}:{{.Tag}}')" || {
+    printf 'ERROR: cannot enumerate test images for %s and %s. Cleanup is incomplete and test images may remain. Diagnose with: docker images --format %q\n' "$DOCKER_IMAGE" "$CLEAN_IMAGE" '{{.Repository}}:{{.Tag}}' >&2
+    return 1
+  }
+  while IFS= read -r tag; do
+    if [[ "${tag%:*}" == "$DOCKER_IMAGE" || "${tag%:*}" == "$CLEAN_IMAGE" ]]; then
+      tags+=("$tag")
+    fi
+  done <<< "$images"
   if [[ ${#tags[@]} -gt 0 ]]; then
-    docker rmi "${tags[@]}" > /dev/null 2>&1 ||
-      echo "WARNING: could not remove test images: ${tags[*]}" >&2
+    docker rmi "${tags[@]}" > /dev/null || {
+      printf 'ERROR: cannot remove test images. Cleanup is incomplete and test images may remain. Diagnose with: docker rmi' >&2
+      printf ' %q' "${tags[@]}" >&2
+      printf '\n' >&2
+      return 1
+    }
   fi
 
   return 0
@@ -232,7 +246,7 @@ function test-docker-clean-removes-every-tag-and-generated-file() {
   return 0
 }
 
-function test-docker-teardown-warns-when-test-images-cannot-be-removed() {
+function test-docker-teardown-fails-when-test-images-cannot-be-removed() {
 
   # Arrange
   local removed_stderr
@@ -245,9 +259,10 @@ function test-docker-teardown-warns-when-test-images-cannot-be-removed() {
   test-capture test-suite-teardown
   # Assert
   assert-equal "" "$removed_stderr" "stderr when docker rmi succeeds"
-  assert-equal 0 "$TEST_STATUS" "exit status when docker rmi fails"
-  assert-equal "WARNING: could not remove test images: $DOCKER_IMAGE:1.0 $CLEAN_IMAGE:latest" \
-    "$TEST_STDERR" "stderr when docker rmi fails"
+  assert-equal 1 "$TEST_STATUS" "exit status when docker rmi fails"
+  assert-contains "$TEST_STDERR" "ERROR: cannot remove test images"
+  assert-contains "$TEST_STDERR" "Cleanup is incomplete"
+  assert-contains "$TEST_STDERR" "docker rmi $DOCKER_IMAGE:1.0 $CLEAN_IMAGE:latest"
   assert-stub-called docker "rmi $DOCKER_IMAGE:1.0 $CLEAN_IMAGE:latest"
 
   return 0

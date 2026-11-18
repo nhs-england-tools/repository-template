@@ -213,8 +213,9 @@ make test
 
 The suite runner starts all discovered suites in parallel, then prints their
 output in a stable order and a summary of passed, failed and unavailable suites.
-The exit status is non-zero unless every suite passed. During a review, report
-failures rather than changing tests or the environment.
+The exit status is non-zero unless every suite passed. Each failed suite comes
+with a `VERBOSE=true` command to rerun it. During a review, report failures
+rather than changing tests or the environment.
 
 Within a suite, `TEST_JOBS` controls parallel tests and defaults to the CPU
 count. It does not limit how many suites `make test` starts. For a sequential,

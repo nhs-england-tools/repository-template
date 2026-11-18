@@ -19,7 +19,7 @@ readonly FAILED_TEST_OUTPUT='t FAIL'
 readonly STDOUT_LABEL='stdout'
 readonly STDERR_LABEL='stderr'
 readonly EXIT_STATUS_LABEL='exit status'
-readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all its tests, see the output above'
+readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all its tests. Verification is incomplete. Review the output above, then rerun this suite with VERBOSE=true.'
 
 function main() {
 
@@ -368,7 +368,9 @@ function test-harness-fails-a-suite-with-no-tests() {
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: no tests to run" "$TEST_STDERR" "$STDERR_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR: no tests to run"
+  assert-contains "$TEST_STDERR" "Verification did not run"
+  assert-contains "$TEST_STDERR" "test-run-suite"
   assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
@@ -482,12 +484,19 @@ function test-harness-does-not-pass-stdin-to-tests() {
 function test-harness-isolates-global-git-config() {
 
   # Arrange
+  mkdir -p "$TEST_TMP/git-template/hooks"
+  touch "$TEST_TMP/git-template/hooks/sentinel"
   write-mini-suite 'function t() {
   assert-equal /dev/null "$GIT_CONFIG_GLOBAL"
   assert-equal 1 "$GIT_CONFIG_NOSYSTEM"
+  git init -q "$TEST_TMP/repo"
+  assert-file-not-exists "$TEST_TMP/repo/.git/hooks/sentinel"
+  assert-equal "" "$GIT_TEMPLATE_DIR" "git template directory"
+  assert-equal "" "$(find "$TEST_TMP/repo/.git" -name "*.sample" -print)" "sample hooks"
 }' t
   # Act
   test-capture env GIT_CONFIG_GLOBAL="$TEST_TMP/gitconfig" GIT_CONFIG_NOSYSTEM=0 \
+    GIT_TEMPLATE_DIR="$TEST_TMP/git-template" \
     "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-contains "$TEST_STDOUT" "t PASS"
@@ -530,6 +539,8 @@ function test-harness-keeps-files-when-the-suite-scratch-directory-cannot-be-cre
   assert-stub-called mktemp -d
   assert-file-exists "$TEST_TMP/sentinel"
   assert-file-exists "$TEST_TMP/sentinel/file"
+  assert-contains "$TEST_STDERR" "mktemp -d"
+  assert-contains "$TEST_STDERR" "TMPDIR"
 
   return 0
 }
@@ -568,6 +579,7 @@ function test-harness-fails-a-test-that-leaves-errexit-off() {
   # Assert
   assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "ERROR: test 't' left errexit off"
+  assert-contains "$TEST_STDOUT" "VERBOSE=true"
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
@@ -583,6 +595,7 @@ function test-harness-fails-a-test-that-calls-exit-0() {
   # Assert
   assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "ERROR: test 't' exited before returning"
+  assert-contains "$TEST_STDOUT" "VERBOSE=true"
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$(cat "$TEST_TMP/tmp-path")" '^/.+' "recorded scratch directory"
   assert-file-not-exists "$(cat "$TEST_TMP/tmp-path")"
@@ -671,6 +684,7 @@ function test-harness-stops-a-blocked-test-before-teardown() {
   # Assert
   assert-equal 143 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
   assert-file-exists "$TEST_TMP/pids"
+  assert-file-exists "$TEST_TMP/parent-ready"
   assert-file-exists "$TEST_TMP/torn-down"
   assert-file-not-exists "$TEST_TMP/alive-at-teardown"
   assert-file-not-exists "$TEST_TMP/late-write"
@@ -689,6 +703,7 @@ function test-harness-kills-a-test-that-ignores-term-after-the-stop-timeout() {
   # Assert
   assert-equal 143 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
   assert-file-exists "$TEST_TMP/pids"
+  assert-file-exists "$TEST_TMP/parent-ready"
   assert-file-exists "$TEST_TMP/torn-down"
   assert-file-not-exists "$TEST_TMP/alive-at-teardown"
   assert-file-not-exists "$TEST_TMP/late-write"
@@ -1119,13 +1134,21 @@ function write-mini-suite() {
 }
 
 # Write a mini test suite whose test blocks in an external command after writing
-# its own PID and the command's PID to "$OUT/pids". The teardown creates
+# its own PID and the command's PID to "$OUT/pids". The parent writes
+# "$OUT/parent-ready" after registering the test. The teardown creates
 # "$OUT/alive-at-teardown" if either is still running. With IGNORE_TERM set,
 # the test and the command ignore TERM.
 function write-blocked-mini-suite() {
 
   local body
   body="$(cat << 'EOF'
+await_end_definition="$(declare -f _test-await-end)"
+eval "${await_end_definition/#_test-await-end /blocked-mini-suite-await-end }"
+function _test-await-end() {
+  touch "$OUT/parent-ready"
+  blocked-mini-suite-await-end "$@" || return "$?"
+  return 0
+}
 function test-suite-teardown() {
   local pid state
   local -a pids=()
@@ -1155,21 +1178,28 @@ EOF
 }
 
 # Run the mini suite in the background, wait up to 10 seconds for its test to
-# block, then send TERM to the suite process only. Kill the suite if it has not
-# exited 30 seconds later, and kill the blocked processes too, so a failing
-# harness leaves nothing running. The suite's temporary files go under
+# block and its parent to register it, then send TERM to the suite process only.
+# Fail without sending TERM if readiness is not reached. Kill the suite if it
+# has not exited 30 seconds later, and kill the blocked processes too, so a
+# failing harness leaves nothing running. The suite's temporary files go under
 # "$TEST_TMP/tmp". Sets SUITE_STATUS to the suite's exit status.
 function term-blocked-mini-suite() {
 
-  local suite_pid test_pid command_pid ticks=0
+  local suite_pid test_pid command_pid ticks=0 readiness_status=0
   mkdir "$TEST_TMP/tmp"
   TMPDIR="$TEST_TMP/tmp" "$BASH" "$TEST_TMP/mini.test.sh" > "$TEST_TMP/mini.out" 2> "$TEST_TMP/mini.err" &
   suite_pid=$!
-  while [[ ! -f "$TEST_TMP/pids" && $ticks -lt 100 ]] && kill -0 "$suite_pid" 2> /dev/null; do
+  while [[ ( ! -f "$TEST_TMP/pids" || ! -f "$TEST_TMP/parent-ready" ) && $ticks -lt 100 ]] && kill -0 "$suite_pid" 2> /dev/null; do
     sleep 0.1
     ticks=$((ticks + 1))
   done
-  kill -TERM "$suite_pid" 2> /dev/null || true
+  if [[ -f "$TEST_TMP/pids" && -f "$TEST_TMP/parent-ready" ]]; then
+    kill -TERM "$suite_pid" 2> /dev/null || true
+  else
+    echo "ERROR: blocked mini suite did not publish child PIDs and parent readiness" >&2
+    readiness_status=1
+    kill -KILL "$suite_pid" 2> /dev/null || true
+  fi
   ticks=0
   while [[ $ticks -lt 300 ]] && kill -0 "$suite_pid" 2> /dev/null; do
     sleep 0.1
@@ -1183,7 +1213,7 @@ function term-blocked-mini-suite() {
     kill -KILL "$test_pid" "$command_pid" 2> /dev/null || true
   fi
 
-  return 0
+  return "$readiness_status"
 }
 
 # Run the mini suite in the background and kill it if it has not exited 10

@@ -40,7 +40,7 @@ function main() {
   local -a suites=()
   find-test-suites suites "$dir" || return "$?"
   if [[ ${#suites[@]} -eq 0 ]]; then
-    echo "No test suites found under $dir" >&2
+    echo "ERROR: No test suites found under '$dir'. Verification did not run. Check discovery with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'" >&2
     return 1
   fi
   run-test-suites "${suites[@]}" || return "$?"
@@ -59,7 +59,10 @@ function find-test-suites() {
 
   local -n result="$1" || return "$?"
   local dir="$2" base="${2%/}" tmp suite path rc=0
-  tmp="$(mktemp -d)" || return "$?"
+  tmp="$(mktemp -d)" || {
+    echo "ERROR: cannot create discovery scratch directory. Verification did not run. Diagnose with: mktemp -d" >&2
+    return 1
+  }
   if list-test-suites "$dir" "$tmp/list"; then
     while IFS= read -r -d '' suite; do
       path="$base/$suite"
@@ -73,7 +76,10 @@ function find-test-suites() {
   else
     rc=$?
   fi
-  rm -rf "$tmp"
+  rm -rf "$tmp" || {
+    echo "ERROR: cannot remove discovery scratch directory '$tmp'. Inspect with: ls -ld '$tmp'" >&2
+    return 1
+  }
 
   return "$rc"
 }
@@ -93,11 +99,14 @@ function list-test-suites() {
   # Git only warns about a directory it cannot read, so any message is a failure
   if [[ $rc -ne 0 || -s "$err" ]]; then
     cat "$err" >&2
-    echo "ERROR: cannot search $dir for test suites" >&2
+    echo "ERROR: cannot search $dir for test suites. Verification did not run. Diagnose with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'" >&2
     return 1
   fi
   # A conflicted path is listed once for each index stage
-  LC_ALL=C sort -zu -o "$list" "$list" || return "$?"
+  LC_ALL=C sort -zu -o "$list" "$list" || {
+    echo "ERROR: cannot sort discovered suites in '$list'. Verification did not run. Diagnose with: sort --version" >&2
+    return 1
+  }
 
   return 0
 }
@@ -110,7 +119,10 @@ function run-test-suites() {
 
   local logs suite rc reason i=0 failed=0 unavailable=0
   local -a pids=() paths=("$@") failures=()
-  logs="$(mktemp -d)" || return "$?"
+  logs="$(mktemp -d)" || {
+    echo "ERROR: cannot create suite log directory. Verification did not run. Diagnose with: mktemp -d" >&2
+    return 1
+  }
   # shellcheck disable=SC2064
   trap "rm -rf '$logs'" EXIT
 
@@ -141,6 +153,10 @@ function run-test-suites() {
       else
         echo "FAILED: ${paths[$i]} (exit code $rc)"
         failed=$((failed + 1))
+        printf 'ERROR: suite %q exited with status %s. Verification failed. Diagnose with: VERBOSE=true %q\n' "${paths[$i]}" "$rc" "${paths[$i]}"
+        if [[ $rc -eq 126 || $rc -eq 127 ]]; then
+          printf 'ERROR: cannot execute suite %q. Verification failed. Inspect its mode and interpreter with: ls -l %q\n' "${paths[$i]}" "${paths[$i]}" >&2
+        fi
       fi
     fi
   done

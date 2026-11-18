@@ -50,11 +50,10 @@ function main() {
   return 0
 }
 
-# Create a repository with origin/main and origin/v2 at its first commit and
-# the feature branch one commit ahead, checked out. Print the first commit.
-function quality-test-create-repo() {
+# Seed origin/main and origin/v2 at the first commit, with feature one ahead.
+function test-suite-setup() {
 
-  local repo="$TEST_TMP/repo" base_commit
+  local repo="$SUITE_TMP/repo" base_commit
   mkdir -p "$repo"
   git -C "$repo" init -q --initial-branch=main
   git -C "$repo" config user.name fixture
@@ -69,7 +68,16 @@ function quality-test-create-repo() {
   printf 'feature\n' >> "$repo/a.txt"
   git -C "$repo" commit -q -am feature
 
-  printf '%s\n' "$base_commit"
+  QUALITY_TEST_BASE_COMMIT="$base_commit"
+
+  return 0
+}
+
+# Copy the baseline into this test's private repository. Print the first commit.
+function quality-test-create-repo() {
+
+  cp -Rp "$SUITE_TMP/repo" "$TEST_TMP/repo"
+  printf '%s\n' "$QUALITY_TEST_BASE_COMMIT"
 
   return 0
 }

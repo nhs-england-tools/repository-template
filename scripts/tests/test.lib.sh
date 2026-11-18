@@ -72,11 +72,11 @@ function test-run-suite() {
   local -a tests=("$@")
 
   if [[ $# -eq 0 ]]; then
-    echo "ERROR: no tests to run" >&2
+    echo "ERROR: no tests to run. Verification did not run. Inspect this suite's test-run-suite arguments, then rerun it with VERBOSE=true." >&2
     return 1
   fi
   if ! _test-mktemp-dir _TEST_SUITE_TMP; then
-    echo "ERROR: cannot create the suite scratch directory" >&2
+    echo "ERROR: cannot create the suite scratch directory under '${TMPDIR:-/tmp}'. Verification did not run. Check TMPDIR permissions and space with: ls -ld '${TMPDIR:-/tmp}' && mktemp -d" >&2
     return 1
   fi
   SUITE_TMP="$_TEST_SUITE_TMP"
@@ -101,7 +101,7 @@ function test-run-suite() {
   # Each test writes its index to this pipe when it ends, so a slow test does
   # not hold up the next ones
   if ! mkfifo "$SUITE_TMP/.ended"; then
-    echo "ERROR: cannot create the pipe that reports ended tests" >&2
+    echo "ERROR: cannot create the pipe '$SUITE_TMP/.ended' that reports ended tests. Verification did not run. Diagnose with: command -v mkfifo && ls -ld '$SUITE_TMP'" >&2
     return 1
   fi
   exec 3<> "$SUITE_TMP/.ended"
@@ -272,7 +272,10 @@ function _test-run-isolated() {
   local test="$1"
   _TEST_NAME="$test"
   _TEST_RETURNED=""
-  _test-mktemp-dir TEST_TMP
+  _test-mktemp-dir TEST_TMP || {
+    echo "ERROR: cannot create scratch directory for test '$test' under '${TMPDIR:-/tmp}'. This test did not run. Diagnose with: mktemp -d" >&2
+    return 1
+  }
   trap '_test-isolated-exit' EXIT
   STUB_DIR="$TEST_TMP/.stubs"
   mkdir "$STUB_DIR"
@@ -281,7 +284,7 @@ function _test-run-isolated() {
   "$test"
   _TEST_RETURNED=true
   if [[ $- != *e* ]]; then
-    echo "ERROR: test '$test' left errexit off" >&2
+    echo "ERROR: test '$test' left errexit off. Its assertions cannot be trusted. Inspect this test's shell options, then rerun the suite with VERBOSE=true." >&2
     return 1
   fi
 
@@ -294,14 +297,14 @@ function _test-isolated-exit() {
 
   local rc=$?
   if [[ $rc -eq 0 && -z "${_TEST_RETURNED:-}" ]]; then
-    echo "ERROR: test '${_TEST_NAME:-}' exited before returning" >&2
+    echo "ERROR: test '${_TEST_NAME:-}' exited before returning. Verification is incomplete. Inspect exit calls and shell errors, then rerun the suite with VERBOSE=true." >&2
     rc=1
   fi
   _test-remove-dir "${TEST_TMP:-}" || rc=1
   exit "$rc"
 }
 
-# Point git at an empty global config and a fixed identity, and drop the
+# Point git at empty global config and templates and a fixed identity. Drop
 # variables that could point it at another repository, such as a git hook's
 # GIT_DIR. Turn off the automatic maintenance that each commit would otherwise
 # start as another git process.
@@ -317,6 +320,7 @@ function _test-isolate-git() {
   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=maintenance.auto GIT_CONFIG_VALUE_0=false
   GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com
   GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
+  export GIT_TEMPLATE_DIR=
   export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 \
     GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 
@@ -347,7 +351,7 @@ function _test-suite-exit() {
     )
     teardown_rc=$?
     if [[ $teardown_rc -ne 0 ]]; then
-      echo "ERROR: test-suite-teardown failed" >&2
+      echo "ERROR: test-suite-teardown failed. Cleanup is incomplete. Inspect test-suite-teardown and rerun this suite with VERBOSE=true." >&2
       rc=1
     fi
   fi
@@ -356,7 +360,7 @@ function _test-suite-exit() {
     if [[ $rc -eq 77 && "${_TEST_SUITE_SETUP:-false}" == true ]]; then
       echo "PREREQUISITE: test-suite-setup could not complete. Tests did not run and verification remains unknown. Review setup diagnostics and rerun this suite with VERBOSE=true." >&2
     else
-      echo "ERROR: the test suite aborted before running all its tests, see the output above" >&2
+      echo "ERROR: the test suite aborted before running all its tests. Verification is incomplete. Review the output above, then rerun this suite with VERBOSE=true." >&2
       [[ $rc -ne 0 && $rc -ne 77 ]] || rc=1
     fi
   fi

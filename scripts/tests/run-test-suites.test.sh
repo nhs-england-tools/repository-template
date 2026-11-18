@@ -34,6 +34,9 @@ function main() {
     test-docker-suite-reports-missing-cli-as-prerequisite \
     test-docker-suite-reports-unreachable-daemon-as-prerequisite \
     test-docker-suite-keeps-image-build-failure-genuine \
+    test-docker-cleanup-failures-override-suite-outcomes \
+    test-docker-cleanup-removes-only-owned-tags \
+    test-runner-quotes-failed-suite-rerun-commands \
     test-runner-runs-every-suite-and-passes \
     test-runner-preserves-paths-and-filters-suites \
     test-runner-fails-when-any-suite-fails-and-still-runs-the-rest \
@@ -225,6 +228,8 @@ function test-docker-suite-reports-unreachable-daemon-as-prerequisite() {
   assert-contains "$TEST_STDERR" "docker info"
   assert-contains "$TEST_STDERR" "unknown"
   assert-not-contains "$TEST_STDOUT" "Total:"
+  assert-not-contains "$(test-stub-calls docker)" "images"
+  assert-not-contains "$(test-stub-calls docker)" "rmi"
 
   return 0
 }
@@ -248,6 +253,73 @@ echo build-fixture-failed >&2; exit 1'
   assert-contains "$(test-stub-calls docker)" "build --progress=plain"
   assert-matches "$(test-stub-calls docker)" 'rmi repository-template/docker-test-[a-z0-9]+:partial'
   assert-not-contains "$TEST_STDERR" "PREREQUISITE:"
+
+  return 0
+}
+
+function test-docker-cleanup-failures-override-suite-outcomes() {
+
+  # Arrange
+  local failure outcome
+  test-isolate-path mkfifo
+  for failure in images rmi; do
+    test-stub docker "case \"\${1:-}\" in
+$failure) echo cleanup-fixture-failed >&2; exit 1 ;;
+images) printf '%s\\n' \"\$DOCKER_IMAGE:partial\" ;;
+esac"
+    for outcome in 0 77; do
+      # Act
+      run-docker-cleanup-probe "$outcome"
+      # Assert
+      assert-equal 1 "$TEST_STATUS" "$failure cleanup overrides status $outcome"
+      assert-contains "$TEST_STDERR" "ERROR:"
+      assert-contains "$TEST_STDERR" "Cleanup is incomplete"
+      assert-contains "$TEST_STDERR" "docker $failure"
+      assert-contains "$TEST_STDERR" "cleanup-fixture-failed"
+      if [[ "$failure" == images ]]; then
+        assert-not-contains "$(test-stub-calls docker)" "rmi"
+      fi
+    done
+  done
+
+  return 0
+}
+
+function test-docker-cleanup-removes-only-owned-tags() {
+
+  # Arrange
+  test-isolate-path mkfifo
+  test-stub docker 'if [[ "${1:-}" == images ]]; then
+printf "%s\n" "$DOCKER_IMAGE:partial" "$CLEAN_IMAGE:latest" "$DOCKER_IMAGE-other:1" other/image:1
+fi'
+  # Act
+  run-docker-cleanup-probe 0
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "successful cleanup is silent"
+  assert-matches "$(test-stub-calls docker)" 'rmi repository-template/probe-[a-z0-9]+:partial repository-template/probe-clean-[a-z0-9]+:latest'
+  assert-not-contains "$(test-stub-calls docker)" "other:1"
+  assert-not-contains "$(test-stub-calls docker)" "other/image:1"
+
+  return 0
+}
+
+function test-runner-quotes-failed-suite-rerun-commands() {
+
+  # Arrange
+  local name command
+  for name in 'space suite.test.sh' "quote'\$; suite.test.sh"; do
+    write-fixture "$name" 'exit 1'
+  done
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "Verification failed"
+  for name in 'space suite.test.sh' "quote'\$; suite.test.sh"; do
+    printf -v command 'VERBOSE=true %q' "$TEST_TMP/tree/$name"
+    assert-contains "$TEST_STDOUT" "$command" "shell-quoted command for each failed suite"
+  done
 
   return 0
 }
@@ -559,6 +631,30 @@ function test-runner-ends-suite-output-with-a-newline() {
 
 # ==============================================================================
 # Helpers
+
+# Exercise the real Docker teardown through the harness without a daemon.
+# Arguments:
+#   $1=[test outcome before cleanup]
+function run-docker-cleanup-probe() {
+
+  test-capture "$BASH" -c '
+source <(sed '\''/^is-arg-true "\${VERBOSE/,$d'\'' "$1/scripts/docker/tests/docker.test.sh")
+source "$1/scripts/tests/test.lib.sh"
+function test-suite-setup() {
+  local suffix
+  suffix="$(basename "$SUITE_TMP" | tr "[:upper:]" "[:lower:]" | tr -cd a-z0-9)"
+  export DOCKER_IMAGE="repository-template/probe-$suffix"
+  export CLEAN_IMAGE="repository-template/probe-clean-$suffix"
+  DOCKER_TEST_BUILD_ATTEMPTED=true
+  return 0
+}
+function probe() { return "$OUTCOME"; }
+OUTCOME="$2"
+test-run-suite probe
+' _ "$TEST_REPO_ROOT" "$1"
+
+  return 0
+}
 
 # Write an executable plain bash script into the fixture tree "$TEST_TMP/tree",
 # a git repository so the runner can discover its suites.
