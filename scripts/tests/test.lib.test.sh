@@ -34,6 +34,12 @@ function main() {
   fi
 
   test-run-suite \
+    test-harness-propagates-unavailable-tests \
+    test-harness-keeps-mixed-failures-genuine \
+    test-harness-captured-prerequisite-does-not-taint-passing-test \
+    test-harness-setup-prerequisite-is-incomplete \
+    test-harness-teardown-failure-overrides-prerequisite \
+    test-harness-cleanup-failure-overrides-prerequisite \
     test-harness-fails-test-when-a-middle-command-fails \
     test-harness-fails-test-when-a-called-function-fails \
     test-harness-fails-test-when-a-command-substitution-fails \
@@ -78,6 +84,12 @@ function main() {
     test-isolate-path-links-the-executable-when-a-function-shadows-it \
     test-isolate-path-links-the-real-executable-behind-a-mise-shim \
     test-isolate-path-rejects-a-mise-shim-it-cannot-resolve \
+    test-isolate-path-fails-for-a-tool-hidden-by-an-earlier-isolation \
+    test-isolate-path-fails-for-an-invalid-tool-name \
+    test-isolate-path-rejects-invalid-mise-executable-paths \
+    test-harness-teardown-aborts-override-prerequisite \
+    test-harness-suite-cleanup-failure-overrides-prerequisite \
+    test-harness-rejects-setup-and-teardown-that-disable-errexit \
     test-create-repo-copies-files-and-commits-on-main \
     test-create-repo-links-executables-and-copies-other-files
 
@@ -86,6 +98,172 @@ function main() {
 
 # ==============================================================================
 # Suite runner
+
+function test-harness-propagates-unavailable-tests() {
+
+  # Arrange
+  write-mini-suite 'function a() { return 0; }
+function t() { test-isolate-path no-such-tool-xyz; }' a t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "t UNAVAILABLE"
+  assert-contains "$TEST_STDOUT" "Total: 2, Passed: 1, Failed: 0, Unavailable: 1"
+  assert-contains "$TEST_STDOUT" "PREREQUISITE:"
+  assert-contains "$TEST_STDOUT" "no-such-tool-xyz"
+  assert-contains "$TEST_STDOUT" "unknown"
+  assert-contains "$TEST_STDOUT" "command -v"
+  assert-matches "$(grep -m1 '^PREREQUISITE:' <<< "$TEST_STDERR")" "^PREREQUISITE: 'no-such-tool-xyz' is not on PATH. Diagnose with: command -v 'no-such-tool-xyz'.* 1 test\\(s\\) could not run"
+
+  return 0
+}
+
+function test-harness-keeps-mixed-failures-genuine() {
+
+  # Arrange
+  write-mini-suite 'function a() { return 77; }
+function b() { assert-equal expected actual; }' a b
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "b FAIL"
+  assert-contains "$TEST_STDOUT" "Total: 2, Passed: 0, Failed: 1, Unavailable: 1"
+
+  return 0
+}
+
+function test-harness-captured-prerequisite-does-not-taint-passing-test() {
+
+  # Arrange
+  write-mini-suite 'function t() {
+  test-capture test-isolate-path no-such-tool-xyz
+  assert-equal 77 "$TEST_STATUS"
+  assert-contains "$TEST_STDERR" "PREREQUISITE:"
+}' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "t PASS"
+
+  return 0
+}
+
+function test-harness-setup-prerequisite-is-incomplete() {
+
+  # Arrange
+  write-mini-suite 'function test-suite-setup() { return 77; }
+function t() { return 0; }' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "PREREQUISITE:"
+  assert-not-contains "$TEST_STDOUT" "Total:"
+  assert-not-contains "$TEST_STDOUT" "PASS"
+
+  return 0
+}
+
+function test-harness-teardown-failure-overrides-prerequisite() {
+
+  # Arrange
+  local setup
+  for setup in 'return 0' 'return 77'; do
+    write-mini-suite "function test-suite-setup() { $setup; }
+function test-suite-teardown() { false; echo hidden-failure; }
+function t() { return 77; }" t
+    # Act
+    test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+    assert-contains "$TEST_STDERR" "test-suite-teardown"
+    assert-not-contains "$TEST_STDOUT" "hidden-failure"
+  done
+
+  return 0
+}
+
+function test-harness-cleanup-failure-overrides-prerequisite() {
+
+  # Arrange
+  export OUT="$TEST_TMP"
+  write-mini-suite 'function t() {
+  echo "$TEST_TMP" > "$OUT/uncleaned"
+  function rm() { return 1; }
+  return 77
+}' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  rm -rf "$(cat "$TEST_TMP/uncleaned")"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "ERROR:"
+
+  return 0
+}
+
+function test-harness-teardown-aborts-override-prerequisite() {
+
+  # Arrange
+  local abort
+  for abort in 'exit 0' 'exit 77' 'echo "${NO_SUCH_VARIABLE_XYZ}"'; do
+    write-mini-suite "function test-suite-teardown() { $abort; }
+function t() { return 77; }" t
+    # Act
+    test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$abort cannot downgrade failure"
+    assert-contains "$TEST_STDERR" "test-suite-teardown"
+  done
+
+  return 0
+}
+
+function test-harness-suite-cleanup-failure-overrides-prerequisite() {
+
+  # Arrange
+  export OUT="$TEST_TMP"
+  write-mini-suite 'function test-suite-setup() {
+  echo "$SUITE_TMP" > "$OUT/uncleaned"
+  function rm() { return 1; }
+  return 77
+}
+function t() { return 0; }' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  rm -rf "$(cat "$TEST_TMP/uncleaned")"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "cannot remove test scratch directory"
+  assert-not-contains "$TEST_STDOUT" "Total:"
+
+  return 0
+}
+
+function test-harness-rejects-setup-and-teardown-that-disable-errexit() {
+
+  # Arrange
+  local phase
+  for phase in setup teardown; do
+    write-mini-suite "function test-suite-$phase() {
+  set +e
+  assert-equal expected actual
+  return 0
+}
+function t() { return 77; }" t
+    # Act
+    test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$phase cannot hide assertion failure"
+    assert-contains "$TEST_STDERR" "test-suite-$phase"
+    assert-contains "$TEST_STDERR" "errexit"
+  done
+
+  return 0
+}
 
 function test-harness-fails-test-when-a-middle-command-fails() {
 
@@ -768,8 +946,40 @@ function test-isolate-path-keeps-listed-tools-and-rejects-missing-ones() {
   test-capture test-isolate-path no-such-tool-xyz
   # Assert
   assert-equal 0 "$found_status" "fake-tool lookup status"
-  assert-equal 1 "$TEST_STATUS" "missing tool status"
+  assert-equal 77 "$TEST_STATUS" "missing tool status"
   assert-contains "$TEST_STDERR" "no-such-tool-xyz"
+
+  return 0
+}
+
+function test-isolate-path-fails-for-a-tool-hidden-by-an-earlier-isolation() {
+
+  # Arrange
+  test-isolate-path
+  # Act
+  test-capture test-isolate-path mkfifo
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR:"
+  assert-contains "$TEST_STDERR" "'mkfifo'"
+  assert-contains "$TEST_STDERR" "changed PATH"
+  assert-not-contains "$TEST_STDERR" "PREREQUISITE:"
+
+  return 0
+}
+
+function test-isolate-path-fails-for-an-invalid-tool-name() {
+
+  # Arrange
+  local name
+  for name in '' 'bad/name' 'two words'; do
+    # Act
+    test-capture test-isolate-path "$name"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "invalid tool name '$name'"
+    assert-contains "$TEST_STDERR" "ERROR:"
+    assert-not-contains "$TEST_STDERR" "PREREQUISITE:"
+  done
 
   return 0
 }
@@ -819,8 +1029,31 @@ function test-isolate-path-rejects-a-mise-shim-it-cannot-resolve() {
   # Act
   test-capture test-isolate-path fake-tool
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "test-isolate-path: cannot resolve the mise shim of 'fake-tool'"
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "PREREQUISITE: mise cannot resolve 'fake-tool'"
+  assert-contains "$TEST_STDERR" "mise which"
+
+  return 0
+}
+
+function test-isolate-path-rejects-invalid-mise-executable-paths() {
+
+  # Arrange
+  create-fake-mise-shim
+  PATH="$STUB_DIR:$TEST_TMP/mise/shims:$TEST_TMP/mise-bin:$PATH"
+  local resolved
+  touch "$TEST_TMP/not-executable"
+  for resolved in '' "$TEST_TMP/missing" "$TEST_TMP/not-executable" "$TEST_TMP" relative-tool; do
+    test-stub mise 'printf "%s\n" "$RESOLVED_PATH"'
+    export RESOLVED_PATH="$resolved"
+    # Act
+    test-capture test-isolate-path fake-tool
+    # Assert
+    assert-equal 77 "$TEST_STATUS" "invalid mise path: $resolved"
+    assert-contains "$TEST_STDERR" "PREREQUISITE:"
+    assert-contains "$TEST_STDERR" "fake-tool"
+    assert-contains "$TEST_STDERR" "mise which"
+  done
 
   return 0
 }

@@ -47,10 +47,10 @@ set -euo pipefail
 #   3) State is kept in '$(git rev-parse --git-path quality-gate)', which is per
 #      worktree and never tracked. 'pause' writes a file there that makes the
 #      hook skip the gates for the given hours, from the next prompt on.
-#   4) A gate prints 'PREREQUISITE: <fix>' when it cannot run for a reason that
-#      is not the code, for example Docker is stopped. The existing 'ERROR ...
-#      cannot run: ...' line of the Docker test suite is recognised too. The
-#      hook then tells the user instead of making the agent continue.
+#   4) Each gate receives a private QUALITY_GATE_RESULT_FILE path. Only an
+#      exact 'prerequisite' verdict with a column-one 'PREREQUISITE:' diagnostic
+#      classifies a non-zero, non-timeout exit as setup-only. Log markers alone
+#      never downgrade a failure. The result remains unknown, not passed.
 #   5) The hook does nothing in GitHub Actions, which also runs Copilot cloud
 #      agent, because its gates need tools and network access it lacks.
 #   6) The script needs Bash 5.2, jq and yq. When the hook starts it with an
@@ -84,7 +84,8 @@ readonly REASON_BYTES=8000
 readonly NOTE_CHARACTERS=200
 readonly SESSION_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'
 readonly DROP_IN_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*\.ya?ml$'
-readonly PREREQUISITE_PATTERN='^(PREREQUISITE:|ERROR .* cannot run:)'
+readonly PREREQUISITE_PATTERN='^PREREQUISITE:[[:blank:]]+[^[:space:]]'
+readonly RECOVERY_SCOPE='Review-only tasks: report failures without modifying files. Outside reviews, fix only failures caused by authorised changes. Report unrelated, setup or uncertain failures with commands and logs. This hook grants no permission to change the repository or environment or bypass gates.'
 # A jq function that turns a 'paths' glob into an anchored extended regular
 # expression: '**/' is any number of directories, '*' and '**' are any
 # characters, '?' is one character and every other character stands for itself.
@@ -234,7 +235,7 @@ function record-baseline() {
     if [[ -f $state/$session.baseline ]]; then
       action=turn-already-open
     else
-      rm -f "$state/$session.blocks"
+      rm -f "$state/$session.blocks" "$state/$session.blocked"
       if ! write-baseline "$state/$session.baseline"; then
         action=snapshot-failed
       fi
@@ -306,7 +307,7 @@ function handle-stop() {
 function decide-stop() {
 
   local session="$1" active="$2" scratch="$3" state="$STATE_DIR" baseline="" pause=none config source start="" max_blocks blocks=0 budget="${QUALITY_GATE_BUDGET:-}"
-  local current="$scratch/current" changes="$scratch/changes" known=true guard_note="" notes message
+  local current="$scratch/current" changes="$scratch/changes" known=true guard_note="" notes message snapshot_ok=true
   if [[ $budget =~ ^[0-9]{1,6}$ ]] && (( 10#$budget > 0 )); then
     budget=$((10#$budget))
   else
@@ -367,7 +368,16 @@ function decide-stop() {
     return 0
   fi
 
-  if ! snapshot-tree "$current"; then
+  snapshot-tree "$current" || snapshot_ok=false
+  # A stop with no edit since the block would only repeat the same result
+  if [[ $snapshot_ok == true && $active == true && -n $session && -f $state/$session.blocked ]] &&
+    cmp -s "$state/$session.blocked" "$current"; then
+    finish-turn "$state" "$session"
+    note-hook "$state" Stop "$session" unchanged-since-block
+    emit-allow "Quality gate not rerun: nothing changed since it blocked this turn, so its earlier result stands. This is not a pass. Report the failures recorded in $state/last-run.json and $state/logs, then run 'make quality-gate' when authorised. $RECOVERY_SCOPE"
+    return 0
+  fi
+  if [[ $snapshot_ok == false ]]; then
     known=false
     guard_note="${guard_note:+$guard_note }The working tree could not be read, so the hook ran every enabled gate."
   elif [[ -z $baseline || ! -f $baseline ]]; then
@@ -405,9 +415,12 @@ function decide-stop() {
   if blocking-failure; then
     if [[ -n $session ]]; then
       printf '%s\n' "$((blocks + 1))" > "$state/$session.blocks"
+      if [[ $snapshot_ok == true ]] && ! cp "$current" "$state/$session.blocked"; then
+        echo "Quality gate: cannot write $state/$session.blocked, so the next stop reruns the gates even without an edit" >&2
+      fi
     fi
     note-hook "$state" Stop "$session" blocked
-    emit-block "$(build-reason)" "Quality gate blocked the stop: $(failed-names)${notes:+. $notes}${guard_note:+. $guard_note}"
+    emit-block "$(build-reason)" "Quality gate blocked the stop: $(failed-names)${notes:+. $notes}${guard_note:+. $guard_note}. $RECOVERY_SCOPE"
     return 0
   fi
   finish-turn "$state" "$session"
@@ -424,7 +437,7 @@ function decide-stop() {
 function finish-turn() {
 
   if [[ -n $2 ]]; then
-    rm -f "$1/$2.baseline" "$1/$2.blocks"
+    rm -f "$1/$2.baseline" "$1/$2.blocks" "$1/$2.blocked"
   fi
 
   return 0
@@ -973,9 +986,11 @@ function changed-guarded-paths() {
 function execute-gates() {
 
   local config="$1" changes="$2" scope="$3" budget="$4" progress="$5" logs="$6"
-  local name target mode timeout patterns limit remaining capped log rc seconds start outcome
+  local name target mode timeout patterns limit remaining capped log rc seconds start outcome result
   local started=$SECONDS
   mkdir -p "$logs" || return "$?"
+  # Gates run from other directories, so the private result path is absolute
+  logs="$(cd "$logs" && pwd)" || return 1
   RESULT_NAME=() RESULT_TARGET=() RESULT_MODE=() RESULT_STATE=() RESULT_RC=() RESULT_SECONDS=() RESULT_LOG=()
   while IFS=$'\x1f' read -r name target mode timeout patterns; do
     log="$logs/$name.log"
@@ -1000,11 +1015,16 @@ function execute-gates() {
       printf 'RUN    %s: make %s\n' "$name" "$target"
     fi
     start=$SECONDS
+    # A fresh, absent path, so a verdict can only come from this run
+    if ! result="$(mktemp "$logs/$name.result.XXXXXX")" || ! rm -f "$result"; then
+      echo "Quality gate: cannot prepare a private result under $logs for make $target" >&2
+      return 1
+    fi
     rc=0
     if [[ -n $changes ]]; then
-      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 QUALITY_GATE_CHANGED_FILES="$changes" make --no-print-directory "$target" || rc=$?
+      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 QUALITY_GATE_RESULT_FILE="$result" QUALITY_GATE_CHANGED_FILES="$changes" make --no-print-directory "$target" || rc=$?
     else
-      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 make --no-print-directory "$target" || rc=$?
+      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 QUALITY_GATE_RESULT_FILE="$result" make --no-print-directory "$target" || rc=$?
     fi
     seconds=$(( SECONDS - start ))
     if [[ $rc -eq 0 ]]; then
@@ -1013,11 +1033,12 @@ function execute-gates() {
       outcome=incomplete
     elif [[ $rc -eq 124 ]]; then
       outcome=timeout
-    elif grep -Eq "$PREREQUISITE_PATTERN" "$log"; then
+    elif [[ -f $result && ! -L $result ]] && { cmp -s "$result" <(printf prerequisite) || cmp -s "$result" <(printf 'prerequisite\n'); } && grep -Eq "$PREREQUISITE_PATTERN" "$log"; then
       outcome=prerequisite
     else
       outcome=fail
     fi
+    rm -f "$result" || echo "Quality gate: cannot remove private result $result" >&2
     record-result "$name" "$target" "$mode" "$outcome" "$rc" "$seconds" "$log"
     if [[ $progress == true ]]; then
       printf '%-6s %s (%ss)\n' "${outcome^^}" "$name" "$seconds"
@@ -1217,7 +1238,7 @@ function summary-notes() {
   for i in "${!RESULT_STATE[@]}"; do
     case ${RESULT_STATE[$i]} in
       prerequisite)
-        notes="${notes:+$notes; }${RESULT_NAME[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown. Fix that, then run 'make ${RESULT_TARGET[$i]}'"
+        notes="${notes:+$notes; }${RESULT_NAME[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown, not passed. Report the prerequisite, then run 'make ${RESULT_TARGET[$i]}' once it is available"
         ;;
       fail | timeout)
         if [[ ${RESULT_MODE[$i]} == warn ]]; then
@@ -1233,9 +1254,10 @@ function summary-notes() {
   return 0
 }
 
-# Build the message that tells the agent what to fix. It names each blocking
-# gate, gives the end of its output and the command to rerun, within
-# REASON_BYTES, and names the gates that could not run.
+# Build the message that tells the agent which gates have not passed and what
+# it may do about them. It names each blocking gate, gives the end of its output
+# and the command to rerun, within REASON_BYTES, and names the gates that could
+# not run.
 function build-reason() {
 
   local i count=0 share text
@@ -1245,7 +1267,7 @@ function build-reason() {
     fi
   done
   share=$(( REASON_BYTES / (count > 0 ? count : 1) ))
-  text="Quality gates failed. Fix the cause and rerun the command shown, do not disable or skip a gate."
+  text="Quality gates have not passed. $RECOVERY_SCOPE Do not disable or skip a gate."
   for i in "${!RESULT_STATE[@]}"; do
     is-blocking "$i" || continue
     if [[ ${RESULT_STATE[$i]} == timeout ]]; then
@@ -1258,7 +1280,7 @@ function build-reason() {
   done
   for i in "${!RESULT_STATE[@]}"; do
     if [[ ${RESULT_STATE[$i]} == prerequisite ]]; then
-      text+=$'\n\n'"make ${RESULT_TARGET[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown. Tell the user, do not change the environment."
+      text+=$'\n\n'"make ${RESULT_TARGET[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown, not passed. Tell the user, do not change the environment."
     fi
   done
   printf '%s\n' "$text"

@@ -92,7 +92,14 @@ function main() {
     test-quality-gate-matches-file-names-that-are-not-utf-8 \
     test-quality-gate-blocks-with-valid-output-for-both-harnesses \
     test-quality-gate-lets-the-agent-finish-without-a-session-after-a-block \
-    test-quality-gate-reports-a-docker-prerequisite-without-blocking \
+    test-quality-gate-does-not-downgrade-legacy-docker-markers \
+    test-quality-gate-does-not-rerun-when-nothing-changed-since-a-block \
+    test-quality-gate-requires-an-explicit-prerequisite-verdict \
+    test-quality-gate-does-not-reuse-a-producer-verdict \
+    test-quality-gate-keeps-success-and-timeouts-authoritative \
+    test-quality-gate-gives-scope-safe-recovery \
+    test-quality-gate-consumes-real-runner-outcomes \
+    test-quality-gate-blocks-on-a-mixed-producer-result \
     test-quality-gate-reports-the-prerequisite-marker \
     test-quality-gate-tells-the-agent-about-a-gate-that-could-not-run \
     test-quality-gate-keeps-fresh-log-directories-of-other-sessions \
@@ -950,8 +957,10 @@ function test-quality-gate-honours-max-blocks-and-a-new-prompt-resets-it() {
   # Act
   test-capture gate-send "$(gate-stop-json)"
   assert-contains "$TEST_STDOUT" '"decision":"block"'
+  printf 'repair\n' >> README.md
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   assert-contains "$TEST_STDOUT" '"decision":"block"'
+  printf 'repair again\n' >> README.md
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   # Assert
   assert-contains "$TEST_STDOUT" "already blocked 2 time(s)"
@@ -965,7 +974,32 @@ function test-quality-gate-honours-max-blocks-and-a-new-prompt-resets-it() {
   return 0
 }
 
-function test-quality-gate-reports-a-docker-prerequisite-without-blocking() {
+function test-quality-gate-does-not-rerun-when-nothing-changed-since-a-block() {
+
+  # Arrange
+  gate-create-repo
+  gate-commit-file scripts/config/quality-gates.d/limits.yaml $'version: 1\nmax_blocks: 3'
+  gate-make "$FAILING_LINT"
+  gate-start-turn
+  printf 'two\n' >> README.md
+  test-capture gate-send "$(gate-stop-json)"
+  assert-contains "$TEST_STDOUT" '"decision":"block"'
+  # Act
+  test-capture gate-send "$(gate-stop-json "$SESSION" true)"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-not-contains "$TEST_STDOUT" '"decision"'
+  assert-contains "$TEST_STDOUT" "nothing changed since"
+  assert-contains "$TEST_STDOUT" "not a pass"
+  assert-contains "$TEST_STDOUT" "Review-only tasks"
+  assert-equal "$LINT_CALL"$'\n'"$TEST_CALL" "$(gate-calls)" "make calls, the gates ran only at the first stop"
+  assert-equal unchanged-since-block "$(jq -r '.action' .git/quality-gate/last-hook.json)" "recorded action"
+  assert-file-not-exists ".git/quality-gate/$SESSION.baseline"
+
+  return 0
+}
+
+function test-quality-gate-does-not-downgrade-legacy-docker-markers() {
 
   # Arrange
   local message
@@ -977,10 +1011,10 @@ function test-quality-gate-reports-a-docker-prerequisite-without-blocking() {
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-not-contains "$TEST_STDOUT" '"decision"'
-  message="$(jq -r '.systemMessage' <<< "$TEST_STDOUT")"
-  assert-contains "$message" "test could not run (ERROR Docker test suite cannot run: docker is not running or is not reachable), so its result is unknown. Fix that, then run 'make test'"
-  assert-file-not-exists ".git/quality-gate/$SESSION.baseline"
+  assert-contains "$TEST_STDOUT" '"decision":"block"'
+  message="$(jq -r '.reason' <<< "$TEST_STDOUT")"
+  assert-contains "$message" "make test"
+  assert-file-exists ".git/quality-gate/$SESSION.baseline"
 
   return 0
 }
@@ -989,14 +1023,16 @@ function test-quality-gate-reports-the-prerequisite-marker() {
 
   # Arrange
   gate-create-repo
-  gate-make 'if [[ "${*: -1}" == lint ]]; then echo "PREREQUISITE: install node, then run make config"; exit 3; fi'
+  gate-make 'if [[ "${*: -1}" == lint ]]; then printf prerequisite > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; echo "PREREQUISITE: node is unavailable"; exit 3; fi'
   gate-start-turn
   printf 'two\n' >> README.md
   # Act
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-not-contains "$TEST_STDOUT" '"decision"'
-  assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "lint could not run (install node, then run make config), so its result is unknown"
+  assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "lint could not run (node is unavailable), so its result is unknown, not passed"
+  assert-contains "$TEST_STDOUT" "make lint"
+  assert-not-contains "$TEST_STDOUT" "Fix that"
 
   return 0
 }
@@ -1006,7 +1042,7 @@ function test-quality-gate-tells-the-agent-about-a-gate-that-could-not-run() {
   # Arrange
   local reason
   gate-create-repo
-  gate-make 'if [[ "${*: -1}" == lint ]]; then echo "lint finding"; exit 1; fi; echo "PREREQUISITE: start Docker"; exit 1'
+  gate-make 'if [[ "${*: -1}" == lint ]]; then echo "lint finding"; exit 1; fi; printf prerequisite > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; echo "PREREQUISITE: Docker unavailable"; exit 1'
   gate-start-turn
   printf 'two\n' >> README.md
   # Act
@@ -1014,9 +1050,149 @@ function test-quality-gate-tells-the-agent-about-a-gate-that-could-not-run() {
   # Assert
   reason="$(jq -r '.reason' <<< "$TEST_STDOUT")"
   assert-contains "$reason" "== lint (make lint) failed with exit status 1 =="
-  assert-contains "$reason" "make test could not run (start Docker), so its result is unknown. Tell the user, do not change the environment."
+  assert-contains "$reason" "make test could not run (Docker unavailable), so its result is unknown, not passed. Tell the user, do not change the environment."
   assert-not-contains "$reason" "== test (make test)"
-  assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "test could not run (start Docker)"
+  assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "test could not run (Docker unavailable)"
+
+  return 0
+}
+
+function test-quality-gate-requires-an-explicit-prerequisite-verdict() {
+
+  # Arrange
+  local verdict marker expected
+  gate-create-repo
+  # Act and assert
+  while IFS='|' read -r verdict marker expected; do
+    export PRODUCER_VERDICT="$verdict" PRODUCER_MARKER="$marker"
+    gate-make 'if [[ "${*: -1}" == lint ]]; then if [[ "$PRODUCER_VERDICT" != missing ]]; then printf "%b" "$PRODUCER_VERDICT" > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; fi; printf "%b\n" "$PRODUCER_MARKER"; exit 1; fi'
+    test-capture "$SCRIPT" run
+    assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL for $verdict / $marker"
+    assert-equal "$expected" "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "classification for $verdict / $marker"
+  done << 'EOF'
+prerequisite|PREREQUISITE: unavailable tool|prerequisite
+missing|PREREQUISITE: unavailable tool|fail
+fail|PREREQUISITE: unavailable tool|fail
+prerequisite\nextra|PREREQUISITE: unavailable tool|fail
+prerequisite\n\n|PREREQUISITE: unavailable tool|fail
+prerequisite\0|PREREQUISITE: unavailable tool|fail
+prerequisite|PREREQUISITE:    |fail
+prerequisite|PREREQUISITE:|fail
+prerequisite|    PREREQUISITE: expected fixture error|fail
+prerequisite|ERROR Docker test suite cannot run: unavailable|fail
+prerequisite|ordinary assertion failure|fail
+EOF
+
+  return 0
+}
+
+function test-quality-gate-does-not-reuse-a-producer-verdict() {
+
+  # Arrange
+  gate-create-repo
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/outer-result"
+  printf 'outer\n' > "$QUALITY_GATE_RESULT_FILE"
+  gate-make '[[ "$QUALITY_GATE_RESULT_FILE" == /* ]] || exit 9; [[ ! -e "$QUALITY_GATE_RESULT_FILE" ]] || exit 8; printf "%s\n" "$QUALITY_GATE_RESULT_FILE" >> "$TEST_TMP/result-paths"; printf prerequisite > "$QUALITY_GATE_RESULT_FILE"; echo "PREREQUISITE: unavailable"; exit 1'
+  # Act
+  test-capture "$SCRIPT" run
+  # Assert
+  assert-equal prerequisite "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "fresh producer result"
+  assert-equal 2 "$(sort -u "$TEST_TMP/result-paths" | wc -l | tr -d ' ')" "private path per gate"
+  assert-equal outer "$(< "$QUALITY_GATE_RESULT_FILE")" "caller result remains private"
+  # Arrange
+  gate-make 'echo "PREREQUISITE: stale marker"; exit 1'
+  # Act
+  test-capture "$SCRIPT" run
+  # Assert
+  assert-equal fail "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "stale verdict is not reused"
+
+  return 0
+}
+
+function test-quality-gate-keeps-success-and-timeouts-authoritative() {
+
+  # Arrange
+  gate-create-repo
+  gate-commit-file scripts/config/quality-gates.d/short.yaml "$SHORT_LINT_GATE"
+  gate-make 'printf prerequisite > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; echo "PREREQUISITE: unavailable"; if [[ "${*: -1}" == lint ]]; then sleep 30; fi'
+  # Act
+  test-capture "$SCRIPT" run
+  # Assert
+  assert-equal timeout "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "timeout precedes producer verdict"
+  assert-equal pass "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "success precedes producer verdict"
+
+  return 0
+}
+
+function test-quality-gate-gives-scope-safe-recovery() {
+
+  # Arrange
+  local reason field
+  gate-create-repo
+  gate-make "$FAILING_LINT"
+  gate-start-turn
+  printf 'two\n' >> README.md
+  # Act
+  test-capture gate-send "$(gate-stop-json)"
+  # Assert
+  for field in reason systemMessage; do
+    reason="$(jq -r --arg field "$field" '.[$field]' <<< "$TEST_STDOUT")"
+    assert-contains "$reason" "Review-only tasks: report failures without modifying files"
+    assert-contains "$reason" "caused by authorised changes"
+    assert-contains "$reason" "unrelated, setup or uncertain"
+    assert-contains "$reason" "no permission"
+    assert-not-contains "$reason" "Fix the cause"
+  done
+  reason="$(jq -r '.reason' <<< "$TEST_STDOUT")"
+  assert-contains "$reason" "have not passed"
+  assert-contains "$reason" "Rerun: make lint"
+
+  return 0
+}
+
+function test-quality-gate-consumes-real-runner-outcomes() {
+
+  # Arrange
+  gate-create-repo
+  export REAL_SUITE_RUNNER="$TEST_REPO_ROOT/scripts/tests/run-test-suites.sh"
+  mkdir fixtures
+  printf '#!/usr/bin/env bash\n[[ ! ${QUALITY_GATE_RESULT_FILE+x} ]] || exit 1\necho "    PREREQUISITE: tool unavailable"\nexit 77\n' > fixtures/setup.test.sh
+  chmod +x fixtures/setup.test.sh
+  gate-make 'if [[ "${*: -1}" == test ]]; then exec env dir=fixtures "$REAL_SUITE_RUNNER"; fi'
+  gate-start-turn
+  printf 'two\n' >> README.md
+  # Act
+  test-capture gate-send "$(gate-stop-json)"
+  # Assert
+  assert-not-contains "$TEST_STDOUT" '"decision"'
+  assert-equal prerequisite "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "real runner setup-only outcome"
+  assert-contains "$TEST_STDOUT" "unknown, not passed"
+  # Arrange
+  gate-start-turn
+  printf '#!/usr/bin/env bash\necho "ASSERTION FAILED: real finding"\nexit 1\n' > fixtures/finding.test.sh
+  chmod +x fixtures/finding.test.sh
+  # Act
+  test-capture gate-send "$(gate-stop-json)"
+  # Assert
+  assert-contains "$TEST_STDOUT" '"decision":"block"'
+  assert-equal fail "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "real runner mixed outcome"
+  assert-contains "$TEST_STDOUT" "ASSERTION FAILED: real finding"
+
+  return 0
+}
+
+function test-quality-gate-blocks-on-a-mixed-producer-result() {
+
+  # Arrange
+  gate-create-repo
+  gate-make 'if [[ "${*: -1}" == test ]]; then printf fail > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; echo "PREREQUISITE: unavailable tool"; echo "ASSERTION FAILED: finding"; exit 1; fi'
+  gate-start-turn
+  printf 'two\n' >> README.md
+  # Act
+  test-capture gate-send "$(gate-stop-json)"
+  # Assert
+  assert-contains "$TEST_STDOUT" '"decision":"block"'
+  assert-equal fail "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "explicit fail cannot be downgraded by marker"
 
   return 0
 }
@@ -1404,10 +1580,12 @@ function test-quality-gate-accepts-whole-numbers-written-as-decimals() {
   assert-contains "$TEST_STDOUT" '"decision":"block"'
   assert-equal "" "$TEST_STDERR" "stderr"
   # Act
+  printf 'repair\n' >> README.md
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   # Assert
   assert-contains "$TEST_STDOUT" '"decision":"block"' "second stop"
   # Act
+  printf 'repair again\n' >> README.md
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   # Assert
   assert-contains "$TEST_STDOUT" "already blocked 2 time(s)"
@@ -1436,10 +1614,12 @@ function test-quality-gate-copes-with-rules-that-print-decimals() {
   assert-contains "$TEST_STDOUT" '"decision":"block"'
   assert-equal "" "$TEST_STDERR" "stderr"
   # Act
+  printf 'repair\n' >> README.md
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   # Assert
   assert-contains "$TEST_STDOUT" '"decision":"block"' "second stop"
   # Act
+  printf 'repair again\n' >> README.md
   test-capture gate-send "$(gate-stop-json "$SESSION" true)"
   # Assert
   assert-contains "$TEST_STDOUT" "already blocked 2 time(s)"
@@ -1595,7 +1775,7 @@ function test-quality-gate-reports-gates-the-time-budget-did-not-allow() {
 
   # Arrange
   gate-create-repo
-  gate-make 'if [[ "${*: -1}" == lint ]]; then sleep 30; fi'
+  gate-make 'if [[ "${*: -1}" == lint ]]; then printf prerequisite > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; echo "PREREQUISITE: unavailable"; sleep 30; fi'
   export QUALITY_GATE_BUDGET=8
   # Act
   # Without a baseline every gate runs, which skips a prompt on this slow test
@@ -1605,6 +1785,7 @@ function test-quality-gate-reports-gates-the-time-budget-did-not-allow() {
   assert-contains "$TEST_STDOUT" "lint did not finish within the time budget"
   assert-contains "$TEST_STDOUT" "test was not run, the time budget was used up"
   assert-not-contains "$TEST_STDOUT" '"decision"'
+  assert-equal incomplete "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "budget overrides explicit prerequisite"
 
   return 0
 }
@@ -1813,7 +1994,7 @@ function test-quality-gate-run-fails-when-a-gate-cannot-run() {
 
   # Arrange
   gate-create-repo
-  gate-make 'if [[ "${*: -1}" == lint ]]; then echo "PREREQUISITE: start Docker"; exit 1; fi'
+  gate-make 'if [[ "${*: -1}" == lint ]]; then printf prerequisite > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; echo "PREREQUISITE: Docker unavailable"; exit 1; fi'
   # Act
   test-capture "$SCRIPT" run
   # Assert

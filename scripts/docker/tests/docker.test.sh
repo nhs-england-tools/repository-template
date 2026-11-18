@@ -62,13 +62,13 @@ function test-suite-setup() {
   export DOCKER_IMAGE="repository-template/docker-test-$suffix"
   CLEAN_IMAGE="repository-template/docker-test-clean-$suffix"
   if ! command -v docker > /dev/null 2>&1; then
-    echo "ERROR Docker test suite cannot run: docker is not installed" >&2
-    return 1
+    echo "PREREQUISITE: the Docker CLI is not on PATH. Diagnose with: command -v docker. Docker tests did not run, so verification is unknown." >&2
+    return 77
   fi
 
   if ! docker info > /dev/null 2>&1; then
-    echo "ERROR Docker test suite cannot run: docker is not running or is not reachable" >&2
-    return 1
+    echo "PREREQUISITE: the Docker daemon is not reachable. Diagnose with: docker info. Docker tests did not run, so verification is unknown." >&2
+    return 77
   fi
   mkdir "$SUITE_TMP/image"
   cp Dockerfile VERSION "$SUITE_TMP/image/"

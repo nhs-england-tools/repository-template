@@ -25,10 +25,13 @@
 #   description  Free text for 'make quality-gate-list'
 #
 # A gate can read the changed paths from the NUL-separated file named by
-# QUALITY_GATE_CHANGED_FILES, when it is set. A gate that cannot run, for
-# example because Docker is stopped, should print a line starting with
-# 'PREREQUISITE:' that says how to fix it. The hook then tells the user instead
-# of making the agent continue.
+# QUALITY_GATE_CHANGED_FILES, when it is set. For a confirmed setup-only
+# failure, print 'PREREQUISITE: <condition and diagnostic command>' and write
+# exactly 'prerequisite' to the private QUALITY_GATE_RESULT_FILE path, when
+# set, before exiting non-zero. Log text alone never downgrades a failure.
+# Aggregate all failures first. Genuine failures take precedence over setup
+# issues. The built-in test runner handles this protocol. See the quality-gate
+# guide for the contract and migration from marker-only reporting.
 version: 1
 
 # Times the Stop hook may block one turn, from 1 to 5. Each block starts another

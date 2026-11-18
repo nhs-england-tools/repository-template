@@ -44,12 +44,19 @@ set -euo pipefail
 #   TEST_STDOUT, TEST_STDERR, TEST_STATUS  # Set by test-capture
 # test-capture runs the command in a subshell, so its 'cd' and variable changes
 # are discarded.
+#
+# Suite exit codes:
+#   0 - Every test passed
+#   77 - Only unavailable prerequisites prevented verification
+#   Other - Test, setup, teardown, cleanup or interruption failure
 
 TEST_REPO_ROOT="${BASH_SOURCE[0]%/*}"
 [[ "$TEST_REPO_ROOT" != "${BASH_SOURCE[0]}" ]] || TEST_REPO_ROOT=.
 TEST_REPO_ROOT="$(cd "$TEST_REPO_ROOT/../.." && pwd -P)"
 TEST_INDENT_PATTERN='s/^/    /'
 TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find git grep head ln mkdir mktemp mv rm sed sleep sort tail tee touch tr uniq wc xargs)
+# A tool is a missing prerequisite only when it is missing from this PATH
+TEST_ORIGINAL_PATH="$PATH"
 
 # ==============================================================================
 # Suite runner
@@ -61,7 +68,7 @@ TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find gi
 #   $@=[names of the test functions to run, in order]
 function test-run-suite() {
 
-  local jobs i=0 next=0 failed=0 running=0
+  local jobs rc i=0 next=0 failed=0 unavailable=0 running=0 prerequisite=""
   local -a tests=("$@")
 
   if [[ $# -eq 0 ]]; then
@@ -79,7 +86,14 @@ function test-run-suite() {
   _test-isolate-git
   export LC_ALL=C
   if declare -F test-suite-setup > /dev/null; then
+    _TEST_SUITE_SETUP=true
     test-suite-setup
+    if [[ $- != *e* ]]; then
+      set -e
+      echo "ERROR: test-suite-setup left errexit off. Setup assertions cannot be trusted. Inspect its shell options, then rerun this suite with VERBOSE=true." >&2
+      return 1
+    fi
+    _TEST_SUITE_SETUP=false
   fi
 
   jobs="${TEST_JOBS:-$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)}"
@@ -112,7 +126,14 @@ function test-run-suite() {
     running=$((running + 1))
     # Report the tests that have ended, in the given order
     while [[ -n "${_TEST_ENDED[next]:-}" ]]; do
-      _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
+      rc=0
+      _test-report "${tests[$next]}" "$next" || rc=$?
+      if [[ $rc -eq 77 ]]; then
+        unavailable=$((unavailable + 1))
+        [[ -n "$prerequisite" ]] || prerequisite="$(_test-first-prerequisite "$next")"
+      elif [[ $rc -ne 0 ]]; then
+        failed=$((failed + 1))
+      fi
       next=$((next + 1))
     done
   done
@@ -121,13 +142,36 @@ function test-run-suite() {
       _test-await-end
       continue
     fi
-    _test-report "${tests[$next]}" "$next" || failed=$((failed + 1))
+    rc=0
+    _test-report "${tests[$next]}" "$next" || rc=$?
+    if [[ $rc -eq 77 ]]; then
+      unavailable=$((unavailable + 1))
+      [[ -n "$prerequisite" ]] || prerequisite="$(_test-first-prerequisite "$next")"
+    elif [[ $rc -ne 0 ]]; then
+      failed=$((failed + 1))
+    fi
     next=$((next + 1))
   done
 
-  echo "Total: $#, Passed: $(($# - failed)), Failed: $failed"
+  printf 'Total: %s, Passed: %s, Failed: %s' "$#" "$(($# - failed - unavailable))" "$failed"
+  if [[ $unavailable -gt 0 ]]; then printf ', Unavailable: %s' "$unavailable"; fi
+  printf '\n'
   _TEST_SUITE_COMPLETED=true
+  if [[ $unavailable -gt 0 && $failed -eq 0 ]]; then
+    echo "PREREQUISITE: ${prerequisite:+$prerequisite }$unavailable test(s) could not run. Verification remains unknown. Fix the setup and rerun this suite." >&2
+    return 77
+  fi
   [[ $failed -eq 0 ]] || return 1
+
+  return 0
+}
+
+# Print the first prerequisite message in a test's log, without its prefix.
+# Arguments:
+#   $1=[index of the test in the suite]
+function _test-first-prerequisite() {
+
+  awk '/^PREREQUISITE: / { sub(/^PREREQUISITE: /, ""); print; exit }' "$SUITE_TMP/.test-$1.log" || true
 
   return 0
 }
@@ -152,9 +196,14 @@ function _test-report() {
     fi
     return 0
   fi
-  echo "$test FAIL"
+  if [[ $rc -eq 77 ]]; then
+    echo "$test UNAVAILABLE"
+  else
+    echo "$test FAIL"
+  fi
   _test-indent "$log"
 
+  [[ $rc -ne 77 ]] || return 77
   return 1
 }
 
@@ -248,7 +297,7 @@ function _test-isolated-exit() {
     echo "ERROR: test '${_TEST_NAME:-}' exited before returning" >&2
     rc=1
   fi
-  _test-remove-dir "${TEST_TMP:-}"
+  _test-remove-dir "${TEST_TMP:-}" || rc=1
   exit "$rc"
 }
 
@@ -278,19 +327,38 @@ function _test-isolate-git() {
 # directory and keep the exit status.
 function _test-suite-exit() {
 
-  local rc=$?
+  local rc=$? teardown_rc
   set +e
   if [[ -n "${_TEST_PIDS[*]:-}" ]]; then
     # Bash 3.2 reports each terminated test on stderr
     _test-stop-tests 2> /dev/null
   fi
   if declare -F test-suite-teardown > /dev/null; then
-    test-suite-teardown || { echo "ERROR: test-suite-teardown failed" >&2; rc=1; }
+    (
+      set -e
+      _TEST_TEARDOWN_RETURNED=false
+      trap '[[ "$_TEST_TEARDOWN_RETURNED" == true ]] || exit 1' EXIT
+      test-suite-teardown
+      if [[ $- != *e* ]]; then
+        echo "ERROR: test-suite-teardown left errexit off. Cleanup assertions cannot be trusted. Inspect its shell options, then rerun this suite with VERBOSE=true." >&2
+        exit 1
+      fi
+      _TEST_TEARDOWN_RETURNED=true
+    )
+    teardown_rc=$?
+    if [[ $teardown_rc -ne 0 ]]; then
+      echo "ERROR: test-suite-teardown failed" >&2
+      rc=1
+    fi
   fi
-  _test-remove-dir "${_TEST_SUITE_TMP:-}"
+  _test-remove-dir "${_TEST_SUITE_TMP:-}" || rc=1
   if [[ -z "${_TEST_SUITE_COMPLETED:-}" ]]; then
-    echo "ERROR: the test suite aborted before running all its tests, see the output above" >&2
-    [[ $rc -ne 0 ]] || rc=1
+    if [[ $rc -eq 77 && "${_TEST_SUITE_SETUP:-false}" == true ]]; then
+      echo "PREREQUISITE: test-suite-setup could not complete. Tests did not run and verification remains unknown. Review setup diagnostics and rerun this suite with VERBOSE=true." >&2
+    else
+      echo "ERROR: the test suite aborted before running all its tests, see the output above" >&2
+      [[ $rc -ne 0 && $rc -ne 77 ]] || rc=1
+    fi
   fi
   exit "$rc"
 }
@@ -364,7 +432,10 @@ function _test-remove-dir() {
 
   local dir="$1"
   if [[ -n "$dir" && -d "$dir" ]]; then
-    rm -rf "$dir"
+    if ! rm -rf "$dir"; then
+      echo "ERROR: cannot remove test scratch directory '$dir'. Cleanup failed. Inspect it with: ls -ld '$dir'" >&2
+      return 1
+    fi
   fi
 
   return 0
@@ -443,8 +514,8 @@ function test-stub-calls() {
 
 # Replace PATH with the stub directory plus symlinks to the base tools and the
 # given tools, so the command under test cannot see anything else installed on
-# the host. Call it before creating stubs. Calling it again in the same test is
-# harmless.
+# the host. Call it before creating stubs. Calling it again with tools already
+# listed is harmless.
 # A tool found in a mise shims directory is linked to the real executable, as
 # 'mise which' resolves it from this repository, because a shim's behaviour
 # depends on the mise config of the directory it runs in.
@@ -455,6 +526,12 @@ function test-isolate-path() {
 
   local bin="$TEST_TMP/.bin" tool path paths i=0 seen=" " lines cached
   local -a tools=("${TEST_BASE_TOOLS[@]}" "$@") batch=()
+  for tool in "$@"; do
+    if [[ ! "$tool" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+      echo "ERROR: test-isolate-path was given an invalid tool name '$tool'. Fix the test's tool list." >&2
+      return 1
+    fi
+  done
   mkdir -p "$bin"
   # One lookup and one 'ln' for all tools, as each process start is slow on
   # macOS. Bash 3.2 may succeed when only some are found, so count the paths
@@ -463,7 +540,13 @@ function test-isolate-path() {
   lines="${paths//[!$'\n']/}"
   if [[ -z "$paths" || $((${#lines} + 1)) -ne ${#tools[@]} ]]; then
     for tool in "${tools[@]}"; do
-      type -P "$tool" > /dev/null || { echo "test-isolate-path: '$tool' is not on PATH" >&2; return 1; }
+      type -P "$tool" > /dev/null && continue
+      if ( PATH="$TEST_ORIGINAL_PATH" && type -P "$tool" > /dev/null ); then
+        echo "ERROR: test-isolate-path cannot find '$tool' because the test changed PATH before isolating it. List every tool in the first test-isolate-path call." >&2
+        return 1
+      fi
+      echo "PREREQUISITE: '$tool' is not on PATH. Diagnose with: command -v '$tool'. Tests that need it cannot run, so verification is unknown." >&2
+      return 77
     done
   fi
   while IFS= read -r path; do
@@ -475,11 +558,17 @@ function test-isolate-path() {
       # Each 'mise which' is slow, so the suite keeps a link to the result,
       # named after the tool and kept apart for each shim path
       cached="${SUITE_TMP:-}/.mise-which/${path//\//%}/$tool"
-      if [[ -n "${SUITE_TMP:-}" && -L "$cached" ]]; then
+      if [[ -n "${SUITE_TMP:-}" && -f "$cached" && -x "$cached" ]]; then
         path="$cached"
       else
-        path="$(cd "$TEST_REPO_ROOT" && mise which "$tool")" ||
-          { echo "test-isolate-path: cannot resolve the mise shim of '$tool'" >&2; return 1; }
+        path="$(cd "$TEST_REPO_ROOT" && mise which "$tool")" || {
+          echo "PREREQUISITE: mise cannot resolve '$tool'. Diagnose with: cd '$TEST_REPO_ROOT' && mise which '$tool'. Tests that need it cannot run, so verification is unknown." >&2
+          return 77
+        }
+        if [[ "$path" != /* || ! -f "$path" || ! -x "$path" ]]; then
+          echo "PREREQUISITE: mise resolved '$tool' to unusable '$path'. Diagnose with: cd '$TEST_REPO_ROOT' && mise which '$tool'. Tests that need it cannot run, so verification is unknown." >&2
+          return 77
+        fi
         if [[ -n "${SUITE_TMP:-}" ]]; then
           mkdir -p "${cached%/*}" && ln -sf "$path" "$cached" || true
         fi

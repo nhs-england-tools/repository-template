@@ -32,6 +32,15 @@ The full run includes the Docker integration suite, which needs a running Docker
 daemon. Suites that stub Docker can run without the daemon. A missing runtime is
 a prerequisite failure, not evidence that the integration passed.
 
+If a test cannot run because a tool or service is missing, exit with status `77`
+and print a line starting with `PREREQUISITE:` that names it and how to check
+it. `test-isolate-path` does this for you. The runner then reports the test as
+`UNAVAILABLE`, not `FAIL`. That is still not a pass, so `make test` fails. If
+any test really fails, the result is `FAIL`.
+
+`test-isolate-path` fails the test if you give it an invalid tool name or call
+it again with a new tool. Name every tool in the first call.
+
 ## Write a small suite 📝
 
 Create `scripts/example/greeting.lib.sh`:
@@ -94,8 +103,9 @@ fails for the intended reason, then implement the behaviour and rerun it.
 ## Capture expected failures 🚨
 
 Each test runs in a subshell with `set -e` enabled. An unexpected failed command
-fails the test immediately. Calling `exit`, even `exit 0`, also fails a test
-because it did not return normally.
+fails the test immediately. Calling `exit 0` also fails a test because it did
+not return normally. Do not use exit status `77` to skip a failing test. It
+means a prerequisite is missing.
 
 `test-capture` runs a command or function in a subshell and records:
 
@@ -125,6 +135,9 @@ disable Bash's errexit behaviour. For assertions, use the harness helpers:
 
 For exact output including trailing newlines, write to a fixture file and use
 `assert-files-identical`.
+
+To test code that reports a missing prerequisite, capture it and assert status
+`77`. The test passes, and the suite is not marked as unavailable.
 
 ## Stub external commands 🧩
 
@@ -199,8 +212,9 @@ make test
 ```
 
 The suite runner starts all discovered suites in parallel, then prints their
-output in a stable order and a pass/fail summary. A missing suite selection or
-any failed suite produces a non-zero exit status.
+output in a stable order and a summary of passed, failed and unavailable suites.
+The exit status is non-zero unless every suite passed. During a review, report
+failures rather than changing tests or the environment.
 
 Within a suite, `TEST_JOBS` controls parallel tests and defaults to the CPU
 count. It does not limit how many suites `make test` starts. For a sequential,

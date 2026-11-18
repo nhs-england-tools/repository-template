@@ -8,6 +8,7 @@
   - [Pause and resume 🔁](#pause-and-resume-)
   - [Limits and cost 📏](#limits-and-cost-)
   - [Gates that cannot run 🚫](#gates-that-cannot-run-)
+  - [When a gate fails 🔎](#when-a-gate-fails-)
   - [Troubleshooting 🔍](#troubleshooting-)
   - [Testing 🧪](#testing-)
 
@@ -55,7 +56,8 @@ agent, because the gates need tools and network access that its sandbox lacks.
   gates when nothing changed in the turn, so a question never costs a run. It
   runs only the gates whose `paths` match the changed files. A change inside a
   nested repository, such as a submodule, counts. When it cannot read the tree
-  or compare it, it runs every enabled gate and says so.
+  or compare it, it runs every enabled gate and says so. So a gate can run even
+  when the agent changed nothing.
 - **On demand.** `make quality-gate` runs the gates for the changed files. Use
   `scope=all` to run them for every file.
 
@@ -120,6 +122,8 @@ expected.
 - `max_blocks` is the number of times the hook may block one turn. It is 1 by
   default and at most 5. Each block starts another agent turn that costs AI
   credits.
+- After a block, the hook runs the gates again only if the agent changed
+  something. If it did not, the turn ends and the failures stand.
 - The Copilot harness and Copilot CLI override a hook after eight blocks in a
   row. The Local harness documents no such limit, so `max_blocks` is the limit
   there. A hook that times out does not block.
@@ -135,12 +139,29 @@ expected.
 
 ## Gates that cannot run 🚫
 
-When a gate cannot run for a reason that is not the code, it should print
-`PREREQUISITE: <how to fix it>`. The Docker test suite's
-`ERROR ... cannot run: ...` line is recognised too. The hook does not block for
-such a gate. It tells you what to fix and that the gate's result is unknown, and
-it tells the agent not to change the environment. `make quality-gate` still
-fails, because the gate did not pass.
+A gate may not run because a tool or service is missing, for example Docker is
+stopped. Its result is then unknown. The hook tells you what is missing and does
+not block the agent. `make quality-gate` still fails.
+
+`make test` handles this for you. For your own gate, do all three:
+
+1. Print a line starting with `PREREQUISITE:` that says what is missing and how
+   to check it.
+2. Write `prerequisite` to the file named by `QUALITY_GATE_RESULT_FILE`.
+3. Exit with a non-zero status.
+
+Write the file only when a missing prerequisite is the only problem. Otherwise
+the hook treats the gate as failed. Earlier versions needed only the
+`PREREQUISITE:` line. A gate that still relies on that now blocks.
+
+## When a gate fails 🔎
+
+The hook does not give the agent permission to change files or the environment.
+
+- In a review, report the failures. Do not fix them.
+- When making changes, fix only the failures your changes caused.
+- Report any other failure with the command and log the hook shows.
+- Never weaken a test or turn off a gate to make it pass.
 
 ## Troubleshooting 🔍
 
