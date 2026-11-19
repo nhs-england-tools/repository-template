@@ -336,12 +336,12 @@ function remove-old-state() {
 #     turn]
 function handle-stop() {
 
-  local scratch rc=0
+  local session="$1" active="$2" session_status="$3" scratch rc=0
   if ! scratch="$(make-temp -d)"; then
     emit-allow "Quality gate: cannot create a temporary directory under $STATE_DIR, so no gate ran and verification is unknown. Inspect that path and verify with 'make quality-gate'."
     return 0
   fi
-  decide-stop "$1" "$2" "$scratch" "$3" || rc=$?
+  decide-stop "$session" "$active" "$scratch" "$session_status" || rc=$?
   rm -rf "$scratch" || {
     echo "Quality gate: cannot remove scratch directory $scratch. Cleanup is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
   }
@@ -755,7 +755,6 @@ function run-command() {
 function run-gates() {
 
   local scope="$1" changes="$2/changes" config state="$STATE_DIR"
-  local session_status=not-applicable selection_reason="manual-$scope" selection_scope="$scope"
   if ! config="$(load-config working-tree)"; then
     return 2
   fi

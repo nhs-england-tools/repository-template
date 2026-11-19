@@ -28,11 +28,13 @@ readonly ACTION_FILTER=".${ACTION_KEY}"
 readonly FIRST_GATE_STATE_FILTER='.gates[0].state'
 readonly SECOND_GATE_STATE_FILTER='.gates[1].state'
 readonly LINT_LOG_FILENAME='lint.log'
+readonly PROMPT_MARKER='PROMPT-MARKER-4711'
+readonly SCRIPT_MAIN_STRIP_PATTERN='/^is-arg-true /,$d'
 # Time limits count whole seconds, so a limit of 2 gives the gate at least a
 # second to start its processes
 readonly SHORT_LINT_GATE=$'version: 1\ngates:\n  - name: lint\n    timeout: 2'
 # The prompt text is a marker the tests look for
-readonly PROMPT_JSON_FORMAT='{"hook_event_name":"UserPromptSubmit","session_id":"%s","prompt":"PROMPT-MARKER-4711"}'
+readonly PROMPT_JSON_FORMAT="{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"%s\",\"prompt\":\"$PROMPT_MARKER\"}"
 
 # Set up the suite fixtures and run every test.
 function main() {
@@ -361,7 +363,7 @@ function test-quality-gate-canonicalises-payload-fields() {
   local field value payload
   gate-create-repo
   # shellcheck source=scripts/quality/quality-gate.sh
-  source <(sed '/^is-arg-true /,$d' "$SCRIPT")
+  source <(sed "$SCRIPT_MAIN_STRIP_PATTERN" "$SCRIPT")
   STATE_DIR="$PWD/.git/quality-gate"
   # Act and assert
   for field in hook_event_name session_id stop_hook_active agent_id prompt; do
@@ -422,7 +424,7 @@ function test-quality-gate-classifies-session-provenance() {
   local value expected file payload
   gate-create-repo
   # shellcheck source=scripts/quality/quality-gate.sh
-  source <(sed '/^is-arg-true /,$d' "$SCRIPT")
+  source <(sed "$SCRIPT_MAIN_STRIP_PATTERN" "$SCRIPT")
   STATE_DIR="$PWD/.git/quality-gate"
   # Act and assert
   for value in null '""' '"../RAW-INVALID-4711"' '"safe\n"' 123 true false '[]' '{}' '"safe-session"'; do
@@ -432,7 +434,7 @@ function test-quality-gate-classifies-session-provenance() {
       *) expected=invalid ;;
     esac
     rm -rf .git/quality-gate/history
-    payload="$(jq -nc --argjson session "$value" '{hook_event_name:"UserPromptSubmit",session_id:$session,prompt:"PROMPT-MARKER-4711"}')"
+    payload="$(jq -nc --argjson session "$value" --arg prompt_marker "$PROMPT_MARKER" '{hook_event_name:"UserPromptSubmit",session_id:$session,prompt:$prompt_marker}')"
     test-capture gate-handle-payload "$payload"
     assert-equal "$expected" "$(jq -r '.session_status' .git/quality-gate/last-hook.json)" "session type $value"
     if [[ $expected == valid ]]; then
@@ -442,10 +444,10 @@ function test-quality-gate-classifies-session-provenance() {
       assert-contains "$TEST_STDOUT" 'cannot associate a baseline'
     fi
     assert-not-contains "$(< .git/quality-gate/last-hook.json)" 'RAW-INVALID-4711'
-    assert-not-contains "$(< .git/quality-gate/last-hook.json)" 'PROMPT-MARKER-4711'
+    assert-not-contains "$(< .git/quality-gate/last-hook.json)" "$PROMPT_MARKER"
     while IFS= read -r -d '' file; do
       assert-not-contains "$(< "$file")" 'RAW-INVALID-4711'
-      assert-not-contains "$(< "$file")" 'PROMPT-MARKER-4711'
+      assert-not-contains "$(< "$file")" "$PROMPT_MARKER"
     done < <(find .git/quality-gate/history -type f -name "$HISTORY_JSON_PATTERN" -print0)
   done
   assert-file-not-exists .git/quality-gate/123.baseline
@@ -459,11 +461,10 @@ function test-quality-gate-note-hook-uses-explicit-provenance() {
   # Arrange
   gate-create-repo
   # shellcheck source=scripts/quality/quality-gate.sh
-  source <(sed '/^is-arg-true /,$d' "$SCRIPT")
+  source <(sed "$SCRIPT_MAIN_STRIP_PATTERN" "$SCRIPT")
   STATE_DIR="$PWD/.git/quality-gate"
   mkdir -p "$STATE_DIR"
   function call-note-hook() {
-    local session_status=missing selection_reason=not-evaluated selection_scope=none
     note-hook "$STATE_DIR" Stop "$SESSION" blocked valid changed-files changed
   }
   # Act
@@ -543,7 +544,7 @@ function test-quality-gate-batches-history-validation() {
   local -a records
   gate-create-repo
   # shellcheck source=scripts/quality/quality-gate.sh
-  source <(sed '/^is-arg-true /,$d' "$SCRIPT")
+  source <(sed "$SCRIPT_MAIN_STRIP_PATTERN" "$SCRIPT")
   mkdir -p "$history"
   record='{"time":"2000-01-01T00:00:00Z","session":"session-1","session_status":"valid","selection_reason":"unchanged","scope":"none","event":"Stop","action":"unchanged"}'
   for ((index = 0; index < 51; index++)); do
@@ -672,7 +673,7 @@ function test-quality-gate-recovers-from-history-validator-failures() {
   local -a records
   gate-create-repo
   # shellcheck source=scripts/quality/quality-gate.sh
-  source <(sed '/^is-arg-true /,$d' "$SCRIPT")
+  source <(sed "$SCRIPT_MAIN_STRIP_PATTERN" "$SCRIPT")
   record='{"time":"2000-01-01T00:00:00Z","session":"session-1","session_status":"valid","selection_reason":"unchanged","scope":"none","event":"Stop","action":"unchanged"}'
   REAL_JQ="$(readlink -f "$(command -v jq)")"
   export REAL_JQ HISTORY_SCAN_DIR="$history" HISTORY_FAILURE_MODE
@@ -2856,9 +2857,9 @@ function test-quality-gate-never-stores-or-prints-the-prompt() {
   test-capture gate-send "$(gate-prompt-json)"
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-not-contains "$TEST_STDOUT" "PROMPT-MARKER-4711"
-  assert-not-contains "$TEST_STDERR" "PROMPT-MARKER-4711"
-  assert-equal "" "$(grep -rl 'PROMPT-MARKER-4711' .git 2> /dev/null || true)" "state files that hold the prompt"
+  assert-not-contains "$TEST_STDOUT" "$PROMPT_MARKER"
+  assert-not-contains "$TEST_STDERR" "$PROMPT_MARKER"
+  assert-equal "" "$(grep -rl "$PROMPT_MARKER" .git 2> /dev/null || true)" "state files that hold the prompt"
 
   return 0
 }
