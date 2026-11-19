@@ -15,6 +15,9 @@ set -euo pipefail
 # ==============================================================================
 
 readonly PASSING_SUITE_BODY='exit 0'
+readonly FAILING_SUITE_BODY='exit 1'
+readonly UNAVAILABLE_SUITE_BODY='exit 77'
+readonly PREREQUISITE_VERDICT='prerequisite'
 readonly EXIT_STATUS_LABEL='exit status'
 
 function main() {
@@ -63,14 +66,14 @@ function test-runner-publishes-only-aggregate-prerequisite() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  write-fixture a.test.sh 'echo "PREREQUISITE: missing example-tool, verification unknown, run command -v example-tool"; exit 77'
-  write-fixture b.test.sh 'exit 77'
+  write-fixture a.test.sh "echo 'PREREQUISITE: missing example-tool, verification unknown, run command -v example-tool'; $UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "$UNAVAILABLE_SUITE_BODY"
   write-fixture c.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner
   # Assert
   assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  printf 'prerequisite\n' > "$TEST_TMP/expected"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$TEST_TMP/expected"
   assert-files-identical "$TEST_TMP/expected" "$QUALITY_GATE_RESULT_FILE"
   assert-contains "$TEST_STDOUT" "Suites: 3, Passed: 1, Failed: 0, Unavailable: 2"
   assert-contains "$TEST_STDOUT" "UNAVAILABLE: $TEST_TMP/tree/a.test.sh (exit code 77)"
@@ -90,8 +93,8 @@ function test-runner-keeps-mixed-failures-genuine() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  write-fixture a.test.sh 'exit 77'
-  write-fixture b.test.sh 'echo "ASSERTION FAILED: real failure"; exit 1'
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "echo 'ASSERTION FAILED: real failure'; $FAILING_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -109,7 +112,7 @@ function test-runner-does-not-classify-log-markers() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  write-fixture a.test.sh 'echo "PREREQUISITE: expected error"; echo "ERROR Docker test suite cannot run: legacy"; exit 1'
+  write-fixture a.test.sh "echo 'PREREQUISITE: expected error'; echo 'ERROR Docker test suite cannot run: legacy'; $FAILING_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -123,7 +126,7 @@ function test-runner-isolates-private-result-from-children() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  write-fixture a.test.sh 'echo "private: ${QUALITY_GATE_RESULT_FILE-unset}"; exit 77'
+  write-fixture a.test.sh "echo \"private: \${QUALITY_GATE_RESULT_FILE-unset}\"; $UNAVAILABLE_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -138,7 +141,7 @@ function test-runner-fails-when-result-cannot-be-published() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/nonexistent/result"
-  write-fixture a.test.sh 'exit 77'
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -154,7 +157,7 @@ function test-runner-rejects-relative-result-path() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE=relative-result
-  write-fixture a.test.sh 'exit 77'
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
   # Act
   run-runner-in-tree dir=.
   # Assert
@@ -169,8 +172,8 @@ function test-runner-all-unavailable-remains-nonzero-without-result-file() {
 
   # Arrange
   unset QUALITY_GATE_RESULT_FILE
-  write-fixture a.test.sh 'exit 77'
-  write-fixture b.test.sh 'exit 77'
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "$UNAVAILABLE_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -187,7 +190,7 @@ function test-runner-final-publication-failure-is-genuine() {
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
   write-fixture a.test.sh "rm '$QUALITY_GATE_RESULT_FILE'
 mkdir '$QUALITY_GATE_RESULT_FILE'
-exit 77"
+$UNAVAILABLE_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -219,7 +222,7 @@ function test-docker-suite-reports-unreachable-daemon-as-prerequisite() {
 
   # Arrange
   test-isolate-path
-  test-stub docker 'exit 1'
+  test-stub docker "$FAILING_SUITE_BODY"
   # Act
   test-capture "$BASH" "$TEST_REPO_ROOT/scripts/docker/tests/docker.test.sh"
   # Assert
@@ -243,7 +246,7 @@ info) exit 0 ;;
 images) printf "%s\n" "$DOCKER_IMAGE:partial"; exit 0 ;;
 rmi) exit 0 ;;
 esac
-echo build-fixture-failed >&2; exit 1'
+echo build-fixture-failed >&2; '"$FAILING_SUITE_BODY"
   # Act
   test-capture "$BASH" "$TEST_REPO_ROOT/scripts/docker/tests/docker.test.sh"
   # Assert
@@ -264,7 +267,7 @@ function test-docker-cleanup-failures-override-suite-outcomes() {
   test-isolate-path mkfifo
   for failure in images rmi; do
     test-stub docker "case \"\${1:-}\" in
-$failure) echo cleanup-fixture-failed >&2; exit 1 ;;
+$failure) echo cleanup-fixture-failed >&2; $FAILING_SUITE_BODY ;;
 images) printf '%s\\n' \"\$DOCKER_IMAGE:partial\" ;;
 esac"
     for outcome in 0 77; do
@@ -309,7 +312,7 @@ function test-runner-quotes-failed-suite-rerun-commands() {
   # Arrange
   local name command
   for name in 'space suite.test.sh' "quote'\$; suite.test.sh"; do
-    write-fixture "$name" 'exit 1'
+    write-fixture "$name" "$FAILING_SUITE_BODY"
   done
   # Act
   run-runner
@@ -328,10 +331,10 @@ function test-runner-runs-every-suite-and-passes() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  printf 'prerequisite\n' > "$QUALITY_GATE_RESULT_FILE"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   write-fixture a/tests/one.test.sh 'echo one-ran; echo "PREREQUISITE: expected captured error"; exit 0'
   write-fixture b/tests/two.test.sh 'echo two-ran; exit 0'
-  write-fixture b/tests/helper.sh 'exit 1'
+  write-fixture b/tests/helper.sh "$FAILING_SUITE_BODY"
   # Act
   run-runner
   # Assert
@@ -349,7 +352,7 @@ function test-runner-runs-every-suite-and-passes() {
 function test-runner-fails-when-any-suite-fails-and-still-runs-the-rest() {
 
   # Arrange
-  write-fixture a.test.sh 'echo a-ran; exit 1'
+  write-fixture a.test.sh "echo a-ran; $FAILING_SUITE_BODY"
   write-fixture b.test.sh 'echo b-ran; exit 0'
   # Act
   run-runner
@@ -368,7 +371,7 @@ function test-runner-fails-when-no-suite-is-found() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  printf 'prerequisite\n' > "$QUALITY_GATE_RESULT_FILE"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   git init -q "$TEST_TMP/tree"
   # Act
   run-runner
@@ -415,7 +418,7 @@ function test-runner-fails-when-directory-is-missing() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  printf 'prerequisite\n' > "$QUALITY_GATE_RESULT_FILE"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   write-fixture existing.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner "$TEST_TMP/tree/missing"
@@ -518,7 +521,7 @@ while [[ \$i -lt 50 ]]; do
   sleep 0.1
   i=\$((i + 1))
 done
-exit 1"
+${FAILING_SUITE_BODY}"
   write-fixture b.test.sh "touch '$marker'"
   # Act
   run-runner
@@ -548,7 +551,7 @@ function test-runner-skips-git-ignored-suites() {
   # Arrange
   git init -q "$TEST_TMP/tree"
   echo 'ignored/' > "$TEST_TMP/tree/.gitignore"
-  write-fixture ignored/tests/bad.test.sh 'exit 1'
+  write-fixture ignored/tests/bad.test.sh "$FAILING_SUITE_BODY"
   write-fixture kept.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner
@@ -565,7 +568,7 @@ function test-runner-skips-git-ignored-suites-under-a-relative-dir() {
   # Arrange
   git init -q "$TEST_TMP/tree"
   echo '/scripts/a/tests/bad.test.sh' > "$TEST_TMP/tree/.gitignore"
-  write-fixture scripts/a/tests/bad.test.sh 'exit 1'
+  write-fixture scripts/a/tests/bad.test.sh "$FAILING_SUITE_BODY"
   write-fixture scripts/b/tests/kept.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner-in-tree
@@ -581,7 +584,7 @@ function test-runner-fails-a-suite-that-is-not-executable() {
 
   # Arrange
   export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
-  printf 'prerequisite\n' > "$QUALITY_GATE_RESULT_FILE"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   write-fixture a.test.sh "$PASSING_SUITE_BODY"
   chmod -x "$TEST_TMP/tree/a.test.sh"
   write-fixture b.test.sh "$PASSING_SUITE_BODY"
@@ -617,7 +620,7 @@ function test-runner-does-not-pass-its-variables-to-suites() {
 function test-runner-ends-suite-output-with-a-newline() {
 
   # Arrange
-  write-fixture a.test.sh "printf 'a-no-newline'; exit 1"
+  write-fixture a.test.sh "printf 'a-no-newline'; $FAILING_SUITE_BODY"
   write-fixture b.test.sh "printf 'b-no-newline'"
   # Act
   run-runner
@@ -637,6 +640,7 @@ function test-runner-ends-suite-output-with-a-newline() {
 #   $1=[test outcome before cleanup]
 function run-docker-cleanup-probe() {
 
+  local outcome="$1"
   test-capture "$BASH" -c '
 source <(sed '\''/^is-arg-true "\${VERBOSE/,$d'\'' "$1/scripts/docker/tests/docker.test.sh")
 source "$1/scripts/tests/test.lib.sh"
@@ -651,7 +655,7 @@ function test-suite-setup() {
 function probe() { return "$OUTCOME"; }
 OUTCOME="$2"
 test-run-suite probe
-' _ "$TEST_REPO_ROOT" "$1"
+' _ "$TEST_REPO_ROOT" "$outcome"
 
   return 0
 }

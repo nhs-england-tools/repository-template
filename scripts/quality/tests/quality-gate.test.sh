@@ -22,6 +22,12 @@ readonly SCRIPT=./scripts/quality/quality-gate.sh
 readonly LINT_CALL='--no-print-directory lint'
 readonly TEST_CALL='--no-print-directory test'
 readonly FAILING_LINT='if [[ "${*: -1}" == lint ]]; then echo "lint finding on line 7"; exit 1; fi'
+readonly HISTORY_JSON_PATTERN='*.json'
+readonly ACTION_KEY=action
+readonly ACTION_FILTER=".${ACTION_KEY}"
+readonly FIRST_GATE_STATE_FILTER='.gates[0].state'
+readonly SECOND_GATE_STATE_FILTER='.gates[1].state'
+readonly LINT_LOG_FILENAME='lint.log'
 # Time limits count whole seconds, so a limit of 2 gives the gate at least a
 # second to start its processes
 readonly SHORT_LINT_GATE=$'version: 1\ngates:\n  - name: lint\n    timeout: 2'
@@ -51,6 +57,7 @@ function main() {
     test-quality-gate-keeps-atomic-run-on-encoding-failure \
     test-quality-gate-keeps-atomic-run-on-publication-failure \
     test-quality-gate-prunes-concurrent-same-session-history \
+    test-quality-gate-note-hook-uses-explicit-provenance \
     test-quality-gate-classifies-session-provenance \
     test-quality-gate-records-comparison-fallback \
     test-quality-gate-bounds-and-isolates-history \
@@ -286,6 +293,18 @@ function gate-calls() {
   return 0
 }
 
+function gate-list-history-files() {
+
+  local result_name="$1" directory="$2" file
+  local -n result="$result_name"
+  result=()
+  while IFS= read -r -d '' file; do
+    result+=("$file")
+  done < <(find "$directory" -maxdepth 1 -type f -name "$HISTORY_JSON_PATTERN" -print0 | LC_ALL=C sort -z)
+
+  return 0
+}
+
 # Assert selection fields in the hook and, unless unchanged, the run audit.
 # Arguments:
 #   $1=[session status] $2=[selection reason] $3=[scope]
@@ -309,7 +328,8 @@ function gate-assert-selection-provenance() {
 #   $1=[hook event JSON]
 function gate-handle-payload() {
 
-  handle-hook <<< "$1" || return "$?"
+  local payload="$1"
+  handle-hook <<< "$payload" || return "$?"
 
   return 0
 }
@@ -355,7 +375,7 @@ function test-quality-gate-canonicalises-payload-fields() {
       assert-not-contains "$TEST_STDOUT$TEST_STDERR" RAW-INVALID-4711
       if [[ $field == session_id ]]; then
         assert-equal invalid "$(jq -r '.session_status' .git/quality-gate/last-hook.json)" "control character session rejected"
-        assert-equal baseline-not-recorded "$(jq -r '.action' .git/quality-gate/last-hook.json)" "no baseline claim"
+        assert-equal baseline-not-recorded "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "no baseline claim"
       elif [[ $field == stop_hook_active || $field == prompt ]]; then
         assert-file-exists .git/quality-gate/safe-session.baseline
       fi
@@ -416,18 +436,41 @@ function test-quality-gate-classifies-session-provenance() {
     test-capture gate-handle-payload "$payload"
     assert-equal "$expected" "$(jq -r '.session_status' .git/quality-gate/last-hook.json)" "session type $value"
     if [[ $expected == valid ]]; then
-      assert-equal baseline-recorded "$(jq -r '.action' .git/quality-gate/last-hook.json)" "valid baseline"
+      assert-equal baseline-recorded "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "valid baseline"
     else
-      assert-equal baseline-not-recorded "$(jq -r '.action' .git/quality-gate/last-hook.json)" "unidentified baseline"
+      assert-equal baseline-not-recorded "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "unidentified baseline"
       assert-contains "$TEST_STDOUT" 'cannot associate a baseline'
     fi
-    for file in .git/quality-gate/last-hook.json .git/quality-gate/history/*/*/*.json; do
+    assert-not-contains "$(< .git/quality-gate/last-hook.json)" 'RAW-INVALID-4711'
+    assert-not-contains "$(< .git/quality-gate/last-hook.json)" 'PROMPT-MARKER-4711'
+    while IFS= read -r -d '' file; do
       assert-not-contains "$(< "$file")" 'RAW-INVALID-4711'
       assert-not-contains "$(< "$file")" 'PROMPT-MARKER-4711'
-    done
+    done < <(find .git/quality-gate/history -type f -name "$HISTORY_JSON_PATTERN" -print0)
   done
   assert-file-not-exists .git/quality-gate/123.baseline
   assert-file-not-exists .git/quality-gate/true.baseline
+
+  return 0
+}
+
+function test-quality-gate-note-hook-uses-explicit-provenance() {
+
+  # Arrange
+  gate-create-repo
+  # shellcheck source=scripts/quality/quality-gate.sh
+  source <(sed '/^is-arg-true /,$d' "$SCRIPT")
+  STATE_DIR="$PWD/.git/quality-gate"
+  mkdir -p "$STATE_DIR"
+  function call-note-hook() {
+    local session_status=missing selection_reason=not-evaluated selection_scope=none
+    note-hook "$STATE_DIR" Stop "$SESSION" blocked valid changed-files changed
+  }
+  # Act
+  test-capture call-note-hook
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal 'valid changed-files changed' "$(jq -r '[.session_status, .selection_reason, .scope] | join(" ")' "$STATE_DIR/last-hook.json")" "explicit provenance overrides caller locals"
 
   return 0
 }
@@ -460,7 +503,7 @@ function test-quality-gate-bounds-and-isolates-history() {
   history=".git/quality-gate/history/sessions/$SESSION"
   mkdir -p "$history"
   prompt_record="$(jq -c --arg session "$SESSION" '.session=$session | .time="2000-01-01T00:00:00Z"' .git/quality-gate/last-hook.json)"
-  stop_record="$(jq -c '.event="Stop" | .action="unchanged" | .selection_reason="unchanged"' <<< "$prompt_record")"
+  stop_record="$(jq -c --arg action_key "$ACTION_KEY" '.event="Stop" | .[$action_key]="unchanged" | .selection_reason="unchanged"' <<< "$prompt_record")"
   for ((index = 0; index < 49; index++)); do
     printf -v file '%s/0946684800%06d-seeded.json' "$history" "$index"
     if (( index % 2 == 0 )); then
@@ -471,22 +514,22 @@ function test-quality-gate-bounds-and-isolates-history() {
   done
   # Act
   gate-start-turn
-  records=("$history"/*.json)
+  gate-list-history-files records "$history"
   assert-equal 50 "${#records[@]}" "reaches retention boundary"
   assert-file-exists "$history/0946684800000000-seeded.json"
   newest_prompt="${records[49]}"
   gate-send "$(gate-stop-json)" > /dev/null
   # Assert
-  records=("$history"/*.json)
+  gate-list-history-files records "$history"
   assert-equal 50 "${#records[@]}" "bounded completed events"
   assert-file-not-exists "$history/0946684800000000-seeded.json"
   assert-file-exists "$history/0946684800000001-seeded.json"
   assert-file-exists "$history/0946684800000048-seeded.json"
   assert-file-exists "$newest_prompt"
-  actions="$(jq -sr 'map(.action) | join(" ")' "${records[@]}")"
-  assert-equal 1 "$(find .git/quality-gate/history/sessions/other -name '*.json' | wc -l | tr -d ' ')" "other session retained"
-  assert-equal 1 "$(find .git/quality-gate/history/sessions/missing -name '*.json' | wc -l | tr -d ' ')" "valid missing session isolated"
-  assert-equal 1 "$(find .git/quality-gate/history/unidentified/missing -name '*.json' | wc -l | tr -d ' ')" "unidentified session isolated"
+  actions="$(jq -sr --arg action_key "$ACTION_KEY" 'map(.[ $action_key ]) | join(" ")' "${records[@]}")"
+  assert-equal 1 "$(find .git/quality-gate/history/sessions/other -name "$HISTORY_JSON_PATTERN" | wc -l | tr -d ' ')" "other session retained"
+  assert-equal 1 "$(find .git/quality-gate/history/sessions/missing -name "$HISTORY_JSON_PATTERN" | wc -l | tr -d ' ')" "valid missing session isolated"
+  assert-equal 1 "$(find .git/quality-gate/history/unidentified/missing -name "$HISTORY_JSON_PATTERN" | wc -l | tr -d ' ')" "unidentified session isolated"
   assert-equal "$(printf 'baseline-recorded unchanged %.0s' {1..25})" "$actions " "lifecycle order"
   assert-stub-not-called make
 
@@ -518,7 +561,7 @@ function test-quality-gate-batches-history-validation() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal '' "$TEST_STDOUT$TEST_STDERR" "clean validation"
   assert-equal x "$(< "$VALIDATION_CALLS")" "one real validator per scan"
-  records=("$history"/*.json)
+  gate-list-history-files records "$history"
   assert-equal 50 "${#records[@]}" "valid completed record cap"
   assert-file-exists "$history/- fresh.json"
   assert-file-exists "$history/"$'z\n0\t\001 odd.json'
@@ -547,7 +590,7 @@ function test-quality-gate-audit-failure-preserves-decisions() {
   test-capture gate-send "$(gate-stop-json)"
   assert-contains "$TEST_STDOUT" '"decision":"block"'
   assert-contains "$TEST_STDERR" '.git/quality-gate/history'
-  assert-equal blocked "$(jq -r '.action' .git/quality-gate/last-hook.json)" "latest survives history failure"
+  assert-equal blocked "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "latest survives history failure"
 
   return 0
 }
@@ -559,7 +602,7 @@ function test-quality-gate-retains-useful-history-on-malformed-records() {
   gate-create-repo
   gate-start-turn
   history=".git/quality-gate/history/sessions/$SESSION"
-  useful="$(find ".git/quality-gate/history/sessions/$SESSION" -name '*.json')"
+  useful="$(find ".git/quality-gate/history/sessions/$SESSION" -name "$HISTORY_JSON_PATTERN")"
   record="$(< "$useful")"
   for ((index = 0; index < 51; index++)); do
     printf -v file '%s/%04d.json' "$history" "$index"
@@ -581,8 +624,10 @@ function test-quality-gate-retains-useful-history-on-malformed-records() {
   index=0
   for mutation in '.time=null' '.time="not-a-date"' '.session=true' '.session="../unsafe"' \
     '.session_status=null' '.session_status="other"' '.selection_reason=null' '.selection_reason="other"' \
-    '.scope=null' '.scope="other"' '.event=null' '.event="other"' '.action=null' '.action="other"' \
-    'del(.time)' 'del(.session)' 'del(.session_status)' 'del(.selection_reason)' 'del(.scope)' 'del(.event)' 'del(.action)'; do
+    '.scope=null' '.scope="other"' '.event=null' '.event="other"' \
+    ".[\"$ACTION_KEY\"]=null" ".[\"$ACTION_KEY\"] = \"other\"" \
+    'del(.time)' 'del(.session)' 'del(.session_status)' 'del(.selection_reason)' 'del(.scope)' 'del(.event)' \
+    "del(.[\"$ACTION_KEY\"])"; do
     jq "$mutation" "$useful" > ".git/quality-gate/history/sessions/$SESSION/9999999999999999-$index-field-bad.json"
     index=$((index + 1))
   done
@@ -601,7 +646,7 @@ function test-quality-gate-retains-useful-history-on-malformed-records() {
   assert-file-not-exists "$history/0000.json"
   assert-file-not-exists "$history/0002.json"
   assert-file-exists "$history/0003.json"
-  assert-equal 50 "$(find "$history" -name '*.json' ! -name '*bad.json' | wc -l | tr -d ' ')" "useful records retained and pruned despite corruption"
+  assert-equal 50 "$(find "$history" -name "$HISTORY_JSON_PATTERN" ! -name '*bad.json' | wc -l | tr -d ' ')" "useful records retained and pruned despite corruption"
   if [[ $EUID -ne 0 ]]; then
     printf '%s\n' "$record" > "$history/unreadable-bad.json"
     chmod 000 "$history/unreadable-bad.json"
@@ -614,7 +659,7 @@ function test-quality-gate-retains-useful-history-on-malformed-records() {
     done
     chmod 600 "$history/unreadable-bad.json"
     assert-file-exists "$useful"
-    assert-equal 50 "$(find "$history" -name '*.json' ! -name '*bad.json' | wc -l | tr -d ' ')" "readable history pruned during recovery"
+    assert-equal 50 "$(find "$history" -name "$HISTORY_JSON_PATTERN" ! -name '*bad.json' | wc -l | tr -d ' ')" "readable history pruned during recovery"
   fi
 
   return 0
@@ -668,7 +713,7 @@ function test-quality-gate-recovers-from-history-validator-failures() {
       expected=53
       assert-file-exists "$history/0000.json"
       assert-file-exists "$history/0001.json"
-      for file in "$history"/*.json; do
+      for file in "$history"/$HISTORY_JSON_PATTERN; do
         assert-contains "$TEST_STDERR" "$file"
       done
     else
@@ -678,7 +723,7 @@ function test-quality-gate-recovers-from-history-validator-failures() {
     if [[ $mode == vanished ]]; then
       assert-contains "$TEST_STDERR" '0000.json'
     fi
-    records=("$history"/*.json)
+    gate-list-history-files records "$history"
     assert-equal "$expected" "${#records[@]}" "$mode safe retention"
     rm -rf "$history"
   done
@@ -699,7 +744,7 @@ function test-quality-gate-keeps-atomic-latest-on-publish-failure() {
   assert-equal '{}' "$TEST_STDOUT" "latest publication does not affect allow"
   assert-contains "$TEST_STDERR" 'last-hook.json'
   assert-files-identical "$TEST_TMP/previous.json" .git/quality-gate/last-hook.json
-  assert-equal 2 "$(find ".git/quality-gate/history/sessions/$SESSION" -name '*.json' | wc -l | tr -d ' ')" "history survives latest failure"
+  assert-equal 2 "$(find ".git/quality-gate/history/sessions/$SESSION" -name "$HISTORY_JSON_PATTERN" | wc -l | tr -d ' ')" "history survives latest failure"
 
   return 0
 }
@@ -707,7 +752,7 @@ function test-quality-gate-keeps-atomic-latest-on-publish-failure() {
 function test-quality-gate-isolates-concurrent-history() {
 
   # Arrange
-  local first second
+  local first second first_event second_event
   gate-create-repo
   # Act
   gate-start-turn first &
@@ -717,9 +762,11 @@ function test-quality-gate-isolates-concurrent-history() {
   wait "$first"
   wait "$second"
   # Assert
-  assert-equal baseline-recorded "$(jq -r '.action' .git/quality-gate/history/sessions/first/*.json)" "first concurrent event"
-  assert-equal baseline-recorded "$(jq -r '.action' .git/quality-gate/history/sessions/second/*.json)" "second concurrent event"
-  jq -e '.action == "baseline-recorded"' .git/quality-gate/last-hook.json > /dev/null
+  first_event="$(find .git/quality-gate/history/sessions/first -maxdepth 1 -type f -name "$HISTORY_JSON_PATTERN" -print -quit)"
+  second_event="$(find .git/quality-gate/history/sessions/second -maxdepth 1 -type f -name "$HISTORY_JSON_PATTERN" -print -quit)"
+  assert-equal baseline-recorded "$(jq -r "$ACTION_FILTER" "$first_event")" "first concurrent event"
+  assert-equal baseline-recorded "$(jq -r "$ACTION_FILTER" "$second_event")" "second concurrent event"
+  jq -e --arg action_key "$ACTION_KEY" '.[ $action_key ] == "baseline-recorded"' .git/quality-gate/last-hook.json > /dev/null
 
   return 0
 }
@@ -763,7 +810,7 @@ function test-quality-gate-prunes-concurrent-same-session-history() {
     exit "$result"'
   test-stub ln '
     "$REAL_LN" "$@" || exit "$?"
-    if [[ $# -eq 2 && $1 == "$RACE_DIR/".* && $2 == "$RACE_DIR/"*.json ]]; then
+    if [[ $# -eq 2 && $1 == "$RACE_DIR/".* && $2 == "$RACE_DIR/"* && ${2##*.} == json ]]; then
       exec 8<> "$RACE_FIRST_PUBLISHED" 9<> "$RACE_SECOND_PUBLISHED"
       if [[ $PRUNE_ROLE == first ]]; then
         printf "published\n" >&8
@@ -786,7 +833,7 @@ function test-quality-gate-prunes-concurrent-same-session-history() {
   assert-file-has-line "$RACE_PUBLICATION_DONE.second" complete
   assert-equal '{}' "$(< "$TEST_TMP/first.out")" "first prompt allowed"
   assert-equal '{}' "$(< "$TEST_TMP/second.out")" "second prompt allowed"
-  assert-equal 50 "$(find "$RACE_DIR" -name '*.json' | wc -l | tr -d ' ')" "same-session pruning does not over-delete"
+  assert-equal 50 "$(find "$RACE_DIR" -name "$HISTORY_JSON_PATTERN" | wc -l | tr -d ' ')" "same-session pruning does not over-delete"
   assert-equal '' "$(< "$TEST_TMP/first.err")$(< "$TEST_TMP/second.err")" "idempotent pruning has no spurious warnings"
   assert-file-exists "$RACE_DIR/0000000000000002-old.json"
 
@@ -848,7 +895,7 @@ function test-quality-gate-records-manual-provenance() {
   gate-create-repo
   # Act and assert
   for scope in all changed; do
-    export scope
+    export scope # NOSONAR: the Make option is lowercase by contract
     test-capture "$SCRIPT" run
     assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
     assert-equal not-applicable "$(jq -r '.session_status' .git/quality-gate/last-run.json)" "manual session"
@@ -880,7 +927,7 @@ function test-quality-gate-reports-history-retention-errors() {
   assert-contains "$TEST_STDERR" 'history retention is incomplete'
   assert-contains "$TEST_STDERR" '.git/quality-gate/history/'
   assert-contains "$TEST_STDERR" 'Inspect'
-  assert-equal unchanged "$(jq -r '.action' .git/quality-gate/last-hook.json)" "latest useful event survives"
+  assert-equal unchanged "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "latest useful event survives"
   assert-stub-not-called make
 
   return 0
@@ -1114,7 +1161,7 @@ function test-quality-gate-runs-every-gate-when-the-tree-could-not-be-read-at-th
   printf 'secret\n' > unreadable.txt
   chmod 000 unreadable.txt
   gate-start-turn
-  assert-equal snapshot-failed "$(jq -r '.action' .git/quality-gate/last-hook.json)" "failed prompt snapshot"
+  assert-equal snapshot-failed "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "failed prompt snapshot"
   chmod 600 unreadable.txt
   gate-start-turn
   printf 'two\n' >> README.md
@@ -1248,7 +1295,7 @@ function test-quality-gate-keeps-the-baseline-when-another-prompt-arrives-mid-tu
   gate-start-turn
   printf 'two\n' >> README.md
   gate-start-turn
-  assert-equal turn-already-open "$(jq -r '.action' .git/quality-gate/last-hook.json)" "retained prompt baseline"
+  assert-equal turn-already-open "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "retained prompt baseline"
   assert-equal valid "$(jq -r '.session_status' .git/quality-gate/last-hook.json)" "retained session"
   # Act
   test-capture gate-send "$(gate-stop-json)"
@@ -1510,7 +1557,7 @@ function test-quality-gate-requires-an-explicit-prerequisite-verdict() {
     gate-make 'if [[ "${*: -1}" == lint ]]; then if [[ "$PRODUCER_VERDICT" != missing ]]; then printf "%b" "$PRODUCER_VERDICT" > "${QUALITY_GATE_RESULT_FILE:-$TEST_TMP/unclaimed}"; fi; printf "%b\n" "$PRODUCER_MARKER"; exit 1; fi'
     test-capture "$SCRIPT" run
     assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL for $verdict / $marker"
-    assert-equal "$expected" "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "classification for $verdict / $marker"
+    assert-equal "$expected" "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "classification for $verdict / $marker"
   done << 'EOF'
 prerequisite|PREREQUISITE: unavailable tool|prerequisite
 missing|PREREQUISITE: unavailable tool|fail
@@ -1538,7 +1585,7 @@ function test-quality-gate-does-not-reuse-a-producer-verdict() {
   # Act
   test-capture "$SCRIPT" run
   # Assert
-  assert-equal prerequisite "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "fresh producer result"
+  assert-equal prerequisite "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "fresh producer result"
   assert-equal 2 "$(sort -u "$TEST_TMP/result-paths" | wc -l | tr -d ' ')" "private path per gate"
   assert-equal outer "$(< "$QUALITY_GATE_RESULT_FILE")" "caller result remains private"
   # Arrange
@@ -1546,7 +1593,7 @@ function test-quality-gate-does-not-reuse-a-producer-verdict() {
   # Act
   test-capture "$SCRIPT" run
   # Assert
-  assert-equal fail "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "stale verdict is not reused"
+  assert-equal fail "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "stale verdict is not reused"
 
   return 0
 }
@@ -1560,8 +1607,8 @@ function test-quality-gate-keeps-success-and-timeouts-authoritative() {
   # Act
   test-capture "$SCRIPT" run
   # Assert
-  assert-equal timeout "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "timeout precedes producer verdict"
-  assert-equal pass "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "success precedes producer verdict"
+  assert-equal timeout "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "timeout precedes producer verdict"
+  assert-equal pass "$(jq -r "$SECOND_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "success precedes producer verdict"
 
   return 0
 }
@@ -1586,7 +1633,7 @@ function test-quality-gate-gives-scope-safe-recovery() {
     assert-contains "$reason" "not passed"
     assert-contains "$reason" "exit status 1"
     assert-contains "$reason" "Rerun: make lint"
-    assert-contains "$reason" "lint.log"
+    assert-contains "$reason" "$LINT_LOG_FILENAME"
     assert-not-contains "$reason" "Fix the cause"
   done
 
@@ -1609,7 +1656,7 @@ function test-quality-gate-warnings-have-diagnostic-context() {
   assert-not-contains "$TEST_STDOUT" '"decision"'
   assert-contains "$TEST_STDOUT" "exit status 1"
   assert-contains "$TEST_STDOUT" "make lint"
-  assert-contains "$TEST_STDOUT" "lint.log"
+  assert-contains "$TEST_STDOUT" "$LINT_LOG_FILENAME"
   # Arrange
   gate-start-turn
   printf 'three\n' >> README.md
@@ -1621,7 +1668,7 @@ function test-quality-gate-warnings-have-diagnostic-context() {
   assert-not-contains "$TEST_STDOUT" '"decision"'
   assert-contains "$TEST_STDOUT" "timed out after"
   assert-contains "$TEST_STDOUT" "make lint"
-  assert-contains "$TEST_STDOUT" "lint.log"
+  assert-contains "$TEST_STDOUT" "$LINT_LOG_FILENAME"
 
   return 0
 }
@@ -1641,7 +1688,7 @@ function test-quality-gate-consumes-real-runner-outcomes() {
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-not-contains "$TEST_STDOUT" '"decision"'
-  assert-equal prerequisite "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "real runner setup-only outcome"
+  assert-equal prerequisite "$(jq -r "$SECOND_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "real runner setup-only outcome"
   assert-contains "$TEST_STDOUT" "unknown, not passed"
   # Arrange
   gate-start-turn
@@ -1651,7 +1698,7 @@ function test-quality-gate-consumes-real-runner-outcomes() {
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-contains "$TEST_STDOUT" '"decision":"block"'
-  assert-equal fail "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "real runner mixed outcome"
+  assert-equal fail "$(jq -r "$SECOND_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "real runner mixed outcome"
   assert-contains "$TEST_STDOUT" "ASSERTION FAILED: real finding"
 
   return 0
@@ -1668,7 +1715,7 @@ function test-quality-gate-blocks-on-a-mixed-producer-result() {
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-contains "$TEST_STDOUT" '"decision":"block"'
-  assert-equal fail "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "explicit fail cannot be downgraded by marker"
+  assert-equal fail "$(jq -r "$SECOND_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "explicit fail cannot be downgraded by marker"
 
   return 0
 }
@@ -1720,7 +1767,7 @@ function test-quality-gate-does-not-rerun-when-nothing-changed-since-a-block() {
   assert-contains "$TEST_STDOUT" "not a pass"
   assert-contains "$TEST_STDOUT" "last-run.json"
   assert-equal "$LINT_CALL"$'\n'"$TEST_CALL" "$(gate-calls)" "make calls, the gates ran only at the first stop"
-  assert-equal unchanged-since-block "$(jq -r '.action' .git/quality-gate/last-hook.json)" "recorded action"
+  assert-equal unchanged-since-block "$(jq -r "$ACTION_FILTER" .git/quality-gate/last-hook.json)" "recorded action"
   assert-file-not-exists ".git/quality-gate/$SESSION.baseline"
 
   return 0
@@ -1762,7 +1809,7 @@ function test-quality-gate-still-blocks-when-a-later-gate-cannot-start() {
   assert-contains "$reason" "== lint (make lint) failed with exit status 1"
   assert-contains "$reason" "Verification is unknown"
   assert-equal "$LINT_CALL" "$(gate-calls)" "make calls"
-  assert-equal fail "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "recorded partial result"
+  assert-equal fail "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "recorded partial result"
 
   return 0
 }
@@ -1801,8 +1848,8 @@ function test-quality-gate-reports-state-and-log-errors() {
   assert-contains "$TEST_STDERR" "event audit is incomplete"
   assert-contains "$TEST_STDERR" "make quality-gate"
   # Arrange
-  rm -f ".git/quality-gate/logs/$SESSION/lint.log"
-  mkdir -p ".git/quality-gate/logs/$SESSION/lint.log"
+  rm -f ".git/quality-gate/logs/$SESSION/$LINT_LOG_FILENAME"
+  mkdir -p ".git/quality-gate/logs/$SESSION/$LINT_LOG_FILENAME"
   # Act
   test-capture gate-send "$(gate-stop-json)"
   # Assert
@@ -1832,7 +1879,7 @@ function test-quality-gate-blocks-with-valid-output-for-both-harnesses() {
   assert-contains "$reason" "== lint (make lint) failed with exit status 1 =="
   assert-contains "$reason" "lint finding on line 7"
   assert-contains "$reason" "Rerun: make lint"
-  assert-contains "$reason" "Full log: .git/quality-gate/logs/$SESSION/lint.log"
+  assert-contains "$reason" "Full log: .git/quality-gate/logs/$SESSION/$LINT_LOG_FILENAME"
   assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "Quality gate blocked the stop:"
   assert-not-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "warning only"
   assert-equal "$LINT_CALL"$'\n'"$TEST_CALL" "$(gate-calls)" "make calls, the gate after the failure still runs"
@@ -1958,7 +2005,7 @@ function test-quality-gate-reports-the-prerequisite-marker() {
   assert-not-contains "$TEST_STDOUT" '"decision"'
   assert-contains "$(jq -r '.systemMessage' <<< "$TEST_STDOUT")" "lint could not run (node is unavailable), so its result is unknown"
   assert-contains "$TEST_STDOUT" "make lint"
-  assert-contains "$TEST_STDOUT" "lint.log"
+  assert-contains "$TEST_STDOUT" "$LINT_LOG_FILENAME"
   assert-not-contains "$TEST_STDOUT" "Fix that"
 
   return 0
@@ -2000,9 +2047,9 @@ function test-quality-gate-keeps-the-logs-of-each-session-apart() {
   export LINT_OWNER=b
   test-capture gate-send "$(gate-stop-json session-b)"
   # Assert
-  assert-contains "$reason" "Full log: .git/quality-gate/logs/session-a/lint.log"
-  assert-contains "$(< .git/quality-gate/logs/session-a/lint.log)" "lint output for a"
-  assert-contains "$(< .git/quality-gate/logs/session-b/lint.log)" "lint output for b"
+  assert-contains "$reason" "Full log: .git/quality-gate/logs/session-a/$LINT_LOG_FILENAME"
+  assert-contains "$(< ".git/quality-gate/logs/session-a/$LINT_LOG_FILENAME")" "lint output for a"
+  assert-contains "$(< ".git/quality-gate/logs/session-b/$LINT_LOG_FILENAME")" "lint output for b"
 
   return 0
 }
@@ -2533,7 +2580,7 @@ function test-quality-gate-times-out-a-gate-and-stops-its-process-group() {
   test-capture gate-send "$(gate-stop-json)"
   # Assert
   assert-contains "$(jq -r '.reason' <<< "$TEST_STDOUT")" "== lint (make lint) timed out after "
-  assert-equal timeout "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "individual timeout"
+  assert-equal timeout "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "individual timeout"
   [[ $((SECONDS - started)) -lt 12 ]] || { echo "ASSERTION FAILED: the hook waited for the gate's child" >&2; return 1; }
   pid="$(< "$TEST_TMP/pid")"
   ! kill -0 "$pid" 2> /dev/null || { echo "ASSERTION FAILED: gate process $pid is still running" >&2; return 1; }
@@ -2636,11 +2683,11 @@ function test-quality-gate-reports-gates-the-time-budget-did-not-allow() {
   assert-contains "$TEST_STDOUT" "test was not run, the time budget was used up"
   assert-contains "$TEST_STDOUT" "unknown, not passed"
   assert-contains "$TEST_STDOUT" "make lint"
-  assert-contains "$TEST_STDOUT" "lint.log"
+  assert-contains "$TEST_STDOUT" "$LINT_LOG_FILENAME"
   assert-contains "$TEST_STDOUT" "make test"
   assert-not-contains "$TEST_STDOUT" '"decision"'
-  assert-equal incomplete "$(jq -r '.gates[0].state' .git/quality-gate/last-run.json)" "budget overrides explicit prerequisite"
-  assert-equal not-run "$(jq -r '.gates[1].state' .git/quality-gate/last-run.json)" "exhausted budget"
+  assert-equal incomplete "$(jq -r "$FIRST_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "budget overrides explicit prerequisite"
+  assert-equal not-run "$(jq -r "$SECOND_GATE_STATE_FILTER" .git/quality-gate/last-run.json)" "exhausted budget"
 
   return 0
 }
@@ -2847,7 +2894,7 @@ function test-quality-gate-run-fails-when-a-gate-fails() {
   assert-contains "$TEST_STDOUT" "PASS   test"
   assert-contains "$TEST_STDOUT" "exit status 1"
   assert-contains "$TEST_STDOUT" "Full log:"
-  assert-contains "$TEST_STDOUT" "logs/run/lint.log"
+  assert-contains "$TEST_STDOUT" "logs/run/$LINT_LOG_FILENAME"
 
   return 0
 }
@@ -2863,7 +2910,7 @@ function test-quality-gate-run-fails-when-a-gate-cannot-run() {
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$TEST_STDOUT" 'lint +prerequisite +make lint'
   assert-contains "$TEST_STDOUT" "unknown"
-  assert-contains "$TEST_STDOUT" "lint.log"
+  assert-contains "$TEST_STDOUT" "$LINT_LOG_FILENAME"
 
   return 0
 }

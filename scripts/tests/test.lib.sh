@@ -171,7 +171,8 @@ function test-run-suite() {
 #   $1=[index of the test in the suite]
 function _test-first-prerequisite() {
 
-  awk '/^PREREQUISITE: / { sub(/^PREREQUISITE: /, ""); print; exit }' "$SUITE_TMP/.test-$1.log" || true
+  local test_index="$1"
+  awk '/^PREREQUISITE: / { sub(/^PREREQUISITE: /, ""); print; exit }' "$SUITE_TMP/.test-$test_index.log" || true
 
   return 0
 }
@@ -435,11 +436,9 @@ function _test-mktemp-dir() {
 function _test-remove-dir() {
 
   local dir="$1"
-  if [[ -n "$dir" && -d "$dir" ]]; then
-    if ! rm -rf "$dir"; then
-      echo "ERROR: cannot remove test scratch directory '$dir'. Cleanup failed. Inspect it with: ls -ld '$dir'" >&2
-      return 1
-    fi
+  if [[ -n "$dir" && -d "$dir" ]] && ! rm -rf "$dir"; then
+    echo "ERROR: cannot remove test scratch directory '$dir'. Cleanup failed. Inspect it with: ls -ld '$dir'" >&2
+    return 1
   fi
 
   return 0

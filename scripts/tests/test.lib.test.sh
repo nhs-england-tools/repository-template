@@ -19,6 +19,8 @@ readonly FAILED_TEST_OUTPUT='t FAIL'
 readonly STDOUT_LABEL='stdout'
 readonly STDERR_LABEL='stderr'
 readonly EXIT_STATUS_LABEL='exit status'
+readonly PREREQUISITE_PREFIX='PREREQUISITE:'
+export PREREQUISITE_PREFIX
 readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all its tests. Verification is incomplete. Review the output above, then rerun this suite with VERBOSE=true.'
 
 function main() {
@@ -110,11 +112,11 @@ function t() { test-isolate-path no-such-tool-xyz; }' a t
   assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "t UNAVAILABLE"
   assert-contains "$TEST_STDOUT" "Total: 2, Passed: 1, Failed: 0, Unavailable: 1"
-  assert-contains "$TEST_STDOUT" "PREREQUISITE:"
+  assert-contains "$TEST_STDOUT" "$PREREQUISITE_PREFIX"
   assert-contains "$TEST_STDOUT" "no-such-tool-xyz"
   assert-contains "$TEST_STDOUT" "unknown"
   assert-contains "$TEST_STDOUT" "command -v"
-  assert-matches "$(grep -m1 '^PREREQUISITE:' <<< "$TEST_STDERR")" "^PREREQUISITE: 'no-such-tool-xyz' is not on PATH. Diagnose with: command -v 'no-such-tool-xyz'.* 1 test\\(s\\) could not run"
+  assert-matches "$(grep -m1 "^$PREREQUISITE_PREFIX" <<< "$TEST_STDERR")" "^$PREREQUISITE_PREFIX 'no-such-tool-xyz' is not on PATH. Diagnose with: command -v 'no-such-tool-xyz'.* 1 test\\(s\\) could not run"
 
   return 0
 }
@@ -140,7 +142,7 @@ function test-harness-captured-prerequisite-does-not-taint-passing-test() {
   write-mini-suite 'function t() {
   test-capture test-isolate-path no-such-tool-xyz
   assert-equal 77 "$TEST_STATUS"
-  assert-contains "$TEST_STDERR" "PREREQUISITE:"
+  assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
 }' t
   # Act
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
@@ -160,7 +162,7 @@ function t() { return 0; }' t
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "PREREQUISITE:"
+  assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
   assert-not-contains "$TEST_STDOUT" "Total:"
   assert-not-contains "$TEST_STDOUT" "PASS"
 
@@ -978,7 +980,7 @@ function test-isolate-path-fails-for-a-tool-hidden-by-an-earlier-isolation() {
   assert-contains "$TEST_STDERR" "ERROR:"
   assert-contains "$TEST_STDERR" "'mkfifo'"
   assert-contains "$TEST_STDERR" "changed PATH"
-  assert-not-contains "$TEST_STDERR" "PREREQUISITE:"
+  assert-not-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
 
   return 0
 }
@@ -993,7 +995,7 @@ function test-isolate-path-fails-for-an-invalid-tool-name() {
     # Assert
     assert-equal 1 "$TEST_STATUS" "invalid tool name '$name'"
     assert-contains "$TEST_STDERR" "ERROR:"
-    assert-not-contains "$TEST_STDERR" "PREREQUISITE:"
+    assert-not-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
   done
 
   return 0
@@ -1045,7 +1047,7 @@ function test-isolate-path-rejects-a-mise-shim-it-cannot-resolve() {
   test-capture test-isolate-path fake-tool
   # Assert
   assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "PREREQUISITE: mise cannot resolve 'fake-tool'"
+  assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX mise cannot resolve 'fake-tool'"
   assert-contains "$TEST_STDERR" "mise which"
 
   return 0
@@ -1065,7 +1067,7 @@ function test-isolate-path-rejects-invalid-mise-executable-paths() {
     test-capture test-isolate-path fake-tool
     # Assert
     assert-equal 77 "$TEST_STATUS" "invalid mise path: $resolved"
-    assert-contains "$TEST_STDERR" "PREREQUISITE:"
+    assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
     assert-contains "$TEST_STDERR" "fake-tool"
     assert-contains "$TEST_STDERR" "mise which"
   done
