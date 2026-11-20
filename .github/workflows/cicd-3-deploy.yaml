@@ -89,26 +89,22 @@ jobs:
         with:
           ref: refs/tags/${{ needs.metadata.outputs.tag }}
           persist-credentials: false
-  # Template placeholder: add project-specific deployment jobs and steps here.
-  # success:
-  #   name: "📣 Success notification"
-  #   runs-on: ubuntu-26.04
-  #   permissions:
-  #     contents: read
-  #   needs: [deploy]
-  #   steps:
-  #     - name: "🔎 Check prerequisites for notification"
-  #       id: check
-  #       env:
-  #         TEAMS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
-  #       run: |
-  #         printf 'secret_exist=%s\n' "$TEAMS_WEBHOOK_CONFIGURED" >> "$GITHUB_OUTPUT"
-  #     - name: "📣 Notify on deployment to an environment"
-  #       if: steps.check.outputs.secret_exist == 'true'
-  #       uses: nhs-england-tools/notify-msteams-action@02b92a76ea509f2d303d59b9c9e2bb30a224e5af # v1.1.0
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
-  #         message-title: "Notification title"
-  #         message-text: "This is a notification body"
-  #         link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # Report the outcome of every job in needs, including failures.
+  notify:
+    name: "📣 Notify pipeline status"
+    permissions:
+      actions: read
+      contents: read
+    needs: [metadata, deploy]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/notify-pipeline-status.yaml
+    with:
+      needs: ${{ toJSON(needs) }}
+      commit: ${{ needs.metadata.outputs.tag }}
+      details: |
+        Tag: ${{ needs.metadata.outputs.tag }}
+        Version: ${{ needs.metadata.outputs.version }}
+      success_title: "DEPLOYED: ${{ needs.metadata.outputs.tag }}"
+      success_text: "${{ needs.metadata.outputs.tag }} is deployed."
+    secrets:
+      TEAMS_NOTIFICATION_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}

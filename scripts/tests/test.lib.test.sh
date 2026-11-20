@@ -19,7 +19,9 @@ readonly FAILED_TEST_OUTPUT='t FAIL'
 readonly STDOUT_LABEL='stdout'
 readonly STDERR_LABEL='stderr'
 readonly EXIT_STATUS_LABEL='exit status'
-readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all its tests, see the output above'
+readonly PREREQUISITE_PREFIX='PREREQUISITE:'
+export PREREQUISITE_PREFIX
+readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all its tests. Verification is incomplete. Review the output above, then rerun this suite with VERBOSE=true.'
 
 function main() {
 
@@ -34,6 +36,12 @@ function main() {
   fi
 
   test-run-suite \
+    test-harness-propagates-unavailable-tests \
+    test-harness-keeps-mixed-failures-genuine \
+    test-harness-captured-prerequisite-does-not-taint-passing-test \
+    test-harness-setup-prerequisite-is-incomplete \
+    test-harness-teardown-failure-overrides-prerequisite \
+    test-harness-cleanup-failure-overrides-prerequisite \
     test-harness-fails-test-when-a-middle-command-fails \
     test-harness-fails-test-when-a-called-function-fails \
     test-harness-fails-test-when-a-command-substitution-fails \
@@ -78,6 +86,12 @@ function main() {
     test-isolate-path-links-the-executable-when-a-function-shadows-it \
     test-isolate-path-links-the-real-executable-behind-a-mise-shim \
     test-isolate-path-rejects-a-mise-shim-it-cannot-resolve \
+    test-isolate-path-fails-for-a-tool-hidden-by-an-earlier-isolation \
+    test-isolate-path-fails-for-an-invalid-tool-name \
+    test-isolate-path-rejects-invalid-mise-executable-paths \
+    test-harness-teardown-aborts-override-prerequisite \
+    test-harness-suite-cleanup-failure-overrides-prerequisite \
+    test-harness-rejects-setup-and-teardown-that-disable-errexit \
     test-create-repo-copies-files-and-commits-on-main \
     test-create-repo-links-executables-and-copies-other-files
 
@@ -86,6 +100,172 @@ function main() {
 
 # ==============================================================================
 # Suite runner
+
+function test-harness-propagates-unavailable-tests() {
+
+  # Arrange
+  write-mini-suite 'function a() { return 0; }
+function t() { test-isolate-path no-such-tool-xyz; }' a t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "t UNAVAILABLE"
+  assert-contains "$TEST_STDOUT" "Total: 2, Passed: 1, Failed: 0, Unavailable: 1"
+  assert-contains "$TEST_STDOUT" "$PREREQUISITE_PREFIX"
+  assert-contains "$TEST_STDOUT" "no-such-tool-xyz"
+  assert-contains "$TEST_STDOUT" "unknown"
+  assert-contains "$TEST_STDOUT" "command -v"
+  assert-matches "$(grep -m1 "^$PREREQUISITE_PREFIX" <<< "$TEST_STDERR")" "^$PREREQUISITE_PREFIX 'no-such-tool-xyz' is not on PATH. Diagnose with: command -v 'no-such-tool-xyz'.* 1 test\\(s\\) could not run"
+
+  return 0
+}
+
+function test-harness-keeps-mixed-failures-genuine() {
+
+  # Arrange
+  write-mini-suite 'function a() { return 77; }
+function b() { assert-equal expected actual; }' a b
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "b FAIL"
+  assert-contains "$TEST_STDOUT" "Total: 2, Passed: 0, Failed: 1, Unavailable: 1"
+
+  return 0
+}
+
+function test-harness-captured-prerequisite-does-not-taint-passing-test() {
+
+  # Arrange
+  write-mini-suite 'function t() {
+  test-capture test-isolate-path no-such-tool-xyz
+  assert-equal 77 "$TEST_STATUS"
+  assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
+}' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "t PASS"
+
+  return 0
+}
+
+function test-harness-setup-prerequisite-is-incomplete() {
+
+  # Arrange
+  write-mini-suite 'function test-suite-setup() { return 77; }
+function t() { return 0; }' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
+  assert-not-contains "$TEST_STDOUT" "Total:"
+  assert-not-contains "$TEST_STDOUT" "PASS"
+
+  return 0
+}
+
+function test-harness-teardown-failure-overrides-prerequisite() {
+
+  # Arrange
+  local setup
+  for setup in 'return 0' 'return 77'; do
+    write-mini-suite "function test-suite-setup() { $setup; }
+function test-suite-teardown() { false; echo hidden-failure; }
+function t() { return 77; }" t
+    # Act
+    test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+    assert-contains "$TEST_STDERR" "test-suite-teardown"
+    assert-not-contains "$TEST_STDOUT" "hidden-failure"
+  done
+
+  return 0
+}
+
+function test-harness-cleanup-failure-overrides-prerequisite() {
+
+  # Arrange
+  export OUT="$TEST_TMP"
+  write-mini-suite 'function t() {
+  echo "$TEST_TMP" > "$OUT/uncleaned"
+  function rm() { return 1; }
+  return 77
+}' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  rm -rf "$(cat "$TEST_TMP/uncleaned")"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "ERROR:"
+
+  return 0
+}
+
+function test-harness-teardown-aborts-override-prerequisite() {
+
+  # Arrange
+  local abort
+  for abort in 'exit 0' 'exit 77' 'echo "${NO_SUCH_VARIABLE_XYZ}"'; do
+    write-mini-suite "function test-suite-teardown() { $abort; }
+function t() { return 77; }" t
+    # Act
+    test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$abort cannot downgrade failure"
+    assert-contains "$TEST_STDERR" "test-suite-teardown"
+  done
+
+  return 0
+}
+
+function test-harness-suite-cleanup-failure-overrides-prerequisite() {
+
+  # Arrange
+  export OUT="$TEST_TMP"
+  write-mini-suite 'function test-suite-setup() {
+  echo "$SUITE_TMP" > "$OUT/uncleaned"
+  function rm() { return 1; }
+  return 77
+}
+function t() { return 0; }' t
+  # Act
+  test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+  rm -rf "$(cat "$TEST_TMP/uncleaned")"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "cannot remove test scratch directory"
+  assert-not-contains "$TEST_STDOUT" "Total:"
+
+  return 0
+}
+
+function test-harness-rejects-setup-and-teardown-that-disable-errexit() {
+
+  # Arrange
+  local phase
+  for phase in setup teardown; do
+    write-mini-suite "function test-suite-$phase() {
+  set +e
+  assert-equal expected actual
+  return 0
+}
+function t() { return 77; }" t
+    # Act
+    test-capture "$BASH" "$TEST_TMP/mini.test.sh"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$phase cannot hide assertion failure"
+    assert-contains "$TEST_STDERR" "test-suite-$phase"
+    assert-contains "$TEST_STDERR" "errexit"
+  done
+
+  return 0
+}
 
 function test-harness-fails-test-when-a-middle-command-fails() {
 
@@ -190,7 +370,9 @@ function test-harness-fails-a-suite-with-no-tests() {
   test-capture "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: no tests to run" "$TEST_STDERR" "$STDERR_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR: no tests to run"
+  assert-contains "$TEST_STDERR" "Verification did not run"
+  assert-contains "$TEST_STDERR" "test-run-suite"
   assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
@@ -304,12 +486,19 @@ function test-harness-does-not-pass-stdin-to-tests() {
 function test-harness-isolates-global-git-config() {
 
   # Arrange
+  mkdir -p "$TEST_TMP/git-template/hooks"
+  touch "$TEST_TMP/git-template/hooks/sentinel"
   write-mini-suite 'function t() {
   assert-equal /dev/null "$GIT_CONFIG_GLOBAL"
   assert-equal 1 "$GIT_CONFIG_NOSYSTEM"
+  git init -q "$TEST_TMP/repo"
+  assert-file-not-exists "$TEST_TMP/repo/.git/hooks/sentinel"
+  assert-equal "" "$GIT_TEMPLATE_DIR" "git template directory"
+  assert-equal "" "$(find "$TEST_TMP/repo/.git" -name "*.sample" -print)" "sample hooks"
 }' t
   # Act
   test-capture env GIT_CONFIG_GLOBAL="$TEST_TMP/gitconfig" GIT_CONFIG_NOSYSTEM=0 \
+    GIT_TEMPLATE_DIR="$TEST_TMP/git-template" \
     "$BASH" "$TEST_TMP/mini.test.sh"
   # Assert
   assert-contains "$TEST_STDOUT" "t PASS"
@@ -352,6 +541,8 @@ function test-harness-keeps-files-when-the-suite-scratch-directory-cannot-be-cre
   assert-stub-called mktemp -d
   assert-file-exists "$TEST_TMP/sentinel"
   assert-file-exists "$TEST_TMP/sentinel/file"
+  assert-contains "$TEST_STDERR" "mktemp -d"
+  assert-contains "$TEST_STDERR" "TMPDIR"
 
   return 0
 }
@@ -390,6 +581,7 @@ function test-harness-fails-a-test-that-leaves-errexit-off() {
   # Assert
   assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "ERROR: test 't' left errexit off"
+  assert-contains "$TEST_STDOUT" "VERBOSE=true"
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
 
   return 0
@@ -405,6 +597,7 @@ function test-harness-fails-a-test-that-calls-exit-0() {
   # Assert
   assert-contains "$TEST_STDOUT" "$FAILED_TEST_OUTPUT"
   assert-contains "$TEST_STDOUT" "ERROR: test 't' exited before returning"
+  assert-contains "$TEST_STDOUT" "VERBOSE=true"
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-matches "$(cat "$TEST_TMP/tmp-path")" '^/.+' "recorded scratch directory"
   assert-file-not-exists "$(cat "$TEST_TMP/tmp-path")"
@@ -493,6 +686,7 @@ function test-harness-stops-a-blocked-test-before-teardown() {
   # Assert
   assert-equal 143 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
   assert-file-exists "$TEST_TMP/pids"
+  assert-file-exists "$TEST_TMP/parent-ready"
   assert-file-exists "$TEST_TMP/torn-down"
   assert-file-not-exists "$TEST_TMP/alive-at-teardown"
   assert-file-not-exists "$TEST_TMP/late-write"
@@ -511,6 +705,7 @@ function test-harness-kills-a-test-that-ignores-term-after-the-stop-timeout() {
   # Assert
   assert-equal 143 "$SUITE_STATUS" "$EXIT_STATUS_LABEL"
   assert-file-exists "$TEST_TMP/pids"
+  assert-file-exists "$TEST_TMP/parent-ready"
   assert-file-exists "$TEST_TMP/torn-down"
   assert-file-not-exists "$TEST_TMP/alive-at-teardown"
   assert-file-not-exists "$TEST_TMP/late-write"
@@ -768,8 +963,40 @@ function test-isolate-path-keeps-listed-tools-and-rejects-missing-ones() {
   test-capture test-isolate-path no-such-tool-xyz
   # Assert
   assert-equal 0 "$found_status" "fake-tool lookup status"
-  assert-equal 1 "$TEST_STATUS" "missing tool status"
+  assert-equal 77 "$TEST_STATUS" "missing tool status"
   assert-contains "$TEST_STDERR" "no-such-tool-xyz"
+
+  return 0
+}
+
+function test-isolate-path-fails-for-a-tool-hidden-by-an-earlier-isolation() {
+
+  # Arrange
+  test-isolate-path
+  # Act
+  test-capture test-isolate-path mkfifo
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR:"
+  assert-contains "$TEST_STDERR" "'mkfifo'"
+  assert-contains "$TEST_STDERR" "changed PATH"
+  assert-not-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
+
+  return 0
+}
+
+function test-isolate-path-fails-for-an-invalid-tool-name() {
+
+  # Arrange
+  local name
+  for name in '' 'bad/name' 'two words'; do
+    # Act
+    test-capture test-isolate-path "$name"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "invalid tool name '$name'"
+    assert-contains "$TEST_STDERR" "ERROR:"
+    assert-not-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
+  done
 
   return 0
 }
@@ -819,8 +1046,31 @@ function test-isolate-path-rejects-a-mise-shim-it-cannot-resolve() {
   # Act
   test-capture test-isolate-path fake-tool
   # Assert
-  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "test-isolate-path: cannot resolve the mise shim of 'fake-tool'"
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX mise cannot resolve 'fake-tool'"
+  assert-contains "$TEST_STDERR" "mise which"
+
+  return 0
+}
+
+function test-isolate-path-rejects-invalid-mise-executable-paths() {
+
+  # Arrange
+  create-fake-mise-shim
+  PATH="$STUB_DIR:$TEST_TMP/mise/shims:$TEST_TMP/mise-bin:$PATH"
+  local resolved
+  touch "$TEST_TMP/not-executable"
+  for resolved in '' "$TEST_TMP/missing" "$TEST_TMP/not-executable" "$TEST_TMP" relative-tool; do
+    test-stub mise 'printf "%s\n" "$RESOLVED_PATH"'
+    export RESOLVED_PATH="$resolved"
+    # Act
+    test-capture test-isolate-path fake-tool
+    # Assert
+    assert-equal 77 "$TEST_STATUS" "invalid mise path: $resolved"
+    assert-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
+    assert-contains "$TEST_STDERR" "fake-tool"
+    assert-contains "$TEST_STDERR" "mise which"
+  done
 
   return 0
 }
@@ -886,13 +1136,21 @@ function write-mini-suite() {
 }
 
 # Write a mini test suite whose test blocks in an external command after writing
-# its own PID and the command's PID to "$OUT/pids". The teardown creates
+# its own PID and the command's PID to "$OUT/pids". The parent writes
+# "$OUT/parent-ready" after registering the test. The teardown creates
 # "$OUT/alive-at-teardown" if either is still running. With IGNORE_TERM set,
 # the test and the command ignore TERM.
 function write-blocked-mini-suite() {
 
   local body
   body="$(cat << 'EOF'
+await_end_definition="$(declare -f _test-await-end)"
+eval "${await_end_definition/#_test-await-end /blocked-mini-suite-await-end }"
+function _test-await-end() {
+  touch "$OUT/parent-ready"
+  blocked-mini-suite-await-end "$@" || return "$?"
+  return 0
+}
 function test-suite-teardown() {
   local pid state
   local -a pids=()
@@ -922,21 +1180,28 @@ EOF
 }
 
 # Run the mini suite in the background, wait up to 10 seconds for its test to
-# block, then send TERM to the suite process only. Kill the suite if it has not
-# exited 30 seconds later, and kill the blocked processes too, so a failing
-# harness leaves nothing running. The suite's temporary files go under
+# block and its parent to register it, then send TERM to the suite process only.
+# Fail without sending TERM if readiness is not reached. Kill the suite if it
+# has not exited 30 seconds later, and kill the blocked processes too, so a
+# failing harness leaves nothing running. The suite's temporary files go under
 # "$TEST_TMP/tmp". Sets SUITE_STATUS to the suite's exit status.
 function term-blocked-mini-suite() {
 
-  local suite_pid test_pid command_pid ticks=0
+  local suite_pid test_pid command_pid ticks=0 readiness_status=0
   mkdir "$TEST_TMP/tmp"
   TMPDIR="$TEST_TMP/tmp" "$BASH" "$TEST_TMP/mini.test.sh" > "$TEST_TMP/mini.out" 2> "$TEST_TMP/mini.err" &
   suite_pid=$!
-  while [[ ! -f "$TEST_TMP/pids" && $ticks -lt 100 ]] && kill -0 "$suite_pid" 2> /dev/null; do
+  while [[ ( ! -f "$TEST_TMP/pids" || ! -f "$TEST_TMP/parent-ready" ) && $ticks -lt 100 ]] && kill -0 "$suite_pid" 2> /dev/null; do
     sleep 0.1
     ticks=$((ticks + 1))
   done
-  kill -TERM "$suite_pid" 2> /dev/null || true
+  if [[ -f "$TEST_TMP/pids" && -f "$TEST_TMP/parent-ready" ]]; then
+    kill -TERM "$suite_pid" 2> /dev/null || true
+  else
+    echo "ERROR: blocked mini suite did not publish child PIDs and parent readiness" >&2
+    readiness_status=1
+    kill -KILL "$suite_pid" 2> /dev/null || true
+  fi
   ticks=0
   while [[ $ticks -lt 300 ]] && kill -0 "$suite_pid" 2> /dev/null; do
     sleep 0.1
@@ -950,7 +1215,7 @@ function term-blocked-mini-suite() {
     kill -KILL "$test_pid" "$command_pid" 2> /dev/null || true
   fi
 
-  return 0
+  return "$readiness_status"
 }
 
 # Run the mini suite in the background and kill it if it has not exited 10

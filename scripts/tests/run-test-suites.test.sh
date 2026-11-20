@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1091,SC2034,SC2317,SC2329
+# shellcheck disable=SC1091,SC2016,SC2034,SC2317,SC2329
 
 set -euo pipefail
 
@@ -15,6 +15,9 @@ set -euo pipefail
 # ==============================================================================
 
 readonly PASSING_SUITE_BODY='exit 0'
+readonly FAILING_SUITE_BODY='exit 1'
+readonly UNAVAILABLE_SUITE_BODY='exit 77'
+readonly PREREQUISITE_VERDICT='prerequisite'
 readonly EXIT_STATUS_LABEL='exit status'
 
 function main() {
@@ -23,6 +26,20 @@ function main() {
   source ./scripts/tests/test.lib.sh
 
   test-run-suite \
+    test-runner-publishes-only-aggregate-prerequisite \
+    test-runner-keeps-mixed-failures-genuine \
+    test-runner-does-not-classify-log-markers \
+    test-runner-isolates-private-result-from-children \
+    test-runner-fails-when-result-cannot-be-published \
+    test-runner-rejects-relative-result-path \
+    test-runner-all-unavailable-remains-nonzero-without-result-file \
+    test-runner-final-publication-failure-is-genuine \
+    test-docker-suite-reports-missing-cli-as-prerequisite \
+    test-docker-suite-reports-unreachable-daemon-as-prerequisite \
+    test-docker-suite-keeps-image-build-failure-genuine \
+    test-docker-cleanup-failures-override-suite-outcomes \
+    test-docker-cleanup-removes-only-owned-tags \
+    test-runner-quotes-failed-suite-rerun-commands \
     test-runner-runs-every-suite-and-passes \
     test-runner-preserves-paths-and-filters-suites \
     test-runner-fails-when-any-suite-fails-and-still-runs-the-rest \
@@ -45,16 +62,285 @@ function main() {
 
 # ==============================================================================
 
+function test-runner-publishes-only-aggregate-prerequisite() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  write-fixture a.test.sh "echo 'PREREQUISITE: missing example-tool, verification unknown, run command -v example-tool'; $UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "$UNAVAILABLE_SUITE_BODY"
+  write-fixture c.test.sh "$PASSING_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$TEST_TMP/expected"
+  assert-files-identical "$TEST_TMP/expected" "$QUALITY_GATE_RESULT_FILE"
+  assert-contains "$TEST_STDOUT" "Suites: 3, Passed: 1, Failed: 0, Unavailable: 2"
+  assert-contains "$TEST_STDOUT" "UNAVAILABLE: $TEST_TMP/tree/a.test.sh (exit code 77)"
+  assert-not-contains "$TEST_STDOUT" "FAILED:"
+  assert-contains "$TEST_STDOUT" "Suites requiring attention:"
+  local rerun
+  printf -v rerun 'dir=%q bash scripts/tests/run-test-suites.sh' "$TEST_TMP/tree"
+  assert-contains "$TEST_STDOUT" "$rerun"
+  assert-contains "$TEST_STDOUT" $'\nPREREQUISITE: 2 suite(s)'
+  assert-contains "$TEST_STDOUT" "example-tool"
+  assert-contains "$TEST_STDOUT" "unknown"
+
+  return 0
+}
+
+function test-runner-keeps-mixed-failures-genuine() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "echo 'ASSERTION FAILED: real failure'; $FAILING_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "mixed verdict"
+  assert-contains "$TEST_STDOUT" "real failure"
+  assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 0, Failed: 1, Unavailable: 1"
+  assert-contains "$TEST_STDOUT" "UNAVAILABLE: $TEST_TMP/tree/a.test.sh (exit code 77)"
+  assert-contains "$TEST_STDOUT" "FAILED: $TEST_TMP/tree/b.test.sh (exit code 1)"
+
+  return 0
+}
+
+function test-runner-does-not-classify-log-markers() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  write-fixture a.test.sh "echo 'PREREQUISITE: expected error'; echo 'ERROR Docker test suite cannot run: legacy'; $FAILING_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "markers cannot downgrade failure"
+
+  return 0
+}
+
+function test-runner-isolates-private-result-from-children() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  write-fixture a.test.sh "echo \"private: \${QUALITY_GATE_RESULT_FILE-unset}\"; $UNAVAILABLE_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "private: unset"
+  assert-equal prerequisite "$(cat "$QUALITY_GATE_RESULT_FILE")" "parent publishes aggregate prerequisite verdict"
+
+  return 0
+}
+
+function test-runner-fails-when-result-cannot-be-published() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/nonexistent/result"
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR:"
+  assert-contains "$TEST_STDERR" "$QUALITY_GATE_RESULT_FILE"
+  assert-contains "$TEST_STDERR" "ls -ld"
+
+  return 0
+}
+
+function test-runner-rejects-relative-result-path() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE=relative-result
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  # Act
+  run-runner-in-tree dir=.
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "absolute"
+  assert-file-not-exists "$TEST_TMP/tree/relative-result"
+
+  return 0
+}
+
+function test-runner-all-unavailable-remains-nonzero-without-result-file() {
+
+  # Arrange
+  unset QUALITY_GATE_RESULT_FILE
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "$UNAVAILABLE_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 0, Failed: 0, Unavailable: 2"
+  assert-contains "$TEST_STDOUT" $'\nPREREQUISITE: 2 suite(s)'
+
+  return 0
+}
+
+function test-runner-final-publication-failure-is-genuine() {
+
+  # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  write-fixture a.test.sh "rm '$QUALITY_GATE_RESULT_FILE'
+mkdir '$QUALITY_GATE_RESULT_FILE'
+$UNAVAILABLE_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR: cannot publish"
+  assert-contains "$TEST_STDERR" "$QUALITY_GATE_RESULT_FILE"
+
+  return 0
+}
+
+function test-docker-suite-reports-missing-cli-as-prerequisite() {
+
+  # Arrange
+  test-isolate-path
+  # Act
+  test-capture "$BASH" "$TEST_REPO_ROOT/scripts/docker/tests/docker.test.sh"
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "PREREQUISITE:"
+  assert-contains "$TEST_STDERR" "command -v docker"
+  assert-contains "$TEST_STDERR" "unknown"
+  assert-not-contains "$TEST_STDOUT" "Total:"
+  assert-not-contains "$TEST_STDERR" "cleanup"
+
+  return 0
+}
+
+function test-docker-suite-reports-unreachable-daemon-as-prerequisite() {
+
+  # Arrange
+  test-isolate-path
+  test-stub docker "$FAILING_SUITE_BODY"
+  # Act
+  test-capture "$BASH" "$TEST_REPO_ROOT/scripts/docker/tests/docker.test.sh"
+  # Assert
+  assert-equal 77 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "PREREQUISITE:"
+  assert-contains "$TEST_STDERR" "docker info"
+  assert-contains "$TEST_STDERR" "unknown"
+  assert-not-contains "$TEST_STDOUT" "Total:"
+  assert-not-contains "$(test-stub-calls docker)" "images"
+  assert-not-contains "$(test-stub-calls docker)" "rmi"
+
+  return 0
+}
+
+function test-docker-suite-keeps-image-build-failure-genuine() {
+
+  # Arrange
+  test-isolate-path
+  test-stub docker 'case "${1:-}" in
+info) exit 0 ;;
+images) printf "%s\n" "$DOCKER_IMAGE:partial"; exit 0 ;;
+rmi) exit 0 ;;
+esac
+echo build-fixture-failed >&2; '"$FAILING_SUITE_BODY"
+  # Act
+  test-capture "$BASH" "$TEST_REPO_ROOT/scripts/docker/tests/docker.test.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "ERROR: docker-build"
+  assert-contains "$TEST_STDERR" "build-fixture-failed"
+  assert-contains "$(test-stub-calls docker)" "build --progress=plain"
+  assert-matches "$(test-stub-calls docker)" 'rmi repository-template/docker-test-[a-z0-9]+:partial'
+  assert-not-contains "$TEST_STDERR" "PREREQUISITE:"
+
+  return 0
+}
+
+function test-docker-cleanup-failures-override-suite-outcomes() {
+
+  # Arrange
+  local failure outcome
+  test-isolate-path mkfifo
+  for failure in images rmi; do
+    test-stub docker "case \"\${1:-}\" in
+$failure) echo cleanup-fixture-failed >&2; $FAILING_SUITE_BODY ;;
+images) printf '%s\\n' \"\$DOCKER_IMAGE:partial\" ;;
+esac"
+    for outcome in 0 77; do
+      # Act
+      run-docker-cleanup-probe "$outcome"
+      # Assert
+      assert-equal 1 "$TEST_STATUS" "$failure cleanup overrides status $outcome"
+      assert-contains "$TEST_STDERR" "ERROR:"
+      assert-contains "$TEST_STDERR" "Cleanup is incomplete"
+      assert-contains "$TEST_STDERR" "docker $failure"
+      assert-contains "$TEST_STDERR" "cleanup-fixture-failed"
+      if [[ "$failure" == images ]]; then
+        assert-not-contains "$(test-stub-calls docker)" "rmi"
+      fi
+    done
+  done
+
+  return 0
+}
+
+function test-docker-cleanup-removes-only-owned-tags() {
+
+  # Arrange
+  test-isolate-path mkfifo
+  test-stub docker 'if [[ "${1:-}" == images ]]; then
+printf "%s\n" "$DOCKER_IMAGE:partial" "$CLEAN_IMAGE:latest" "$DOCKER_IMAGE-other:1" other/image:1
+fi'
+  # Act
+  run-docker-cleanup-probe 0
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDERR" "successful cleanup is silent"
+  assert-matches "$(test-stub-calls docker)" 'rmi repository-template/probe-[a-z0-9]+:partial repository-template/probe-clean-[a-z0-9]+:latest'
+  assert-not-contains "$(test-stub-calls docker)" "other:1"
+  assert-not-contains "$(test-stub-calls docker)" "other/image:1"
+
+  return 0
+}
+
+function test-runner-quotes-failed-suite-rerun-commands() {
+
+  # Arrange
+  local name command
+  for name in 'space suite.test.sh' "quote'\$; suite.test.sh"; do
+    write-fixture "$name" "$FAILING_SUITE_BODY"
+  done
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "Verification failed"
+  for name in 'space suite.test.sh' "quote'\$; suite.test.sh"; do
+    printf -v command 'VERBOSE=true %q' "$TEST_TMP/tree/$name"
+    assert-contains "$TEST_STDOUT" "$command" "shell-quoted command for each failed suite"
+  done
+
+  return 0
+}
+
 function test-runner-runs-every-suite-and-passes() {
 
   # Arrange
-  write-fixture a/tests/one.test.sh 'echo one-ran; exit 0'
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
+  write-fixture a/tests/one.test.sh 'echo one-ran; echo "PREREQUISITE: expected captured error"; exit 0'
   write-fixture b/tests/two.test.sh 'echo two-ran; exit 0'
-  write-fixture b/tests/helper.sh 'exit 1'
+  write-fixture b/tests/helper.sh "$FAILING_SUITE_BODY"
   # Act
   run-runner
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal pass "$(cat "$QUALITY_GATE_RESULT_FILE")" "passing verdict"
+  assert-contains "$TEST_STDOUT" "PREREQUISITE: expected captured error"
   assert-contains "$TEST_STDOUT" "one-ran"
   assert-contains "$TEST_STDOUT" "two-ran"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 2, Failed: 0"
@@ -66,7 +352,7 @@ function test-runner-runs-every-suite-and-passes() {
 function test-runner-fails-when-any-suite-fails-and-still-runs-the-rest() {
 
   # Arrange
-  write-fixture a.test.sh 'echo a-ran; exit 1'
+  write-fixture a.test.sh "echo a-ran; $FAILING_SUITE_BODY"
   write-fixture b.test.sh 'echo b-ran; exit 0'
   # Act
   run-runner
@@ -84,11 +370,14 @@ function test-runner-fails-when-any-suite-fails-and-still-runs-the-rest() {
 function test-runner-fails-when-no-suite-is-found() {
 
   # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   git init -q "$TEST_TMP/tree"
   # Act
   run-runner
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "empty discovery verdict"
   assert-contains "$TEST_STDERR" "No test suites found under"
 
   return 0
@@ -128,11 +417,14 @@ function test-runner-preserves-paths-and-filters-suites() {
 function test-runner-fails-when-directory-is-missing() {
 
   # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   write-fixture existing.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner "$TEST_TMP/tree/missing"
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "missing directory verdict"
   assert-contains "$TEST_STDERR" "cannot search $TEST_TMP/tree/missing for test suites"
   assert-not-contains "$TEST_STDOUT" "Suites:" "no suites run after a Git discovery failure"
 
@@ -229,7 +521,7 @@ while [[ \$i -lt 50 ]]; do
   sleep 0.1
   i=\$((i + 1))
 done
-exit 1"
+${FAILING_SUITE_BODY}"
   write-fixture b.test.sh "touch '$marker'"
   # Act
   run-runner
@@ -259,7 +551,7 @@ function test-runner-skips-git-ignored-suites() {
   # Arrange
   git init -q "$TEST_TMP/tree"
   echo 'ignored/' > "$TEST_TMP/tree/.gitignore"
-  write-fixture ignored/tests/bad.test.sh 'exit 1'
+  write-fixture ignored/tests/bad.test.sh "$FAILING_SUITE_BODY"
   write-fixture kept.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner
@@ -276,7 +568,7 @@ function test-runner-skips-git-ignored-suites-under-a-relative-dir() {
   # Arrange
   git init -q "$TEST_TMP/tree"
   echo '/scripts/a/tests/bad.test.sh' > "$TEST_TMP/tree/.gitignore"
-  write-fixture scripts/a/tests/bad.test.sh 'exit 1'
+  write-fixture scripts/a/tests/bad.test.sh "$FAILING_SUITE_BODY"
   write-fixture scripts/b/tests/kept.test.sh "$PASSING_SUITE_BODY"
   # Act
   run-runner-in-tree
@@ -291,6 +583,8 @@ function test-runner-skips-git-ignored-suites-under-a-relative-dir() {
 function test-runner-fails-a-suite-that-is-not-executable() {
 
   # Arrange
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  printf '%s\n' "$PREREQUISITE_VERDICT" > "$QUALITY_GATE_RESULT_FILE"
   write-fixture a.test.sh "$PASSING_SUITE_BODY"
   chmod -x "$TEST_TMP/tree/a.test.sh"
   write-fixture b.test.sh "$PASSING_SUITE_BODY"
@@ -298,6 +592,7 @@ function test-runner-fails-a-suite-that-is-not-executable() {
   run-runner
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "non-executable suite verdict"
   assert-contains "$TEST_STDOUT" "FAILED: $TEST_TMP/tree/a.test.sh (exit code 126)"
   assert-contains "$TEST_STDOUT" "Suites: 2, Passed: 1, Failed: 1"
   assert-contains "$TEST_STDOUT" "$TEST_TMP/tree/a.test.sh: exit code 126"
@@ -325,7 +620,7 @@ function test-runner-does-not-pass-its-variables-to-suites() {
 function test-runner-ends-suite-output-with-a-newline() {
 
   # Arrange
-  write-fixture a.test.sh "printf 'a-no-newline'; exit 1"
+  write-fixture a.test.sh "printf 'a-no-newline'; $FAILING_SUITE_BODY"
   write-fixture b.test.sh "printf 'b-no-newline'"
   # Act
   run-runner
@@ -339,6 +634,31 @@ function test-runner-ends-suite-output-with-a-newline() {
 
 # ==============================================================================
 # Helpers
+
+# Exercise the real Docker teardown through the harness without a daemon.
+# Arguments:
+#   $1=[test outcome before cleanup]
+function run-docker-cleanup-probe() {
+
+  local outcome="$1"
+  test-capture "$BASH" -c '
+source <(sed '\''/^is-arg-true "\${VERBOSE/,$d'\'' "$1/scripts/docker/tests/docker.test.sh")
+source "$1/scripts/tests/test.lib.sh"
+function test-suite-setup() {
+  local suffix
+  suffix="$(basename "$SUITE_TMP" | tr "[:upper:]" "[:lower:]" | tr -cd a-z0-9)"
+  export DOCKER_IMAGE="repository-template/probe-$suffix"
+  export CLEAN_IMAGE="repository-template/probe-clean-$suffix"
+  DOCKER_TEST_BUILD_ATTEMPTED=true
+  return 0
+}
+function probe() { return "$OUTCOME"; }
+OUTCOME="$2"
+test-run-suite probe
+' _ "$TEST_REPO_ROOT" "$outcome"
+
+  return 0
+}
 
 # Write an executable plain bash script into the fixture tree "$TEST_TMP/tree",
 # a git repository so the runner can discover its suites.

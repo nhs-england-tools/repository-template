@@ -113,7 +113,7 @@ jobs:
       contents: read
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-3-build.yaml
-    if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
+    if: github.ref == 'refs/heads/main' || needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime_london: "${{ needs.metadata.outputs.build_datetime_london }}"
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
@@ -129,7 +129,7 @@ jobs:
       contents: read
     needs: [metadata, build-stage]
     uses: ./.github/workflows/stage-4-acceptance.yaml
-    if: needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
+    if: github.ref == 'refs/heads/main' || needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime_london: "${{ needs.metadata.outputs.build_datetime_london }}"
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
@@ -139,3 +139,18 @@ jobs:
       nodejs_version: "${{ needs.metadata.outputs.nodejs_version }}"
       python_version: "${{ needs.metadata.outputs.python_version }}"
       version: "${{ needs.metadata.outputs.version }}"
+  # Report the outcome of every job in needs, including failures.
+  notify:
+    name: "📣 Notify pipeline status"
+    permissions:
+      actions: read
+      contents: read
+    needs: [metadata, commit-stage, test-stage, build-stage, acceptance-stage]
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/notify-pipeline-status.yaml
+    with:
+      needs: ${{ toJSON(needs) }}
+      stop_the_line: true
+      details: "Version: ${{ needs.metadata.outputs.version }}"
+    secrets:
+      TEAMS_NOTIFICATION_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}

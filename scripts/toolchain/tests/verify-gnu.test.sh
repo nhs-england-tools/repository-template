@@ -47,8 +47,8 @@ function main() {
   return 0
 }
 
-# Create the one executable every fake tool links to, and run it once so macOS
-# assesses it here rather than in each test.
+# Create and warm the shared fake executables so macOS assesses them here
+# rather than in each test.
 function test-suite-setup() {
 
   FAKE_TOOL="$SUITE_TMP/fake-tool"
@@ -77,6 +77,30 @@ EOF
   chmod +x "$FAKE_TOOL"
   printf '0\n' > "$SUITE_TMP/.fake-tool.fake"
   "$FAKE_TOOL"
+
+  FAKE_DATE="$SUITE_TMP/fake-date"
+  cat > "$FAKE_DATE" << 'EOF'
+#!/bin/sh
+{
+  IFS= read -r version
+  IFS= read -r timestamp
+  IFS= read -r epoch
+} < "${0%/*}/.${0##*/}.data"
+case "$*" in
+  "--date=2026-09-27T07:08:09+0000 -u +%Y%m%d%H%M%S")
+    printf '%s\n' "$timestamp"
+    ;;
+  "--date=1970-01-01T00:00:01+0000 -u +%s")
+    printf '%s\n' "$epoch"
+    ;;
+  *)
+    printf '%s\n' "$version"
+    ;;
+esac
+EOF
+  chmod +x "$FAKE_DATE"
+  printf '%s\n' 'date (GNU coreutils) 9.5' '20260927070809' '1' > "$SUITE_TMP/.fake-date.data"
+  "$FAKE_DATE" --version > /dev/null
 
   return 0
 }
@@ -496,24 +520,8 @@ function create-fake-date() {
 
   local dir="$TEST_TMP/fakes"
   [[ -d "$dir" ]] || mkdir "$dir"
-  cat > "$dir/date" << EOF
-#!/bin/sh
-case "\$*" in
-  "--version")
-    printf '%s\n' '$1'
-    ;;
-  "--date=2026-09-27T07:08:09+0000 -u +%Y%m%d%H%M%S")
-    printf '%s\n' '20260927070809'
-    ;;
-  "--date=1970-01-01T00:00:01+0000 -u +%s")
-    printf '%s\n' '1'
-    ;;
-  *)
-    printf '%s\n' '$1'
-    ;;
-esac
-EOF
-  chmod +x "$dir/date"
+  printf '%s\n' "$1" '20260927070809' '1' > "$dir/.date.data"
+  ln -sf "$FAKE_DATE" "$dir/date"
 
   return 0
 }

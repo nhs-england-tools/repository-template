@@ -625,8 +625,8 @@ function workflow-security-run-fixture() {
 function workflow-security-create-repo() {
 
   local repo="$TEST_TMP/repo"
-  # shellcheck disable=SC2119
-  quality-create-fixture-repo
+  cp -Rp "$SUITE_TMP/quality-fixture-base" "$repo"
+  cp "$TEST_REPO_ROOT/scripts/quality/tests/mise.toml.test" "$repo/mise.toml"
   mkdir -p "$repo/.github" "$repo/scripts/config"
   [[ ! -d "$TEST_TMP/workflows" ]] || cp -R "$TEST_TMP/workflows" "$repo/.github/workflows"
   [[ ! -d "$TEST_TMP/actions" ]] || cp -R "$TEST_TMP/actions" "$repo/.github/actions"

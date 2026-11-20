@@ -16,7 +16,7 @@ set -euo pipefail
 # ==============================================================================
 
 readonly EXIT_STATUS_LABEL='exit status'
-readonly CHECKS=(check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security format-markdown)
+readonly CHECKS=(check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security check-pipeline-contract format-markdown)
 
 # Set up the suite fixtures and run every test.
 function main() {
@@ -36,6 +36,7 @@ function main() {
     test-make-lint-targets-run-their-check-directly \
     test-make-lint-shell-honours-a-scoped-mode \
     test-make-lint-workflow-security-honours-a-scoped-mode \
+    test-make-lint-pipeline-contract-honours-a-scoped-mode \
     test-make-format-defaults-to-all-and-passes-a-scoped-mode
 
   return 0
@@ -72,7 +73,8 @@ function test-make-lint-checks-every-tracked-file-by-default() {
 check-markdown-format.sh check=all pr=unset
 check-markdown-links.sh check=all pr=unset
 check-shell-lint.sh check=all pr=unset
-check-workflow-security.sh check=all pr=unset" "$(cat "$TEST_TMP/checks.log")" "check modes"
+check-workflow-security.sh check=all pr=unset
+check-pipeline-contract.sh check=all pr=unset" "$(cat "$TEST_TMP/checks.log")" "check modes"
   assert-stub-not-called gh
 
   return 0
@@ -91,7 +93,8 @@ function test-make-lint-passes-a-check-mode-to-the-file-checks() {
 check-markdown-format.sh check=branch pr=v2
 check-markdown-links.sh check=branch pr=v2
 check-shell-lint.sh check=branch pr=v2
-check-workflow-security.sh check=branch pr=v2" "$(cat "$TEST_TMP/checks.log")" "check modes"
+check-workflow-security.sh check=branch pr=v2
+check-pipeline-contract.sh check=branch pr=v2" "$(cat "$TEST_TMP/checks.log")" "check modes"
   assert-equal 1 "$(test-stub-calls gh | awk 'END { print NR }')" "number of GitHub CLI calls"
 
   return 0
@@ -104,7 +107,7 @@ function test-make-lint-targets-run-their-check-directly() {
   make-lint-create-fixture-repo
   cd "$TEST_TMP/repo"
   # Act
-  for target in lint-file-format lint-markdown-format lint-markdown-links lint-shell lint-workflow-security; do
+  for target in lint-file-format lint-markdown-format lint-markdown-links lint-shell lint-workflow-security lint-pipeline-contract; do
     make-lint-run "$target"
     assert-equal 0 "$TEST_STATUS" "exit status of $target"
   done
@@ -113,7 +116,8 @@ function test-make-lint-targets-run-their-check-directly() {
 check-markdown-format.sh check=all pr=unset
 check-markdown-links.sh check=all pr=unset
 check-shell-lint.sh check=all pr=unset
-check-workflow-security.sh check=all pr=unset" "$(cat "$TEST_TMP/checks.log")" "check run by each target"
+check-workflow-security.sh check=all pr=unset
+check-pipeline-contract.sh check=all pr=unset" "$(cat "$TEST_TMP/checks.log")" "check run by each target"
   assert-equal 0 "$(make-lint-target-count 'lint-*')" "lint-* targets defined in the root Makefile"
 
   return 0
@@ -143,6 +147,20 @@ function test-make-lint-workflow-security-honours-a-scoped-mode() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "check-workflow-security.sh check=staged-changes pr=unset" "$(cat "$TEST_TMP/checks.log")" "workflow security mode"
+
+  return 0
+}
+
+function test-make-lint-pipeline-contract-honours-a-scoped-mode() {
+
+  # Arrange
+  make-lint-create-fixture-repo
+  cd "$TEST_TMP/repo"
+  # Act
+  make-lint-run lint-pipeline-contract check=staged-changes
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "check-pipeline-contract.sh check=staged-changes pr=unset" "$(cat "$TEST_TMP/checks.log")" "pipeline contract mode"
 
   return 0
 }

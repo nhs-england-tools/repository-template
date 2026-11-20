@@ -84,6 +84,28 @@ Maintainers apply the project's review, approval, and protected-branch rules.
 These rules should be documented by the project team after adopting this
 template.
 
+## When main is broken 🚨
+
+The CI/CD pipeline runs every stage on each push to `main`. When that run
+fails, it posts a message to the team's Microsoft Teams channel, and it posts
+again when `main` is green. Only the newest finished run reports, so a slow run
+of an older commit does not undo the news of a newer one. A run that a person
+cancels is not reported.
+
+- Stop merging to `main` until it is green again. Only the fix or the revert
+  may merge.
+- The author of the breaking change owns the fix. Anyone may help.
+- Fix forward only when the fix is quick. If `main` is still broken 10 minutes
+  after the message, revert the change and fix it on a branch.
+- Re-run a failed job only when the change clearly did not cause the failure,
+  such as a runner outage, and say so in the channel. A passing re-run posts
+  that `main` is green again.
+
+A project can change the time limit when it adopts this template. Update the
+message in
+[notify-pipeline-status.jq](../scripts/cicd/notify-pipeline-status.jq) to
+match.
+
 ## Tailor this guide when adopting the template 🧩
 
 Before accepting contributions to an NHS project created from this template,

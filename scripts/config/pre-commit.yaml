@@ -43,6 +43,13 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: check-pipeline-contract
+        name: Check pipeline contract
+        entry: make lint-pipeline-contract check=all
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: test
         name: Run tests
         entry: make test

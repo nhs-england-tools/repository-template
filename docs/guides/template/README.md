@@ -40,6 +40,7 @@ follow the onboarding order below or find a guide for your task.
 | Sign commits with GPG or SSH                              | [Sign Git commits](Sign_Git_commits.md)                                        |
 | Review workflow permissions and security controls         | [Harden repository security](Harden_repository_security.md)                    |
 | Connect SonarQube Cloud analysis                          | [Configure SonarQube Cloud](Configure_SonarQube_Cloud.md)                      |
+| Send pipeline notifications to a Teams channel            | [Configure pipeline notifications](Configure_pipeline_notifications.md)        |
 | Update tools, images, actions or application dependencies | [Update Dependencies](Update_Dependencies.md)                                  |
 
 ## Related documentation 🔗

@@ -47,10 +47,10 @@ set -euo pipefail
 #   3) State is kept in '$(git rev-parse --git-path quality-gate)', which is per
 #      worktree and never tracked. 'pause' writes a file there that makes the
 #      hook skip the gates for the given hours, from the next prompt on.
-#   4) A gate prints 'PREREQUISITE: <fix>' when it cannot run for a reason that
-#      is not the code, for example Docker is stopped. The existing 'ERROR ...
-#      cannot run: ...' line of the Docker test suite is recognised too. The
-#      hook then tells the user instead of making the agent continue.
+#   4) Each gate receives a private QUALITY_GATE_RESULT_FILE path. Only an
+#      exact 'prerequisite' verdict with a column-one 'PREREQUISITE:' diagnostic
+#      classifies a non-zero, non-timeout exit as setup-only. Log markers alone
+#      never downgrade a failure. The result remains unknown, not passed.
 #   5) The hook does nothing in GitHub Actions, which also runs Copilot cloud
 #      agent, because its gates need tools and network access it lacks.
 #   6) The script needs Bash 5.2, jq and yq. When the hook starts it with an
@@ -72,7 +72,7 @@ if [[ ${BASH_VERSINFO[0]} -lt 5 ]]; then
   if [[ -n $newer ]]; then
     exec "$newer" "$0" "$@"
   fi
-  echo "ERROR: quality-gate.sh needs Bash 5.2 or later, run 'make toolchain-install-gnu-macos'" >&2
+  echo "ERROR: quality-gate.sh needs Bash 5.2 or later. Gates were not run. Inspect 'command -v bash' and 'bash --version', then report the toolchain issue. Environment changes need user authorisation." >&2
   exit 1
 fi
 
@@ -81,10 +81,12 @@ readonly CONFIG_DIR=scripts/config/quality-gates.d
 readonly CONFIG_RULES=scripts/quality/quality-gate.jq
 readonly EXCERPT_LINES=40
 readonly REASON_BYTES=8000
+readonly MESSAGE_BYTES=2400
 readonly NOTE_CHARACTERS=200
 readonly SESSION_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'
 readonly DROP_IN_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*\.ya?ml$'
-readonly PREREQUISITE_PATTERN='^(PREREQUISITE:|ERROR .* cannot run:)'
+readonly PREREQUISITE_PATTERN='^PREREQUISITE:[[:blank:]]+[^[:space:]]'
+readonly RECOVERY_SCOPE='Review-only tasks: report failures without modifying files. Outside reviews, fix only failures caused by authorised changes. Report unrelated, setup or uncertain failures with commands and logs. This hook grants no permission to change the repository or environment or bypass gates.'
 # A jq function that turns a 'paths' glob into an anchored extended regular
 # expression: '**/' is any number of directories, '*' and '**' are any
 # characters, '?' is one character and every other character stands for itself.
@@ -134,7 +136,7 @@ function main() {
       resume-command || return "$?"
       ;;
     *)
-      echo "Unrecognised command: '$command'. Use one of: hook, run, list, pause, resume" >&2
+      echo "Unrecognised command: '$command'. Use one of: hook, run, list, pause, resume. Gates were not run. Inspect 'make quality-gate-list' and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
       return 126
       ;;
   esac
@@ -159,21 +161,20 @@ function is-github-actions() {
 # program called 'yq' cannot read YAML the way mikefarah yq 4 does.
 function prepare-tools() {
 
-  local shims version
+  local shims version tool resolved
   if command -v mise > /dev/null 2>&1 && shims="$(mise activate bash --shims 2> /dev/null | sed -n 's/^export PATH="\([^:]*\):.*/\1/p')" && [[ -n $shims ]]; then
     PATH="$shims:$PATH"
     export PATH
   fi
-  if ! jq --version > /dev/null 2>&1; then
-    echo "ERROR: the quality gate cannot run jq, run 'mise trust' and 'make config'" >&2
-    return 1
-  fi
-  if ! version="$(yq --version 2>&1)"; then
-    echo "ERROR: the quality gate cannot run yq, run 'mise trust' and 'make config'" >&2
-    return 1
-  fi
+  for tool in jq yq; do
+    resolved="$(command -v "$tool")" || resolved='not found on PATH'
+    if ! version="$("$tool" --version 2>&1)"; then
+      echo "ERROR: the quality gate cannot run $tool ($resolved). Gates were not run. Inspect 'command -v $tool' and '$tool --version' in $PWD. Tool output: ${version:0:$NOTE_CHARACTERS}. Report the setup issue before any environment change, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      return 1
+    fi
+  done
   if [[ $version != *mikefarah/yq*'version v4.'* ]]; then
-    echo "ERROR: the quality gate needs mikefarah yq version 4, run 'mise trust' and 'make config'" >&2
+    echo "ERROR: the quality gate needs mikefarah yq version 4. Found $resolved: ${version:0:$NOTE_CHARACTERS}. Gates were not run. Inspect 'command -v yq' and 'yq --version', report the mismatch, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
     return 1
   fi
 
@@ -188,32 +189,67 @@ function prepare-tools() {
 # payload, so the prompt text never reaches a shell variable.
 function handle-hook() {
 
-  local fields event session active agent
-  if ! fields="$(jq -r '[.hook_event_name, .session_id, .stop_hook_active, .agent_id] | map(. // "" | tostring) | join("\u001f")')"; then
-    emit-allow "Quality gate: the hook payload is not valid JSON, so no gate ran."
+  local fields event session active agent session_status session_ok=false
+  if ! fields="$(jq -ers --arg pattern "$SESSION_PATTERN" '
+    if length != 1 or (.[0] | type) != "object" then error("invalid hook object") else .[0] end |
+    .session_id as $id |
+    (if $id == null or $id == "" then "missing"
+      elif ($id | type) != "string" then "invalid"
+      elif ($id | test($pattern + "\\z")) then "valid" else "invalid" end) as $status |
+    [(if .hook_event_name == "UserPromptSubmit" or .hook_event_name == "Stop" then .hook_event_name else "" end),
+      (if $status == "valid" then $id else "" end),
+      (.stop_hook_active == true or .stop_hook_active == "true"),
+      (.agent_id != null and .agent_id != "" and .agent_id != false), $status] |
+    map(tostring) | join("\u001f")' 2> /dev/null)"; then
+    emit-allow "Quality gate: the hook payload is not valid JSON, so no gate ran and verification is unknown. Inspect the hook event source and verify with 'make quality-gate'."
     return 0
   fi
-  IFS=$'\x1f' read -r event session active agent <<< "$fields"
-  if [[ ! $session =~ $SESSION_PATTERN ]]; then
-    session=""
+  IFS=$'\x1f' read -r event session active agent session_status <<< "$fields"
+  if is-session-id "$session"; then
+    session_ok=true
+  fi
+  if [[ $fields != "$event"$'\x1f'"$session"$'\x1f'"$active"$'\x1f'"$agent"$'\x1f'"$session_status" ||
+    ( $event != UserPromptSubmit && $event != Stop && -n $event ) ||
+    ( $active != true && $active != false ) || ( $agent != true && $agent != false ) ||
+    ( $session_status != valid && $session_status != missing && $session_status != invalid ) ||
+    ( $session_status == valid && $session_ok != true ) ||
+    ( $session_status != valid && -n $session ) ]]; then
+    emit-allow "Quality gate: the decoded hook fields are invalid, so no gate ran and verification is unknown. Inspect the hook event source and verify with 'make quality-gate'."
+    return 0
   fi
   # The Copilot harness marks events from inside a subagent, whose parent's stop
   # runs the gates
-  if [[ -n $agent ]]; then
+  if [[ $agent == true ]]; then
     emit-allow
     return 0
   fi
   case $event in
     UserPromptSubmit)
-      record-baseline "$session" || return "$?"
+      record-baseline "$session" "$session_status" || return "$?"
       ;;
     Stop)
-      handle-stop "$session" "$active" || return "$?"
+      handle-stop "$session" "$active" "$session_status" || return "$?"
       ;;
     *)
       emit-allow
       ;;
   esac
+
+  return 0
+}
+
+# Succeed when the value is a safe session identifier. The C locale in a
+# subshell compares bytes and leaves the caller's locale, which gates inherit,
+# alone.
+# Arguments:
+#   $1=[session identifier]
+function is-session-id() {
+
+  local session_id="$1"
+  (
+    LC_ALL=C
+    [[ $session_id =~ $SESSION_PATTERN ]]
+  ) || return 1
 
   return 0
 }
@@ -224,23 +260,33 @@ function handle-hook() {
 #   $1=[session identifier, empty when unknown]
 function record-baseline() {
 
-  local session="$1" state="$STATE_DIR" action=baseline-recorded
+  local session="$1" session_status="$2" state="$STATE_DIR" action=baseline-recorded
   if ! create-state-dir; then
-    emit-allow "Quality gate: cannot create its state directory, so no baseline was recorded."
+    emit-allow "Quality gate: cannot create its state directory $state, so no baseline was recorded. Inspect that path and verify with 'make quality-gate scope=all'."
     return 0
   fi
   remove-old-state "$state"
+  if [[ -z $session ]]; then
+    note-hook "$state" UserPromptSubmit "$session" baseline-not-recorded "$session_status" not-evaluated none
+    emit-allow "Quality gate: the session identifier is $session_status, so the hook cannot associate a baseline with this turn. A later stop uses all gates as a conservative fallback, not proof of edits. Inspect the hook session_id and verify with 'make quality-gate scope=all'."
+    return 0
+  fi
   if [[ -n $session ]]; then
     if [[ -f $state/$session.baseline ]]; then
       action=turn-already-open
     else
-      rm -f "$state/$session.blocks"
+      rm -f "$state/$session.blocks" "$state/$session.blocked" || {
+        echo "Quality gate: cannot reset $state/$session.blocks and $state/$session.blocked. The continuation count is unknown. Inspect those paths and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      }
       if ! write-baseline "$state/$session.baseline"; then
         action=snapshot-failed
+        note-hook "$state" UserPromptSubmit "$session" "$action" "$session_status" not-evaluated none
+        emit-allow "Quality gate: cannot read the working tree for $state/$session.baseline. Change selection is unknown. Inspect 'git status --short' and verify with 'make quality-gate scope=all'."
+        return 0
       fi
     fi
   fi
-  note-hook "$state" UserPromptSubmit "$session" "$action"
+  note-hook "$state" UserPromptSubmit "$session" "$action" "$session_status" not-evaluated none
   emit-allow
 
   return 0
@@ -253,15 +299,17 @@ function record-baseline() {
 #   $1=[baseline file]
 function write-baseline() {
 
-  local tmp="" head
-  if tmp="$(mktemp "$1.XXXXXX")" && snapshot-tree "$tmp" && mv "$tmp" "$1"; then
+  local baseline_file="$1" tmp="" head
+  if tmp="$(mktemp "$baseline_file.XXXXXX")" && snapshot-tree "$tmp" && mv "$tmp" "$baseline_file"; then
     return 0
   fi
   if [[ -n $tmp ]]; then
     rm -f "$tmp"
   fi
   head="$(git rev-parse --verify --quiet HEAD)" || head=none
-  printf '=\t%s\0!\tunreadable\0' "$head" > "$1"
+  printf '=\t%s\0!\tunreadable\0' "$head" > "$baseline_file" || {
+    echo "Quality gate: cannot write baseline $baseline_file. Change selection is unknown. Inspect that path and verify with 'make quality-gate scope=all'. $RECOVERY_SCOPE" >&2
+  }
 
   return 1
 }
@@ -274,7 +322,7 @@ function remove-old-state() {
 
   # '-delete' visits a directory after its files, so '-empty' sees them gone
   if ! find "$1" -mindepth 1 \( -type f -mtime +7 -delete \) -o \( -type d -empty -mtime +7 -delete \); then
-    echo "Quality gate: cannot remove old state files from $1" >&2
+    echo "Quality gate: cannot remove old state files from $1. Retention is incomplete. Inspect that directory and 'make quality-gate' output. $RECOVERY_SCOPE" >&2
   fi
 
   return 0
@@ -288,13 +336,15 @@ function remove-old-state() {
 #     turn]
 function handle-stop() {
 
-  local scratch rc=0
+  local session="$1" active="$2" session_status="$3" scratch rc=0
   if ! scratch="$(make-temp -d)"; then
-    emit-allow "Quality gate: cannot create a temporary directory, so no gate ran."
+    emit-allow "Quality gate: cannot create a temporary directory under $STATE_DIR, so no gate ran and verification is unknown. Inspect that path and verify with 'make quality-gate'."
     return 0
   fi
-  decide-stop "$1" "$2" "$scratch" || rc=$?
-  rm -rf "$scratch"
+  decide-stop "$session" "$active" "$scratch" "$session_status" || rc=$?
+  rm -rf "$scratch" || {
+    echo "Quality gate: cannot remove scratch directory $scratch. Cleanup is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+  }
 
   return "$rc"
 }
@@ -303,17 +353,19 @@ function handle-stop() {
 # unless a gate blocks, so the next prompt records a new baseline.
 # Arguments:
 #   $1=[session identifier] $2=[stop_hook_active] $3=[scratch directory]
+#   $4=[session status]
 function decide-stop() {
 
   local session="$1" active="$2" scratch="$3" state="$STATE_DIR" baseline="" pause=none config source start="" max_blocks blocks=0 budget="${QUALITY_GATE_BUDGET:-}"
-  local current="$scratch/current" changes="$scratch/changes" known=true guard_note="" notes message
+  local session_status="$4" selection_reason=not-evaluated selection_scope=none
+  local current="$scratch/current" changes="$scratch/changes" known=true guard_note="" notes message snapshot_ok=true
   if [[ $budget =~ ^[0-9]{1,6}$ ]] && (( 10#$budget > 0 )); then
     budget=$((10#$budget))
   else
     budget=240
   fi
   if ! create-state-dir; then
-    emit-allow "Quality gate: cannot create its state directory, so no gate ran."
+    emit-allow "Quality gate: cannot create its state directory $state, so no gate ran and verification is unknown. Inspect that path and verify with 'make quality-gate'."
     return 0
   fi
   if [[ -n $session ]]; then
@@ -325,8 +377,8 @@ function decide-stop() {
   case $pause in
     until:*)
       finish-turn "$state" "$session"
-      note-hook "$state" Stop "$session" paused
-      emit-allow "Quality gate is paused until $(format-time "${pause#until:}"). Resume it with: make quality-gate-resume"
+      note-hook "$state" Stop "$session" paused "$session_status" "$selection_reason" "$selection_scope"
+      emit-allow "Quality gate is paused until $(format-time "${pause#until:}"). Gates were not run, not passed. Pause state: $state/paused. When authorised, resume it with: make quality-gate-resume, then verify with 'make quality-gate'."
       return 0
       ;;
     during-turn)
@@ -340,8 +392,8 @@ function decide-stop() {
   # Errors go to their own file, as a warning on stderr would corrupt the JSON
   if ! config="$(read-config "$source" "$scratch" 2> "$scratch/config-errors")"; then
     finish-turn "$state" "$session"
-    note-hook "$state" Stop "$session" invalid-configuration
-    emit-allow "Quality gate: no gate ran. $(< "$scratch/config-errors")"
+    note-hook "$state" Stop "$session" invalid-configuration "$session_status" "$selection_reason" "$selection_scope"
+    emit-allow "Quality gate: no gate ran and verification is unknown. $(< "$scratch/config-errors") Inspect $CONFIG_FILE and $CONFIG_DIR from $(describe-source "$source" "$start") Verify with 'make quality-gate-list' and 'make quality-gate'."
     return 0
   fi
   # Rules from the start of the turn may print a whole number as 1.0
@@ -351,67 +403,104 @@ function decide-stop() {
   # continuation starts at zero
   if [[ $active == true ]]; then
     if [[ -z $session ]]; then
-      note-hook "$state" Stop "$session" already-continued
-      emit-allow "Quality gate not run: an earlier block already continued this turn. Run 'make quality-gate' to check."
+      note-hook "$state" Stop "$session" already-continued "$session_status" "$selection_reason" "$selection_scope"
+      emit-allow "Quality gate not run: an earlier block already continued this turn. This is not a pass. Inspect $state/last-run.json and $state/logs, then run 'make quality-gate' to check."
       return 0
     fi
-    if [[ -f $state/$session.blocks ]]; then
-      blocks="$(< "$state/$session.blocks")"
-      [[ $blocks =~ ^[0-9]+$ ]] || blocks=0
+    if [[ -e $state/$session.blocks ]]; then
+      blocks="$(cat "$state/$session.blocks")" || blocks=unknown
+      if [[ ! $blocks =~ ^[0-9]{1,6}$ ]]; then
+        finish-turn "$state" "$session"
+        note-hook "$state" Stop "$session" block-count-unknown "$session_status" "$selection_reason" "$selection_scope"
+        emit-allow "Quality gate not run: the continuation count in $state/$session.blocks is unreadable or invalid, so max_blocks cannot be enforced. This is not a pass. Inspect that path and $state/last-run.json, then run 'make quality-gate' to check."
+        return 0
+      fi
+      blocks=$((10#$blocks))
     fi
   fi
   if (( blocks >= max_blocks )); then
     finish-turn "$state" "$session"
-    note-hook "$state" Stop "$session" block-limit-reached
-    emit-allow "Quality gate not run: it already blocked $blocks time(s) this turn. Run 'make quality-gate' to check."
+    note-hook "$state" Stop "$session" block-limit-reached "$session_status" "$selection_reason" "$selection_scope"
+    emit-allow "Quality gate not run: it already blocked $blocks time(s) this turn. This is not a pass. Inspect $state/last-run.json and $state/logs, then run 'make quality-gate' to check."
     return 0
   fi
 
-  if ! snapshot-tree "$current"; then
+  snapshot-tree "$current" || snapshot_ok=false
+  # A stop with no edit since the block would only repeat the same result
+  if [[ $snapshot_ok == true && $active == true && -n $session && -f $state/$session.blocked ]] &&
+    cmp -s "$state/$session.blocked" "$current"; then
+    finish-turn "$state" "$session"
+    note-hook "$state" Stop "$session" unchanged-since-block "$session_status" "$selection_reason" "$selection_scope"
+    emit-allow "Quality gate not rerun: nothing changed since it blocked this turn, so its earlier result stands. This is not a pass. Report the failures recorded in $state/last-run.json and $state/logs, then run 'make quality-gate' when authorised."
+    return 0
+  fi
+  if [[ $snapshot_ok == false ]]; then
     known=false
+    selection_reason=snapshot-failed
     guard_note="${guard_note:+$guard_note }The working tree could not be read, so the hook ran every enabled gate."
   elif [[ -z $baseline || ! -f $baseline ]]; then
     known=false
-    guard_note="${guard_note:+$guard_note }No baseline was recorded for this turn, so the hook ran every enabled gate."
+    if [[ -z $session ]]; then
+      selection_reason="$session_status-session-id"
+      guard_note="${guard_note:+$guard_note }The session identifier is $session_status, so the hook cannot associate a baseline with this turn."
+    else
+      selection_reason=missing-baseline
+      guard_note="${guard_note:+$guard_note }The baseline file is absent at Stop."
+    fi
+    guard_note+=" The hook ran every enabled gate as a conservative fallback, not proof of edits."
   elif baseline-unreadable "$baseline"; then
     known=false
+    selection_reason=unreadable-baseline
     guard_note="${guard_note:+$guard_note }The working tree could not be read at the start of the turn, so the hook ran every enabled gate."
   elif cmp -s "$baseline" "$current"; then
+    selection_reason=unchanged
     finish-turn "$state" "$session"
-    note-hook "$state" Stop "$session" unchanged
+    note-hook "$state" Stop "$session" unchanged "$session_status" "$selection_reason" "$selection_scope"
     emit-allow "${guard_note:+Quality gate: $guard_note}"
     return 0
   elif ! diff-snapshots "$baseline" "$current" "$changes"; then
     known=false
+    selection_reason=comparison-failed
     guard_note="${guard_note:+$guard_note }The changes of this turn could not be compared with its start, so the hook ran every enabled gate."
   fi
 
   if [[ $known == true ]]; then
+    selection_reason=changed-files
+    selection_scope=changed
     notes="$(changed-guarded-paths "$changes")"
     if [[ -n $notes ]]; then
       guard_note="${guard_note:+$guard_note }This turn changed quality gate files ($notes). $(describe-source "$source" "$start") Review that change."
     fi
-    execute-gates "$config" "$changes" changed "$budget" false "$state/logs/${session:-hook}"
+    execute-gates "$config" "$changes" changed "$budget" false "$state/logs/${session:-hook}" ||
+      guard_note="${guard_note:+$guard_note }Gate execution stopped early under $state/logs/${session:-hook}. Verification is unknown for the gates that did not run. Inspect that path and run 'make quality-gate'."
   else
+    selection_scope=all
     # Without the turn's changes, a gate list that is not the start's may have
     # been changed in it
     if [[ $source != "$start" ]]; then
       guard_note="${guard_note:+$guard_note }$(describe-source "$source" "$start")"
     fi
-    execute-gates "$config" "" all "$budget" false "$state/logs/${session:-hook}"
+    guard_note+=" Change selection is unknown. Inspect ${baseline:-$state} and 'git status --short', then verify with 'make quality-gate scope=all'."
+    execute-gates "$config" "" all "$budget" false "$state/logs/${session:-hook}" ||
+      guard_note+=" Gate execution stopped early under $state/logs/${session:-hook}. Verification is unknown for the gates that did not run. Inspect that path and run 'make quality-gate scope=all'."
   fi
-  write-last-run "$state" Stop "$session"
+  write-last-run "$state" Stop "$session" "$session_status" "$selection_reason" "$selection_scope"
   notes="$(summary-notes)"
   if blocking-failure; then
     if [[ -n $session ]]; then
-      printf '%s\n' "$((blocks + 1))" > "$state/$session.blocks"
+      printf '%s\n' "$((blocks + 1))" > "$state/$session.blocks" || {
+        echo "Quality gate: cannot write $state/$session.blocks. The continuation count is unknown. The failed gates still block. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      }
+      if [[ $snapshot_ok == true ]] && ! cp "$current" "$state/$session.blocked"; then
+        echo "Quality gate: cannot write $state/$session.blocked, so the next stop reruns the gates even without an edit. Inspect that path. $RECOVERY_SCOPE" >&2
+      fi
     fi
-    note-hook "$state" Stop "$session" blocked
-    emit-block "$(build-reason)" "Quality gate blocked the stop: $(failed-names)${notes:+. $notes}${guard_note:+. $guard_note}"
+    note-hook "$state" Stop "$session" blocked "$session_status" "$selection_reason" "$selection_scope"
+    emit-block "$(build-reason "$REASON_BYTES" true "$guard_note")" "$(build-reason "$MESSAGE_BYTES" false "$guard_note")"
     return 0
   fi
   finish-turn "$state" "$session"
-  note-hook "$state" Stop "$session" allowed
+  note-hook "$state" Stop "$session" allowed "$session_status" "$selection_reason" "$selection_scope"
   message="${notes:+$notes. }$guard_note"
   emit-allow "${message:+Quality gate: ${message% }}"
 
@@ -423,8 +512,11 @@ function decide-stop() {
 #   $1=[state directory] $2=[session identifier, empty when unknown]
 function finish-turn() {
 
-  if [[ -n $2 ]]; then
-    rm -f "$1/$2.baseline" "$1/$2.blocks"
+  local state_dir="$1" session="$2"
+  if [[ -n $session ]]; then
+    rm -f "$state_dir/$session.baseline" "$state_dir/$session.blocks" "$state_dir/$session.blocked" || {
+      echo "Quality gate: cannot close turn state $state_dir/$session.baseline, $state_dir/$session.blocks and $state_dir/$session.blocked. Turn tracking is unknown, not evidence of a pass. Inspect those paths and verify with 'make quality-gate scope=all'. $RECOVERY_SCOPE" >&2
+    }
   fi
 
   return 0
@@ -442,9 +534,14 @@ function pause-state() {
     echo none
     return 0
   fi
-  expiry="$(< "$file")"
+  expiry="$(cat "$file")" || expiry=unknown
   if [[ ! $expiry =~ ^[0-9]{1,12}$ ]] || (( 10#$expiry <= $(date +%s) )); then
-    rm -f "$file"
+    if [[ ! $expiry =~ ^[0-9]{1,12}$ ]]; then
+      echo "Quality gate: pause state $file is unreadable or invalid. No pause was applied and verification is not implied. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    fi
+    rm -f "$file" || {
+      echo "Quality gate: cannot remove expired or invalid pause $file. Pause tracking is unknown, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    }
     echo none
     return 0
   fi
@@ -483,13 +580,144 @@ function describe-source() {
 #   $1=[state directory]
 #   $2=[event name]
 #   $3=[session identifier]
-#   $4=[what the hook did]
+#   $4=[what the hook did] $5=[session status]
+#   $6=[selection reason] $7=[selection scope]
 function note-hook() {
 
-  if ! jq -nc --arg event "$2" --arg session "$3" --arg action "$4" \
-    '{time: (now | floor | todate), event: $event, session: $session, action: $action}' > "$1/last-hook.json"; then
-    echo "Quality gate: cannot write $1/last-hook.json" >&2
+  local state_dir="$1" event="$2" session="$3" action="$4" session_status="$5" selection_reason="$6" selection_scope="$7"
+  local record tmp=""
+  if ! record="$(jq -nc --arg event "$event" --arg session "$session" --arg action "$action" \
+    --arg session_status "$session_status" --arg selection_reason "$selection_reason" --arg scope "$selection_scope" \
+    '{time: (now | floor | todate), event: $event, session: $session, action: $action,
+      session_status: $session_status, selection_reason: $selection_reason, scope: $scope}')"; then
+    echo "Quality gate: cannot encode $state_dir/last-hook.json. The event audit is incomplete. Inspect jq diagnostics and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 0
   fi
+  if ! { tmp="$(mktemp "$state_dir/.last-hook.XXXXXX")" && printf '%s\n' "$record" > "$tmp" && [[ ! -d $state_dir/last-hook.json ]] && mv "$tmp" "$state_dir/last-hook.json"; }; then
+    echo "Quality gate: cannot write $state_dir/last-hook.json. The event audit is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+  fi
+  if [[ -n $tmp ]]; then
+    rm -f "$tmp" || audit-error "$tmp" 'temporary event cleanup failed'
+  fi
+  record-history "$state_dir" "$session" "$record" "$session_status"
+
+  return 0
+}
+
+# Publish one immutable completed event before pruning its own namespace.
+# Arguments:
+#   $1=[state directory] $2=[validated session or empty] $3=[event JSON]
+#   $4=[session status]
+function record-history() {
+
+  local state_dir="$1" session="$2" record="$3" session_status="$4"
+  local directory="$state_dir/history" tmp="" published name
+  if [[ -n $session ]]; then
+    directory+="/sessions/$session"
+  else
+    directory+="/unidentified/$session_status"
+  fi
+  if ! mkdir -p "$directory"; then
+    audit-error "$directory" 'event history could not be created'
+    return 0
+  fi
+  if ! tmp="$(mktemp "$directory/.${EPOCHREALTIME//[!0-9]/}.$BASHPID.XXXXXX")"; then
+    audit-error "$directory" 'event history could not be allocated'
+    return 0
+  fi
+  name="${tmp##*/}"
+  published="$directory/${name#.}.json"
+  if ! { printf '%s\n' "$record" > "$tmp" && ln "$tmp" "$published"; }; then
+    audit-error "$published" 'event history could not be published'
+    rm -f "$tmp" || audit-error "$tmp" 'temporary history cleanup failed'
+    return 0
+  fi
+  rm -f "$tmp" || audit-error "$tmp" 'temporary history cleanup failed'
+  prune-history "$directory" "$published"
+
+  return 0
+}
+
+# Keep the newest 50 readable completed events. Leave corrupt files for
+# diagnosis.
+# Arguments:
+#   $1=[session history directory] $2=[fresh record, never pruned here]
+function prune-history() {
+
+  local history_dir="$1" fresh_record="$2" LC_ALL=C file excess index verdicts
+  local -a records=("$history_dir"/*.json) completed=() arguments=()
+  [[ -f ${records[0]} ]] || return 0
+  # shellcheck disable=SC2016
+  local predicate='
+    def completed:
+      length == 1 and (.[0] |
+        type == "object" and
+        (.time | type == "string") and
+        (try (.time | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\\z") and (fromdate | type == "number")) catch false) and
+        (.session | type == "string") and
+        (if .session_status == "valid" then (.session | test($pattern + "\\z"))
+          else ((.session_status == "missing" or .session_status == "invalid") and .session == "") end) and
+        (.selection_reason | IN("not-evaluated", "snapshot-failed", "missing-session-id", "invalid-session-id",
+          "missing-baseline", "unreadable-baseline", "unchanged", "comparison-failed", "changed-files")) and
+        (.scope | IN("none", "changed", "all")) and
+        (if .event == "UserPromptSubmit" then
+            (.action | IN("baseline-recorded", "baseline-not-recorded", "turn-already-open", "snapshot-failed"))
+          elif .event == "Stop" then
+            (.action | IN("paused", "invalid-configuration", "already-continued", "block-limit-reached", "block-count-unknown", "unchanged-since-block", "unchanged", "blocked", "allowed"))
+          else false end));
+    def validraw:
+      if contains("\u0000") then false
+      else try ([fromjson] | completed) catch false end;
+  '
+  for index in "${!records[@]}"; do
+    arguments+=(--rawfile "record$index" "${records[index]}")
+  done
+  if ! verdicts="$(jq -nr --arg pattern "$SESSION_PATTERN" \
+    --argjson count "${#records[@]}" "${arguments[@]}" "$predicate"'
+      [range(0; $count) | $ARGS.named["record\(.)"] | validraw |
+        if . then "1" else "0" end] | join("")' 2> /dev/null)"; then
+    verdicts=""
+  fi
+  if [[ ${#verdicts} -ne ${#records[@]} || $verdicts == *[!01]* ]]; then
+    audit-error "$history_dir" 'history validation failed; retrying individual events'
+    verdicts=""
+    for file in "${records[@]}"; do
+      if jq -en --arg pattern "$SESSION_PATTERN" --rawfile record "$file" \
+        "$predicate"'$record | validraw' > /dev/null 2>&1; then
+        verdicts+='1'
+      else
+        verdicts+='0'
+      fi
+    done
+  fi
+  for index in "${!records[@]}"; do
+    file="${records[index]}"
+    if [[ ${verdicts:index:1} != 1 ]]; then
+      audit-error "$file" 'existing event is unreadable or malformed'
+    else
+      completed+=("$file")
+    fi
+  done
+  excess=$((${#completed[@]} - 50))
+  for file in "${completed[@]}"; do
+    if (( excess > 0 )) && [[ $file != "$fresh_record" ]]; then
+      if rm -f -- "$file"; then
+        excess=$((excess - 1))
+      else
+        audit-error "$file" 'history retention is incomplete'
+      fi
+    fi
+  done
+
+  return 0
+}
+
+# Report audit failures without changing the gate's allow or block decision.
+# Arguments:
+#   $1=[affected path] $2=[impact]
+function audit-error() {
+
+  echo "Quality gate: $2 at $1. The audit is incomplete, not evidence of a pass. Inspect that path, its permissions and free space, and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
 
   return 0
 }
@@ -506,12 +734,12 @@ function run-command() {
   case $scope in
     changed | all) ;;
     *)
-      echo "Unrecognised scope: '$scope'. Use one of: changed, all" >&2
+      echo "Unrecognised scope: '$scope'. Use one of: changed, all. Gates were not run. Verify with 'make quality-gate scope=changed' or 'make quality-gate scope=all'. $RECOVERY_SCOPE" >&2
       return 126
       ;;
   esac
   if [[ -n ${QUALITY_GATE_ACTIVE:-} ]]; then
-    echo "ERROR: quality-gate is running inside a gate, remove the gate that calls it" >&2
+    echo "ERROR: quality-gate is running inside a gate. Nested gates were not run. Inspect $CONFIG_FILE and $CONFIG_DIR for recursive targets, report the configuration issue, then verify with 'make quality-gate' outside the gate. $RECOVERY_SCOPE" >&2
     return 1
   fi
   scratch="$(make-temp -d)" || return "$?"
@@ -531,10 +759,21 @@ function run-gates() {
     return 2
   fi
   create-state-dir || return "$?"
-  collect-changed-paths "$changes" || return "$?"
-  execute-gates "$config" "$changes" "$scope" 0 true "$state/logs/run"
-  write-last-run "$state" run ""
+  collect-changed-paths "$changes" || {
+    echo "Quality gate: change selection is unknown, so gates were not run. Inspect 'git status --short' and the Git errors above, then verify with 'make quality-gate scope=all'. State: $state. $RECOVERY_SCOPE" >&2
+    return 1
+  }
+  execute-gates "$config" "$changes" "$scope" 0 true "$state/logs/run" || return "$?"
+  write-last-run "$state" run "" not-applicable "manual-$scope" "$scope"
   summarise-results
+  local notes
+  notes="$(summary-notes)"
+  if [[ -n $notes ]]; then
+    printf '%s\n%s\n' "$notes" "$RECOVERY_SCOPE"
+  fi
+  if blocking-failure; then
+    build-reason
+  fi
   if run-failed; then
     return 1
   fi
@@ -549,7 +788,10 @@ function list-command() {
   if ! config="$(load-config working-tree)"; then
     return 2
   fi
-  rows="$(jq -r '.gates[] | [.name, .target, .mode, "\(.timeout | floor)s", (if (.paths | length) == 0 then "all" else (.paths | join(" ")) end), .description] | @tsv' <<< "$config")" || return 2
+  rows="$(jq -r '.gates[] | [.name, .target, .mode, "\(.timeout | floor)s", (if (.paths | length) == 0 then "all" else (.paths | join(" ")) end), .description] | @tsv' <<< "$config")" || {
+    echo "Quality gate: cannot list the validated configuration from $CONFIG_FILE and $CONFIG_DIR. Gates were not run. Inspect the jq errors above and verify with 'make quality-gate-list'. $RECOVERY_SCOPE" >&2
+    return 2
+  }
   printf '%s\n' "$rows" \
     | awk -F'\t' 'BEGIN { printf "%-22s %-22s %-6s %-8s %-24s %s\n", "NAME", "TARGET", "MODE", "TIMEOUT", "PATHS", "DESCRIPTION" } NF > 0 { printf "%-22s %-22s %-6s %-8s %-24s %s\n", $1, $2, $3, $4, $5, $6 }'
 
@@ -563,13 +805,16 @@ function pause-command() {
 
   local hours="$1" state="$STATE_DIR" expiry
   if [[ ! $hours =~ ^[1-8]$ ]]; then
-    echo "ERROR: hours must be a whole number from 1 to 8, for example: make quality-gate-pause hours=2" >&2
+    echo "ERROR: hours must be a whole number from 1 to 8, for example: make quality-gate-pause hours=2. Pause unchanged. Inspect 'make quality-gate-list' and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
     return 1
   fi
   create-state-dir || return "$?"
   expiry=$(( $(date +%s) + hours * 3600 ))
-  printf '%s\n' "$expiry" > "$state/paused"
-  echo "Quality gate paused from the next prompt until $(format-time "$expiry"). Resume it with: make quality-gate-resume"
+  printf '%s\n' "$expiry" > "$state/paused" || {
+    echo "Quality gate: cannot write $state/paused. Pause state is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 1
+  }
+  echo "Quality gate paused from the next prompt until $(format-time "$expiry"). Paused gates are not passed. State: $state/paused. When authorised, resume it with: make quality-gate-resume, then verify with 'make quality-gate'."
 
   return 0
 }
@@ -578,8 +823,11 @@ function pause-command() {
 function resume-command() {
 
   create-state-dir || return "$?"
-  rm -f "$STATE_DIR/paused"
-  echo "Quality gate resumed"
+  rm -f "$STATE_DIR/paused" || {
+    echo "Quality gate: cannot remove $STATE_DIR/paused. Resume failed and gates were not run. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 1
+  }
+  echo "Quality gate resumed. No gates ran during resume. Verify with 'make quality-gate'. State: $STATE_DIR/paused."
 
   return 0
 }
@@ -631,36 +879,39 @@ function read-config() {
   local from="$1" names="$2/names" rules="$CONFIG_RULES" file doc out rc=0
   local -a docs=() files=("$CONFIG_FILE")
   if [[ $from == working-tree && ! -f $CONFIG_FILE ]]; then
-    echo "ERROR: $CONFIG_FILE is missing. Restore it from the repository template." >&2
+    echo "ERROR: $CONFIG_FILE is missing. Gates were not run. Compare it with the repository template and report the missing configuration, then verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
     return 2
   fi
   if ! list-drop-ins "$from" > "$names"; then
-    echo "ERROR: cannot list the files in $CONFIG_DIR." >&2
+    echo "ERROR: cannot list the files in $CONFIG_DIR. Gates were not run. Inspect that path and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
     return 2
   fi
   while IFS= read -r -d '' file; do
     if ! is-drop-in-name "${file##*/}"; then
-      echo "ERROR: $file: drop-in file names may use only ASCII letters, digits, '.', '_' and '-', and end in .yaml or .yml." >&2
+      echo "ERROR: $file: drop-in file names may use only ASCII letters, digits, '.', '_' and '-', and end in .yaml or .yml. Gates were not run. Report the configuration issue and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
       return 2
     fi
     files+=("$file")
   done < "$names"
   if [[ $from != working-tree ]] && git cat-file -e "$from:$CONFIG_RULES" 2> /dev/null; then
     rules="$2/rules.jq"
-    git show "$from:$CONFIG_RULES" > "$rules" || return 2
+    git show "$from:$CONFIG_RULES" > "$rules" || {
+      echo "ERROR: cannot read $CONFIG_RULES from commit $from into $rules. Gates were not run. Inspect 'git show $from:$CONFIG_RULES' and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      return 2
+    }
   fi
   for file in "${files[@]}"; do
     if [[ $from == working-tree ]]; then
-      doc="$(yq -o=json 'explode(.)' "$file")" || { echo "ERROR: $file is not valid YAML." >&2; return 2; }
+      doc="$(yq -o=json 'explode(.)' "$file")" || { echo "ERROR: $file could not be read as valid YAML. Gates were not run. Inspect the parser output and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2; return 2; }
     else
-      doc="$(git show "$from:$file" | yq -o=json 'explode(.)' -)" || { echo "ERROR: $file at commit ${from:0:7} is not valid YAML." >&2; return 2; }
+      doc="$(git show "$from:$file" | yq -o=json 'explode(.)' -)" || { echo "ERROR: $file at commit ${from:0:7} could not be read as valid YAML. Gates were not run. Inspect 'git show $from:$file' and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2; return 2; }
     fi
     docs+=("$doc")
   done
   out="$(printf '%s\n' "${docs[@]}" | jq -c -s -f "$rules" 2> "$2/errors")" || rc=$?
   if [[ $rc -ne 0 ]]; then
     out="$(< "$2/errors")"
-    echo "ERROR: gate configuration: ${out#jq: error (at *): }" >&2
+    echo "ERROR: gate configuration: ${out#jq: error (at *): }. Gates were not run. Inspect $CONFIG_FILE, $CONFIG_DIR and $rules, then verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
     return 2
   fi
   printf '%s\n' "$out"
@@ -716,7 +967,10 @@ function list-drop-ins() {
 # Create STATE_DIR, the directory that holds the hook's state, when needed.
 function create-state-dir() {
 
-  [[ -d $STATE_DIR/logs ]] || mkdir -p "$STATE_DIR/logs" || return "$?"
+  if [[ ! -d $STATE_DIR/logs ]] && ! mkdir -p "$STATE_DIR/logs"; then
+    echo "Quality gate: cannot create $STATE_DIR/logs. State is unavailable and verification is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 1
+  fi
 
   return 0
 }
@@ -728,7 +982,10 @@ function create-state-dir() {
 function make-temp() {
 
   create-state-dir || return "$?"
-  mktemp "$@" "$STATE_DIR/tmp.XXXXXX" || return "$?"
+  mktemp "$@" "$STATE_DIR/tmp.XXXXXX" || {
+    echo "Quality gate: cannot create temporary state under $STATE_DIR. Verification is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 1
+  }
 
   return 0
 }
@@ -973,12 +1230,21 @@ function changed-guarded-paths() {
 function execute-gates() {
 
   local config="$1" changes="$2" scope="$3" budget="$4" progress="$5" logs="$6"
-  local name target mode timeout patterns limit remaining capped log rc seconds start outcome
+  local name target mode timeout patterns limit remaining capped log rc seconds start outcome result
   local started=$SECONDS
-  mkdir -p "$logs" || return "$?"
+  mkdir -p "$logs" || {
+    echo "Quality gate: cannot create log directory $logs. Gates were not run. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 1
+  }
+  # Gates run from other directories, so the private result path is absolute
+  logs="$(cd "$logs" && pwd)" || return 1
   RESULT_NAME=() RESULT_TARGET=() RESULT_MODE=() RESULT_STATE=() RESULT_RC=() RESULT_SECONDS=() RESULT_LOG=()
   while IFS=$'\x1f' read -r name target mode timeout patterns; do
     log="$logs/$name.log"
+    if ! rm -f "$logs/$name.result" "$log"; then
+      echo "Quality gate: cannot remove stale results under $logs for make $target. Verification is unknown. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE" >&2
+      return 1
+    fi
     if [[ $scope == changed && -n $patterns && -n $changes ]] && ! changes-match "$changes" "$patterns"; then
       record-result "$name" "$target" "$mode" skipped 0 0 "$log"
       continue
@@ -1000,11 +1266,15 @@ function execute-gates() {
       printf 'RUN    %s: make %s\n' "$name" "$target"
     fi
     start=$SECONDS
+    if ! result="$(mktemp "$logs/$name.result.XXXXXX")" || ! rm -f "$result"; then
+      echo "Quality gate: cannot prepare a private result under $logs for make $target. This gate was not run and verification is unknown. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE" >&2
+      return 1
+    fi
     rc=0
     if [[ -n $changes ]]; then
-      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 QUALITY_GATE_CHANGED_FILES="$changes" make --no-print-directory "$target" || rc=$?
+      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 QUALITY_GATE_RESULT_FILE="$result" QUALITY_GATE_CHANGED_FILES="$changes" make --no-print-directory "$target" || rc=$?
     else
-      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 make --no-print-directory "$target" || rc=$?
+      run-with-limit "$limit" "$log" env QUALITY_GATE_ACTIVE=1 QUALITY_GATE_RESULT_FILE="$result" make --no-print-directory "$target" || rc=$?
     fi
     seconds=$(( SECONDS - start ))
     if [[ $rc -eq 0 ]]; then
@@ -1013,11 +1283,14 @@ function execute-gates() {
       outcome=incomplete
     elif [[ $rc -eq 124 ]]; then
       outcome=timeout
-    elif grep -Eq "$PREREQUISITE_PATTERN" "$log"; then
+    elif [[ -f $result && ! -L $result ]] && { cmp -s "$result" <(printf prerequisite) || cmp -s "$result" <(printf 'prerequisite\n'); } && grep -Eq "$PREREQUISITE_PATTERN" "$log"; then
       outcome=prerequisite
     else
       outcome=fail
     fi
+    rm -f "$result" || {
+      echo "Quality gate: cannot remove private result $result. Cleanup is incomplete. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE" >&2
+    }
     record-result "$name" "$target" "$mode" "$outcome" "$rc" "$seconds" "$log"
     if [[ $progress == true ]]; then
       printf '%-6s %s (%ss)\n' "${outcome^^}" "$name" "$seconds"
@@ -1181,16 +1454,20 @@ function run-failed() {
   return 1
 }
 
-# Print the names of the gates that blocked, comma separated.
-function failed-names() {
+# Print the condition, command and log for a blocking gate.
+# Arguments:
+#   $1=[result index]
+function blocking-metadata() {
 
-  local i names=""
-  for i in "${!RESULT_STATE[@]}"; do
-    if is-blocking "$i"; then
-      names="${names:+$names, }${RESULT_NAME[$i]}"
-    fi
-  done
-  printf '%s\n' "$names"
+  local index="$1" condition
+  if [[ ${RESULT_STATE[$index]} == timeout ]]; then
+    condition="timed out after ${RESULT_SECONDS[$index]}s (exit status ${RESULT_RC[$index]})"
+  else
+    condition="failed with exit status ${RESULT_RC[$index]}"
+  fi
+  printf '== %s (make %s) %s ==\nRerun: make %s. Full log: %s\n' \
+    "${RESULT_NAME[$index]}" "${RESULT_TARGET[$index]}" "$condition" \
+    "${RESULT_TARGET[$index]}" "${RESULT_LOG[$index]#"$PWD"/}"
 
   return 0
 }
@@ -1211,21 +1488,30 @@ function prerequisite-line() {
 
 # Describe the results the user should know about that do not block: gates that
 # could not run, warnings and the time budget.
+# Arguments:
+#   $1=[optional result index, otherwise all results]
 function summary-notes() {
 
-  local i notes=""
+  local result_index="${1:-}" i notes=""
   for i in "${!RESULT_STATE[@]}"; do
+    [[ -z $result_index || $i == "$result_index" ]] || continue
     case ${RESULT_STATE[$i]} in
       prerequisite)
-        notes="${notes:+$notes; }${RESULT_NAME[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown. Fix that, then run 'make ${RESULT_TARGET[$i]}'"
+        notes="${notes:+$notes. }${RESULT_NAME[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown, not passed (exit status ${RESULT_RC[$i]}). Report the prerequisite and inspect 'make ${RESULT_TARGET[$i]}'. Full log: ${RESULT_LOG[$i]}"
         ;;
       fail | timeout)
         if [[ ${RESULT_MODE[$i]} == warn ]]; then
-          notes="${notes:+$notes; }${RESULT_NAME[$i]} did not pass (warning only)"
+          notes="${notes:+$notes. }${RESULT_NAME[$i]} did not pass (warning only)"
+          if [[ ${RESULT_STATE[$i]} == timeout ]]; then
+            notes+=". make ${RESULT_TARGET[$i]} timed out after ${RESULT_SECONDS[$i]}s (exit status ${RESULT_RC[$i]})"
+          else
+            notes+=". make ${RESULT_TARGET[$i]} failed with exit status ${RESULT_RC[$i]}"
+          fi
+          notes+=". Inspect 'make ${RESULT_TARGET[$i]}' and Full log: ${RESULT_LOG[$i]}"
         fi
         ;;
-      incomplete) notes="${notes:+$notes; }${RESULT_NAME[$i]} did not finish within the time budget" ;;
-      not-run) notes="${notes:+$notes; }${RESULT_NAME[$i]} was not run, the time budget was used up" ;;
+      incomplete) notes="${notes:+$notes. }${RESULT_NAME[$i]} did not finish within the time budget (${RESULT_SECONDS[$i]}s, exit status ${RESULT_RC[$i]}). Result unknown, not passed. Verify with 'make ${RESULT_TARGET[$i]}'. Full log: ${RESULT_LOG[$i]}" ;;
+      not-run) notes="${notes:+$notes. }${RESULT_NAME[$i]} was not run, the time budget was used up. Result unknown, not passed. Verify with 'make ${RESULT_TARGET[$i]}'. No current log was produced. State: $STATE_DIR/last-run.json" ;;
     esac
   done
   printf '%s\n' "$notes"
@@ -1233,33 +1519,62 @@ function summary-notes() {
   return 0
 }
 
-# Build the message that tells the agent what to fix. It names each blocking
-# gate, gives the end of its output and the command to rerun, within
-# REASON_BYTES, and names the gates that could not run.
+# Build a byte-bounded diagnostic, reserving whole metadata before excerpts.
+# Arguments:
+#   $1=[byte limit, default REASON_BYTES] $2=[include excerpts, default true]
+#   $3=[additional hook context, optional]
 function build-reason() {
 
-  local i count=0 share text
+  local limit="${1:-$REASON_BYTES}" excerpts="${2:-true}" context="${3:-}"
+  local LC_ALL=C
+  local i count=0 share text opening metadata="" entry excerpt footer omitted overhead=0
+  local -a entries=()
+  opening="Quality gates have not passed. $RECOVERY_SCOPE"
+  if [[ $excerpts == false ]]; then
+    opening="Quality gate blocked the stop: gates have not passed. $RECOVERY_SCOPE"
+  fi
   for i in "${!RESULT_STATE[@]}"; do
     if is-blocking "$i"; then
       count=$((count + 1))
+      entry="$(blocking-metadata "$i")"
+      excerpt=$'\n\n'"Output (${RESULT_NAME[$i]}):"$'\n'
+      overhead=$((overhead + ${#excerpt}))
+    else
+      entry="$(summary-notes "$i")"
     fi
+    [[ -n $entry ]] || continue
+    entries+=("$entry")
+    metadata+=$'\n'"$entry"
   done
-  share=$(( REASON_BYTES / (count > 0 ? count : 1) ))
-  text="Quality gates failed. Fix the cause and rerun the command shown, do not disable or skip a gate."
+  text="$opening$metadata${context:+$'\n'$context}"
+  if (( ${#text} > limit )); then
+    omitted=${#entries[@]}
+    footer=$'\n'"Partial metadata: $omitted gate(s) omitted. Rerun: make quality-gate scope=all. Results: ${STATE_DIR#"$PWD"/}/last-run.json. Full logs: ${STATE_DIR#"$PWD"/}/logs."
+    [[ -z $context ]] || footer+=" Additional hook context omitted."
+    text="$opening"
+    for entry in "${entries[@]}"; do
+      (( ${#text} + 1 + ${#entry} + ${#footer} <= limit )) || break
+      text+=$'\n'"$entry"
+      omitted=$((omitted - 1))
+    done
+    printf '%s%s\n' "$text" "${footer/Partial metadata: ${#entries[@]}/Partial metadata: $omitted}"
+    return 0
+  fi
+  share=$(( (limit - ${#text} - overhead) / (count > 0 ? count : 1) ))
+  if [[ $excerpts == false ]] || (( share <= 0 )); then
+    printf '%s\n' "$text"
+    return 0
+  fi
   for i in "${!RESULT_STATE[@]}"; do
     is-blocking "$i" || continue
-    if [[ ${RESULT_STATE[$i]} == timeout ]]; then
-      text+=$'\n\n'"== ${RESULT_NAME[$i]} (make ${RESULT_TARGET[$i]}) timed out after ${RESULT_SECONDS[$i]}s =="
-    else
-      text+=$'\n\n'"== ${RESULT_NAME[$i]} (make ${RESULT_TARGET[$i]}) failed with exit status ${RESULT_RC[$i]} =="
-    fi
-    text+=$'\n'"$(strip-ansi < "${RESULT_LOG[$i]}" | tail -n "$EXCERPT_LINES" | tail -c "$share")"
-    text+=$'\n'"Rerun: make ${RESULT_TARGET[$i]}"$'\n'"Full log: ${RESULT_LOG[$i]#"$PWD"/}"
-  done
-  for i in "${!RESULT_STATE[@]}"; do
-    if [[ ${RESULT_STATE[$i]} == prerequisite ]]; then
-      text+=$'\n\n'"make ${RESULT_TARGET[$i]} could not run ($(prerequisite-line "$i")), so its result is unknown. Tell the user, do not change the environment."
-    fi
+    excerpt="$(
+      if [[ -r ${RESULT_LOG[$i]} ]]; then
+        strip-ansi < "${RESULT_LOG[$i]}" | tail -n "$EXCERPT_LINES"
+      else
+        printf 'Gate log is unreadable. Result unknown, not passed. Inspect %s.' "${RESULT_LOG[$i]}"
+      fi | jq -Rrs --argjson limit "$share" '.[-$limit:] | until(utf8bytelength <= $limit; .[1:])'
+    )"
+    text+=$'\n\n'"Output (${RESULT_NAME[$i]}):"$'\n'"$excerpt"
   done
   printf '%s\n' "$text"
 
@@ -1280,15 +1595,29 @@ function summarise-results() {
 # Save the results of the last run as JSON, for diagnosing the hook.
 # Arguments:
 #   $1=[state directory] $2=[event] $3=[session identifier]
+#   $4=[session status] $5=[selection reason] $6=[selection scope]
 function write-last-run() {
 
-  local i rows=""
+  local state_dir="$1" event="$2" session="$3" session_status="$4" selection_reason="$5" selection_scope="$6"
+  local i rows="" record tmp=""
   for i in "${!RESULT_STATE[@]}"; do
     rows+="${RESULT_NAME[$i]}"$'\t'"${RESULT_STATE[$i]}"$'\t'"${RESULT_RC[$i]}"$'\t'"${RESULT_SECONDS[$i]}"$'\n'
   done
-  jq -R -s -c --arg event "$2" --arg session "$3" \
-    '{time: (now | floor | todate), event: $event, session: $session, gates: (split("\n") | map(select(length > 0) | split("\t") | {name: .[0], state: .[1], status: (.[2] | tonumber), seconds: (.[3] | tonumber)}))}' \
-    <<< "$rows" > "$1/last-run.json" || echo "Quality gate: cannot write $1/last-run.json" >&2
+  if ! record="$(jq -R -s -c --arg event "$event" --arg session "$session" \
+    --arg session_status "$session_status" --arg selection_reason "$selection_reason" --arg scope "$selection_scope" \
+    '{time: (now | floor | todate), event: $event, session: $session,
+      session_status: $session_status, selection_reason: $selection_reason, scope: $scope,
+      gates: (split("\n") | map(select(length > 0) | split("\t") | {name: .[0], state: .[1], status: (.[2] | tonumber), seconds: (.[3] | tonumber)}))}' \
+    <<< "$rows")"; then
+    echo "Quality gate: cannot write $state_dir/last-run.json because encoding failed. Result history is unavailable, not evidence of a pass. Inspect jq diagnostics and $state_dir/logs, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    return 0
+  fi
+  if ! { tmp="$(mktemp "$state_dir/.last-run.XXXXXX")" && printf '%s\n' "$record" > "$tmp" && [[ ! -d $state_dir/last-run.json ]] && mv "$tmp" "$state_dir/last-run.json"; }; then
+    echo "Quality gate: cannot write $state_dir/last-run.json. Result history is unavailable, not evidence of a pass. Inspect that path and $state_dir/logs, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+  fi
+  if [[ -n $tmp ]]; then
+    rm -f "$tmp" || audit-error "$tmp" 'temporary run cleanup failed'
+  fi
 
   return 0
 }
@@ -1298,8 +1627,9 @@ function write-last-run() {
 #   $1=[message for the user, optional]
 function emit-allow() {
 
-  if [[ -n ${1:-} ]]; then
-    jq -nc --arg message "$1" '{systemMessage: $message}'
+  local message="${1:-}"
+  if [[ -n $message ]]; then
+    jq -nc --arg message "$message $RECOVERY_SCOPE" '{systemMessage: $message}'
   else
     echo '{}'
   fi

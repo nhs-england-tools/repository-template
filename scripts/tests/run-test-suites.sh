@@ -18,28 +18,33 @@ set -euo pipefail
 #   dir=path      # Directory within a Git worktree, relative to the
 #                 # repository's top-level directory or absolute, default is
 #                 # 'scripts'
+#   QUALITY_GATE_RESULT_FILE=path
+#                 # Optional absolute private verdict path supplied by the hook
 #   VERBOSE=true  # Show all the executed commands, default is 'false'
 #
 # Exit codes:
 #   0 - Every test suite passed
 #   1 - At least one test suite failed, no test suite was found, or Git could
 #       not search the directory
+#   77 - Verification is incomplete solely because prerequisites are unavailable
 #   Other - Non-zero statuses from temporary-file creation or sorting
 
 # ==============================================================================
 
 function main() {
 
-  cd "$(git rev-parse --show-toplevel)"
+  publish-result fail || return 1
+  cd "$(git rev-parse --show-toplevel)" || return 1
 
   local dir=${dir:-scripts}
   local -a suites=()
   find-test-suites suites "$dir" || return "$?"
   if [[ ${#suites[@]} -eq 0 ]]; then
-    echo "No test suites found under $dir" >&2
+    echo "ERROR: No test suites found under '$dir'. Verification did not run. Check discovery with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'" >&2
     return 1
   fi
   run-test-suites "${suites[@]}" || return "$?"
+  publish-result pass || return 1
 
   return 0
 }
@@ -54,7 +59,10 @@ function find-test-suites() {
 
   local -n result="$1" || return "$?"
   local dir="$2" base="${2%/}" tmp suite path rc=0
-  tmp="$(mktemp -d)" || return "$?"
+  tmp="$(mktemp -d)" || {
+    echo "ERROR: cannot create discovery scratch directory. Verification did not run. Diagnose with: mktemp -d" >&2
+    return 1
+  }
   if list-test-suites "$dir" "$tmp/list"; then
     while IFS= read -r -d '' suite; do
       path="$base/$suite"
@@ -68,7 +76,10 @@ function find-test-suites() {
   else
     rc=$?
   fi
-  rm -rf "$tmp"
+  rm -rf "$tmp" || {
+    echo "ERROR: cannot remove discovery scratch directory '$tmp'. Inspect with: ls -ld '$tmp'" >&2
+    return 1
+  }
 
   return "$rc"
 }
@@ -88,11 +99,14 @@ function list-test-suites() {
   # Git only warns about a directory it cannot read, so any message is a failure
   if [[ $rc -ne 0 || -s "$err" ]]; then
     cat "$err" >&2
-    echo "ERROR: cannot search $dir for test suites" >&2
+    echo "ERROR: cannot search $dir for test suites. Verification did not run. Diagnose with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'" >&2
     return 1
   fi
   # A conflicted path is listed once for each index stage
-  LC_ALL=C sort -zu -o "$list" "$list" || return "$?"
+  LC_ALL=C sort -zu -o "$list" "$list" || {
+    echo "ERROR: cannot sort discovered suites in '$list'. Verification did not run. Diagnose with: sort --version" >&2
+    return 1
+  }
 
   return 0
 }
@@ -103,16 +117,19 @@ function list-test-suites() {
 #   $@=[test suite paths]
 function run-test-suites() {
 
-  local logs suite rc reason i=0 failed=0
+  local logs suite rc reason i=0 failed=0 unavailable=0
   local -a pids=() paths=("$@") failures=()
-  logs="$(mktemp -d)"
+  logs="$(mktemp -d)" || {
+    echo "ERROR: cannot create suite log directory. Verification did not run. Diagnose with: mktemp -d" >&2
+    return 1
+  }
   # shellcheck disable=SC2064
   trap "rm -rf '$logs'" EXIT
 
   for suite in "${paths[@]}"; do
     # 'env' keeps the runner's own variables out of the suite and reports a
     # suite that cannot run as 126
-    env -u dir -u suites "$suite" > "$logs/$i.log" 2>&1 < /dev/null &
+    env -u dir -u suites -u QUALITY_GATE_RESULT_FILE "$suite" > "$logs/$i.log" 2>&1 < /dev/null &
     pids+=("$!")
     i=$((i + 1))
   done
@@ -123,24 +140,68 @@ function run-test-suites() {
     rc=$?
     set -e
     echo "== ${paths[$i]} =="
-    cat "$logs/$i.log"
+    cat "$logs/$i.log" || return 1
     if [[ -n "$(tail -c 1 "$logs/$i.log")" ]]; then
       echo
     fi
     if [[ $rc -ne 0 ]]; then
-      echo "FAILED: ${paths[$i]} (exit code $rc)"
       reason="$(awk '/^(ERROR|FAILED|ASSERTION FAILED)/ { print; exit }' "$logs/$i.log" || true)"
       failures+=("${paths[$i]}: ${reason:-exit code $rc}")
-      failed=$((failed + 1))
+      if [[ $rc -eq 77 ]]; then
+        echo "UNAVAILABLE: ${paths[$i]} (exit code $rc)"
+        unavailable=$((unavailable + 1))
+      else
+        echo "FAILED: ${paths[$i]} (exit code $rc)"
+        failed=$((failed + 1))
+        printf 'ERROR: suite %q exited with status %s. Verification failed. Diagnose with: VERBOSE=true %q\n' "${paths[$i]}" "$rc" "${paths[$i]}"
+        if [[ $rc -eq 126 || $rc -eq 127 ]]; then
+          printf 'ERROR: cannot execute suite %q. Verification failed. Inspect its mode and interpreter with: ls -l %q\n' "${paths[$i]}" "${paths[$i]}" >&2
+        fi
+      fi
     fi
   done
 
-  echo "Suites: ${#paths[@]}, Passed: $((${#paths[@]} - failed)), Failed: $failed"
-  if [[ $failed -ne 0 ]]; then
-    echo "Failed suites:"
+  printf 'Suites: %s, Passed: %s, Failed: %s' "${#paths[@]}" "$((${#paths[@]} - failed - unavailable))" "$failed"
+  if [[ $unavailable -gt 0 ]]; then printf ', Unavailable: %s' "$unavailable"; fi
+  printf '\n'
+  rm -rf "$logs" || {
+    echo "ERROR: cannot remove suite logs '$logs'. Cleanup failed. Inspect with: ls -ld '$logs'" >&2
+    return 1
+  }
+  trap - EXIT
+  if [[ $failed -gt 0 || $unavailable -gt 0 ]]; then
+    if [[ $unavailable -gt 0 ]]; then
+      echo "Suites requiring attention:"
+    else
+      echo "Failed suites:"
+    fi
     for reason in "${failures[@]}"; do
       echo "  - $reason"
     done
+    if [[ $failed -eq 0 ]]; then
+      printf 'PREREQUISITE: %s suite(s) could not complete because prerequisites are unavailable. Verification remains unknown. Review the detailed diagnostics above and rerun: dir=%q bash scripts/tests/run-test-suites.sh\n' "$unavailable" "${dir:-scripts}"
+      publish-result prerequisite || return 1
+      return 77
+    fi
+    return 1
+  fi
+
+  return 0
+}
+
+# Write a private aggregate verdict when the hook supplies an absolute path.
+# Arguments:
+#   $1=[protocol value to write]
+function publish-result() {
+
+  local value="$1" file="${QUALITY_GATE_RESULT_FILE-}"
+  [[ ${QUALITY_GATE_RESULT_FILE+x} ]] || return 0
+  if [[ "$file" != /* ]]; then
+    echo "ERROR: QUALITY_GATE_RESULT_FILE must be an absolute path, got '$file'. No trustworthy verdict can be published. Check with: declare -p QUALITY_GATE_RESULT_FILE" >&2
+    return 1
+  fi
+  if ! printf '%s\n' "$value" > "$file"; then
+    echo "ERROR: cannot publish test-suite verdict to '$file'. Verification cannot be classified. Inspect the destination with: ls -ld '${file%/*}' '$file'" >&2
     return 1
   fi
 

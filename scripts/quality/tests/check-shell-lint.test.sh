@@ -997,8 +997,8 @@ function test-check-shell-lint-pre-commit-and-ci-wiring() {
 
   # Arrange
   local hook_ids lint_hook_ids shell_hook workflow_jobs jobs_with_needs pre_commit workflow
-  local lint_jobs='^(scan-secrets|check-file-format|check-markdown-format|check-markdown-links|check-shell-lint|check-workflow-security)$'
-  local lint_order='scan-secrets check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security '
+  local lint_jobs='^(scan-secrets|check-file-format|check-markdown-format|check-markdown-links|check-shell-lint|check-workflow-security|check-pipeline-contract)$'
+  local lint_order='scan-secrets check-file-format check-markdown-format check-markdown-links check-shell-lint check-workflow-security check-pipeline-contract '
   pre_commit="$TEST_REPO_ROOT/scripts/config/pre-commit.yaml"
   workflow="$TEST_REPO_ROOT/.github/workflows/stage-1-commit.yaml"
   hook_ids="$(sed -En 's/^[[:space:]]*-[[:space:]]+id:[[:space:]]*([^[:space:]]+).*/\1/p' "$pre_commit")"
