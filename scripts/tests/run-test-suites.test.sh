@@ -14,6 +14,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/test.lib.sh"
+
 readonly PASSING_SUITE_BODY='exit 0'
 readonly FAILING_SUITE_BODY='exit 1'
 readonly UNAVAILABLE_SUITE_BODY='exit 77'
@@ -23,7 +25,9 @@ readonly EXIT_STATUS_LABEL='exit status'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
+
+  # The caller's options must not reach the script under test
+  unset -v GITHUB_ACTIONS
 
   test-run-suite \
     test-runner-publishes-only-aggregate-prerequisite \
@@ -43,8 +47,12 @@ function main() {
     test-runner-runs-every-suite-and-passes \
     test-runner-preserves-paths-and-filters-suites \
     test-runner-fails-when-any-suite-fails-and-still-runs-the-rest \
+    test-runner-reports-failed-suites-locally-without-annotations \
+    test-runner-annotates-each-failed-suite-in-github-actions \
+    test-runner-does-not-annotate-unavailable-suites-as-failures \
     test-runner-fails-when-no-suite-is-found \
     test-runner-fails-when-directory-is-missing \
+    test-runner-annotates-a-missing-directory-in-github-actions \
     test-runner-fails-when-a-directory-cannot-be-searched \
     test-runner-runs-root-level-suites-with-a-relative-dir \
     test-runner-runs-suites-in-a-nested-repository \
@@ -367,6 +375,74 @@ function test-runner-fails-when-any-suite-fails-and-still-runs-the-rest() {
   return 0
 }
 
+function test-runner-reports-failed-suites-locally-without-annotations() {
+
+  # Arrange
+  local tree="$TEST_TMP/tree" diagnostic
+  printf -v diagnostic 'ERROR: suite %q exited with status 1. Verification failed. Diagnose with: VERBOSE=true %q' "$tree/a.test.sh" "$tree/a.test.sh"
+  write-fixture a.test.sh "echo 'ERROR: a broke'; exit 1"
+  write-fixture b.test.sh "$PASSING_SUITE_BODY"
+  # Act
+  run-runner
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$(printf '%s\n' \
+    "== $tree/a.test.sh ==" \
+    'ERROR: a broke' \
+    "FAILED: $tree/a.test.sh (exit code 1)" \
+    "$diagnostic" \
+    "== $tree/b.test.sh ==" \
+    'Suites: 2, Passed: 1, Failed: 1' \
+    'Failed suites:' \
+    "  - $tree/a.test.sh: ERROR: a broke")" "$TEST_STDOUT" "stdout"
+  assert-equal "" "$TEST_STDERR" "no diagnostics on stderr"
+
+  return 0
+}
+
+function test-runner-annotates-each-failed-suite-in-github-actions() {
+
+  # Arrange
+  local tree="$TEST_TMP/tree" local_stdout
+  write-fixture a.test.sh "echo 'ERROR: a broke'; exit 1"
+  write-fixture b.test.sh 'exit 2'
+  write-fixture c.test.sh "$PASSING_SUITE_BODY"
+  run-runner
+  local_stdout="$TEST_STDOUT"
+  # Act
+  test-capture env GITHUB_ACTIONS=true dir="$tree" \
+    "$TEST_REPO_ROOT/scripts/tests/run-test-suites.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "$local_stdout" "$TEST_STDOUT" "stdout matches a local run"
+  assert-equal "$(printf '%s\n' \
+    "::error::Test suite failed: $tree/a.test.sh: ERROR: a broke" \
+    "::error::Test suite failed: $tree/b.test.sh: exit code 2")" \
+    "$TEST_STDERR" "one annotation per failed suite"
+
+  return 0
+}
+
+function test-runner-does-not-annotate-unavailable-suites-as-failures() {
+
+  # Arrange
+  local tree="$TEST_TMP/tree"
+  export QUALITY_GATE_RESULT_FILE="$TEST_TMP/result"
+  write-fixture a.test.sh "$UNAVAILABLE_SUITE_BODY"
+  write-fixture b.test.sh "$FAILING_SUITE_BODY"
+  # Act
+  test-capture env GITHUB_ACTIONS=true dir="$tree" \
+    "$TEST_REPO_ROOT/scripts/tests/run-test-suites.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "mixed verdict"
+  assert-contains "$TEST_STDOUT" "UNAVAILABLE: $tree/a.test.sh"
+  assert-contains "$TEST_STDERR" "::error::Test suite failed: $tree/b.test.sh: exit code 1"
+  assert-not-contains "$TEST_STDERR" "::error::Test suite failed: $tree/a.test.sh"
+
+  return 0
+}
+
 function test-runner-fails-when-no-suite-is-found() {
 
   # Arrange
@@ -378,7 +454,16 @@ function test-runner-fails-when-no-suite-is-found() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "empty discovery verdict"
-  assert-contains "$TEST_STDERR" "No test suites found under"
+  assert-contains "$TEST_STDERR" "ERROR: No test suites found under '$TEST_TMP/tree'."
+  assert-contains "$TEST_STDERR" "Verification did not run"
+  # Act
+  test-capture env GITHUB_ACTIONS=true dir="$TEST_TMP/tree" \
+    "$TEST_REPO_ROOT/scripts/tests/run-test-suites.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "empty discovery verdict in GitHub Actions"
+  assert-contains "$TEST_STDERR" "::error::No test suites found under '$TEST_TMP/tree'."
+  assert-contains "$TEST_STDERR" "Verification did not run"
 
   return 0
 }
@@ -427,6 +512,22 @@ function test-runner-fails-when-directory-is-missing() {
   assert-equal fail "$(cat "$QUALITY_GATE_RESULT_FILE")" "missing directory verdict"
   assert-contains "$TEST_STDERR" "cannot search $TEST_TMP/tree/missing for test suites"
   assert-not-contains "$TEST_STDOUT" "Suites:" "no suites run after a Git discovery failure"
+
+  return 0
+}
+
+function test-runner-annotates-a-missing-directory-in-github-actions() {
+
+  # Arrange
+  local missing="$TEST_TMP/tree/missing"
+  write-fixture existing.test.sh "$PASSING_SUITE_BODY"
+  # Act
+  test-capture env GITHUB_ACTIONS=true dir="$missing" \
+    "$TEST_REPO_ROOT/scripts/tests/run-test-suites.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "::error::cannot search $missing for test suites"
+  assert-not-contains "$TEST_STDERR" "ERROR: cannot search" "no local error line"
 
   return 0
 }
@@ -496,7 +597,7 @@ function test-runner-runs-a-conflicted-suite-once() {
   write-fixture c.test.sh 'echo first'
   git -C "$tree" commit -q -am first
   if git -C "$tree" merge -q other > /dev/null 2>&1; then
-    echo "ERROR: the fixture merge did not conflict" >&2
+    print-diagnostic error "the fixture merge did not conflict"
     return 1
   fi
   write-fixture c.test.sh 'echo resolved-ran'
@@ -642,8 +743,8 @@ function run-docker-cleanup-probe() {
 
   local outcome="$1"
   test-capture "$BASH" -c '
-source <(sed '\''/^is-arg-true "\${VERBOSE/,$d'\'' "$1/scripts/docker/tests/docker.test.sh")
 source "$1/scripts/tests/test.lib.sh"
+source <(sed -e '\''/^source "/d'\'' -e '\''/^is-arg-true "\${VERBOSE/,$d'\'' "$1/scripts/docker/tests/docker.test.sh")
 function test-suite-setup() {
   local suffix
   suffix="$(basename "$SUITE_TMP" | tr "[:upper:]" "[:lower:]" | tr -cd a-z0-9)"

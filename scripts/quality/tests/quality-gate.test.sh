@@ -16,6 +16,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 readonly SESSION=session-1
 readonly SCRIPT=./scripts/quality/quality-gate.sh
@@ -29,7 +31,7 @@ readonly FIRST_GATE_STATE_FILTER='.gates[0].state'
 readonly SECOND_GATE_STATE_FILTER='.gates[1].state'
 readonly LINT_LOG_FILENAME='lint.log'
 readonly PROMPT_MARKER='PROMPT-MARKER-4711'
-readonly SCRIPT_MAIN_STRIP_PATTERN='/^is-arg-true /,$d'
+readonly SCRIPT_MAIN_STRIP_PATTERN=$'/^source ".*github-actions[.]lib[.]sh"$/d\n/^is-arg-true /,$d'
 # Time limits count whole seconds, so a limit of 2 gives the gate at least a
 # second to start its processes
 readonly SHORT_LINT_GATE=$'version: 1\ngates:\n  - name: lint\n    timeout: 2'
@@ -40,7 +42,6 @@ readonly PROMPT_JSON_FORMAT="{\"hook_event_name\":\"UserPromptSubmit\",\"session
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
 
   # The caller's options must not reach the script under test
   unset -v scope hours QUALITY_GATE_BUDGET QUALITY_GATE_ACTIVE GITHUB_ACTIONS COPILOT_AGENT_PROMPT
@@ -156,6 +157,7 @@ function main() {
     test-quality-gate-ignores-a-pause-made-during-the-turn \
     test-quality-gate-removes-an-expired-pause \
     test-quality-gate-rejects-an-out-of-range-pause \
+    test-quality-gate-annotates-an-invalid-pause-in-github-actions \
     test-quality-gate-never-stores-or-prints-the-prompt \
     test-quality-gate-run-runs-every-gate \
     test-quality-gate-run-fails-when-a-gate-fails \
@@ -202,8 +204,9 @@ function gate-build-repo() {
 
   local repo="$1" line
   git init -q -b main "$repo"
-  mkdir -p "$repo/scripts/quality" "$repo/scripts/config" "$repo/src"
+  mkdir -p "$repo/scripts/quality" "$repo/scripts/config" "$repo/scripts/cicd" "$repo/src"
   ln -s "$TEST_REPO_ROOT/scripts/quality/quality-gate.sh" "$repo/scripts/quality/quality-gate.sh"
+  ln -s "$TEST_REPO_ROOT/scripts/cicd/github-actions.lib.sh" "$repo/scripts/cicd/github-actions.lib.sh"
   cp -p "$TEST_REPO_ROOT/scripts/quality/quality-gate.jq" "$repo/scripts/quality/quality-gate.jq"
   # Pin the block limit so the tests do not depend on the project's setting
   while IFS= read -r line || [[ -n $line ]]; do
@@ -1453,10 +1456,11 @@ function test-quality-gate-runs-every-gate-when-the-first-commit-is-made-during-
   # Arrange
   local repo="$TEST_TMP/empty"
   git init -q -b main "$repo"
-  mkdir -p "$repo/scripts/quality" "$repo/scripts/config"
+  mkdir -p "$repo/scripts/quality" "$repo/scripts/config" "$repo/scripts/cicd"
   cp "$TEST_REPO_ROOT/scripts/quality/quality-gate.jq" "$repo/scripts/quality/"
   cp "$TEST_REPO_ROOT/scripts/config/quality-gates.yaml" "$repo/scripts/config/"
   ln -s "$TEST_REPO_ROOT/scripts/quality/quality-gate.sh" "$repo/scripts/quality/quality-gate.sh"
+  ln -s "$TEST_REPO_ROOT/scripts/cicd/github-actions.lib.sh" "$repo/scripts/cicd/github-actions.lib.sh"
   test-isolate-path jq yq readlink
   test-stub make
   cd "$repo"
@@ -1978,7 +1982,7 @@ function test-quality-gate-does-not-downgrade-legacy-docker-markers() {
   # Arrange
   local message
   gate-create-repo
-  gate-make 'if [[ "${*: -1}" == test ]]; then echo "ERROR Docker test suite cannot run: docker is not running or is not reachable" >&2; echo "test-real-bug FAIL"; exit 1; fi'
+  gate-make 'if [[ "${*: -1}" == test ]]; then echo "ERROR: Docker test suite cannot run: docker is not running or is not reachable" >&2; echo "test-real-bug FAIL"; exit 1; fi'
   gate-start-turn
   printf 'two\n' >> README.md
   # Act
@@ -2840,6 +2844,21 @@ function test-quality-gate-rejects-an-out-of-range-pause() {
     assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL for hours='$hours'"
     assert-contains "$TEST_STDERR" "hours must be a whole number from 1 to 8"
   done
+  assert-file-not-exists .git/quality-gate/paused
+
+  return 0
+}
+
+function test-quality-gate-annotates-an-invalid-pause-in-github-actions() {
+
+  # Arrange
+  gate-create-repo
+  # Act
+  test-capture env GITHUB_ACTIONS=true hours=0 "$SCRIPT" pause
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "::error::hours must be a whole number from 1 to 8"
+  assert-contains "$TEST_STDERR" "Pause unchanged."
   assert-file-not-exists .git/quality-gate/paused
 
   return 0

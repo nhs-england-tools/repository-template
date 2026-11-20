@@ -34,6 +34,9 @@ MIN_BASH_VERSION="5.2"
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+
 function main() {
 
   local tool failed=0
@@ -54,6 +57,10 @@ function main() {
   if [[ ${failed} -gt 0 ]]; then
     echo
     echo "${failed} tool(s) are not resolving to their required GNU-compatible implementation or version."
+    # Locally the report above already shows the failure
+    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+      print-diagnostic error "${failed} tool(s) are not resolving to their required GNU-compatible implementation or version."
+    fi
     if [[ "$(uname -s)" == "Darwin" ]]; then
       echo "Run: make toolchain-install-gnu-macos, then add the printed PATH line to your shell profile."
     else

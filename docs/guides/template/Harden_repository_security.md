@@ -120,7 +120,10 @@ requires a `tag` input with no default. It rejects `latest`, checks the value
 with `git check-ref-format` and checks out `refs/tags/<tag>` instead of the
 default branch. A valid ref name does not prove that the tag exists or that it
 cannot move. Protect release tags and restrict who can run the deploy workflow
-in the repository settings.
+in the repository settings. Only one deployment runs at a time, and a running
+deployment is never cancelled. At most one more waits behind it. When another
+deployment starts, GitHub cancels the one that is waiting and queues the new
+one.
 
 The build, publish, deploy and acceptance steps are template placeholders.
 Implement and review them before relying on them.

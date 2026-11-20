@@ -15,6 +15,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 readonly STATUS_NONE_OUTPUT='status=none'
 readonly STATUS_FAILURE_OUTPUT='status=failure'
@@ -44,7 +46,9 @@ readonly FAILED_ATTEMPT_RESPONSE='{"conclusion":"failure","run_number":10,"html_
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
+
+  # The caller's options must not reach the code under test
+  unset -v GITHUB_ACTIONS
 
   test-run-suite \
     test-notify-reports-nothing-when-every-job-passes \
@@ -75,7 +79,8 @@ function main() {
     test-notify-warns-when-the-webhook-is-not-configured \
     test-notify-writes-the-step-summary \
     test-notify-rejects-needs-that-are-not-json \
-    test-notify-requires-the-github-actions-variables
+    test-notify-requires-the-github-actions-variables \
+    test-notify-annotates-an-error-in-github-actions
 
   return 0
 }
@@ -555,6 +560,19 @@ function test-notify-requires-the-github-actions-variables() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "GITHUB_OUTPUT is not set" "diagnostic"
+
+  return 0
+}
+
+function test-notify-annotates-an-error-in-github-actions() {
+
+  # Arrange
+  notify-set-up 'not json'
+  # Act
+  notify-run GITHUB_ACTIONS=true
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "::error::NEEDS must be the JSON object of 'toJSON(needs)'" "$TEST_STDERR" "annotation"
 
   return 0
 }

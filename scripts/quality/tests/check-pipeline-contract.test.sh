@@ -15,6 +15,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/quality-test.lib.sh"
+
 readonly NOTIFY_IF="\${{ !cancelled() && github.ref == 'refs/heads/main' }}"
 readonly SILENT_WORKFLOW=$'name: test\non: push\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest'
 readonly EXIT_STATUS_LABEL='exit status'
@@ -26,20 +29,20 @@ readonly NOTIFY_IF_ERROR='job notify must start its if: condition with !cancelle
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
+
   NOTIFYING_WORKFLOW="$(pipeline-contract-notifying-workflow "$NOTIFY_IF" '[build, test]')"
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-pipeline-contract.sh scripts/quality/check-pipeline-contract.jq scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-pipeline-contract.sh scripts/quality/check-pipeline-contract.jq scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v check dir BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE
+  unset -v check dir BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE GITHUB_ACTIONS
 
   test-run-suite \
     test-pipeline-contract-rejects-unknown-mode \
     test-pipeline-contract-fails-without-tracked-workflows \
     test-pipeline-contract-accepts-cicd-workflow-that-notifies \
     test-pipeline-contract-rejects-cicd-workflow-without-notification \
+    test-pipeline-contract-annotates-errors-in-github-actions \
     test-pipeline-contract-rejects-notification-skipped-on-failure \
     test-pipeline-contract-rejects-notification-that-cannot-be-cancelled \
     test-pipeline-contract-rejects-notification-that-misses-a-job \
@@ -117,6 +120,21 @@ function test-pipeline-contract-rejects-cicd-workflow-without-notification() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "ERROR: .github/workflows/cicd-1-test.yaml: $NOTIFY_ERROR" "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
+
+  return 0
+}
+
+function test-pipeline-contract-annotates-errors-in-github-actions() {
+
+  # Arrange
+  pipeline-contract-write-fixture cicd-1-test.yaml "$SILENT_WORKFLOW"
+  pipeline-contract-create-repo
+  # Act
+  pipeline-contract-run-check GITHUB_ACTIONS=true
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "::error::.github/workflows/cicd-1-test.yaml: $NOTIFY_ERROR" "$TEST_STDERR" "annotation"
+  assert-equal "" "$TEST_STDOUT" "stdout"
 
   return 0
 }

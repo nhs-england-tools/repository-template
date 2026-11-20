@@ -39,6 +39,11 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-files.lib.sh"
+
 # Check the selected workflows against the pipeline contract.
 function main() {
 
@@ -51,7 +56,7 @@ function main() {
 
   for tool in yq jq; do
     command -v "$tool" > /dev/null 2>&1 || {
-      echo "ERROR: $tool is required to validate the pipeline contract, run 'make config'" >&2
+      print-diagnostic error "$tool is required to validate the pipeline contract, run 'make config'"
       return 1
     }
   done
@@ -59,15 +64,13 @@ function main() {
   dir="${dir#"$PWD"/}"
   dir="${dir#./}"
   [[ -d "$dir" ]] || {
-    echo "ERROR: workflow directory does not exist: $dir" >&2
+    print-diagnostic error "workflow directory does not exist: $dir"
     return 1
   }
 
-  # shellcheck disable=SC1091
-  source ./scripts/quality/git-files.lib.sh
   collect-pipeline-contract-files workflows "$check_mode" "$dir" || return "$?"
   [[ "$check_mode" != all || ${#workflows[@]} -gt 0 ]] || {
-    echo "ERROR: no tracked workflow files found under $dir" >&2
+    print-diagnostic error "no tracked workflow files found under $dir"
     return 1
   }
 
@@ -149,7 +152,7 @@ function pipeline-contract-check() {
 function pipeline-contract-error() {
 
   local file="$1" message="$2"
-  printf 'ERROR: %s: %s\n' "$file" "$message" >&2
+  print-diagnostic error "$file: $message"
 
   return 0
 }

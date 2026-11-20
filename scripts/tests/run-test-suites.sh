@@ -31,6 +31,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+
 function main() {
 
   publish-result fail || return 1
@@ -40,7 +43,7 @@ function main() {
   local -a suites=()
   find-test-suites suites "$dir" || return "$?"
   if [[ ${#suites[@]} -eq 0 ]]; then
-    echo "ERROR: No test suites found under '$dir'. Verification did not run. Check discovery with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'" >&2
+    print-diagnostic error "No test suites found under '$dir'. Verification did not run. Check discovery with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'"
     return 1
   fi
   run-test-suites "${suites[@]}" || return "$?"
@@ -99,7 +102,7 @@ function list-test-suites() {
   # Git only warns about a directory it cannot read, so any message is a failure
   if [[ $rc -ne 0 || -s "$err" ]]; then
     cat "$err" >&2
-    echo "ERROR: cannot search $dir for test suites. Verification did not run. Diagnose with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'" >&2
+    print-diagnostic error "cannot search $dir for test suites. Verification did not run. Diagnose with: git -C '$dir' ls-files --cached --others --exclude-standard -- '*.test.sh'"
     return 1
   fi
   # A conflicted path is listed once for each index stage
@@ -154,6 +157,9 @@ function run-test-suites() {
         echo "FAILED: ${paths[$i]} (exit code $rc)"
         failed=$((failed + 1))
         printf 'ERROR: suite %q exited with status %s. Verification failed. Diagnose with: VERBOSE=true %q\n' "${paths[$i]}" "$rc" "${paths[$i]}"
+        if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+          print-diagnostic error "Test suite failed: ${paths[$i]}: ${reason:-exit code $rc}"
+        fi
         if [[ $rc -eq 126 || $rc -eq 127 ]]; then
           printf 'ERROR: cannot execute suite %q. Verification failed. Inspect its mode and interpreter with: ls -l %q\n' "${paths[$i]}" "${paths[$i]}" >&2
         fi

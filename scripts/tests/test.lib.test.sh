@@ -15,6 +15,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/test.lib.sh"
+
 readonly FAILED_TEST_OUTPUT='t FAIL'
 readonly STDOUT_LABEL='stdout'
 readonly STDERR_LABEL='stderr'
@@ -26,12 +28,14 @@ readonly ABORTED_SUITE_ERROR='ERROR: the test suite aborted before running all i
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
+
+  # The caller's options must not reach the harness under test
+  unset -v GITHUB_ACTIONS
 
   # A harness that ignores errexit in tests also ignores failed assertions here,
   # so check it from outside first
   if "$BASH" -c 'source ./scripts/tests/test.lib.sh; function t() { false; true; }; test-run-suite t' > /dev/null 2>&1; then
-    echo "ERROR: the harness passed a test whose command failed" >&2
+    print-diagnostic error "the harness passed a test whose command failed"
     return 1
   fi
 
