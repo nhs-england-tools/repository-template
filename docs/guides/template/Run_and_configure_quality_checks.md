@@ -308,8 +308,11 @@ Design a new check so it works as well for an agent as for a person:
 - Keep it read-only. Put anything that rewrites files behind `make format`.
 - Separate the code from the environment. When the check cannot run for a reason
   outside the code, such as a missing tool or a stopped Docker daemon, print a
-  line starting with `PREREQUISITE:` that says how to fix it. The Stop hook then
-  tells the user instead of asking the agent to fix something it cannot.
+  line starting with `PREREQUISITE:` that says how to fix it. If that is the
+  only problem, also write `prerequisite` to `QUALITY_GATE_RESULT_FILE` when the
+  hook supplies that path, then exit non-zero. The line alone does not downgrade
+  a failed gate. Follow the
+  [prerequisite reporting contract](Run_quality_gate_on_agent_stop.md#gates-that-cannot-run-).
 
 Then decide where the check runs. A target under `make lint` runs in the Stop
 hook and whenever someone runs `make lint`. To run it in the hook on its own,

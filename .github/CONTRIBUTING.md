@@ -44,6 +44,8 @@ maintain those steps in its README and Makefile.
 - Discuss larger or breaking changes with the maintainers before investing in
   implementation.
 - Add or update tests and documentation when behaviour or instructions change.
+- When adding or renaming a template capability, update the
+  [capability table](../docs/guides/template/README.md#template-capabilities-).
 - Follow the conventions already used in the repository. Use approved
   dependencies and follow the project's licensing and supply-chain requirements.
 - Keep changes reviewable. Do not include generated files or unrelated clean-up
@@ -58,13 +60,14 @@ make lint
 make test
 ```
 
-`make lint` checks file formats, Markdown formatting and links, and shell
-scripts. `make test` is the quick-feedback target for development. It currently
-runs this template's own script test suites, and some integration tests require
-a running Docker daemon. Add fast project and system tests, such as unit tests,
-to this target. Keep slower test tiers separate. Extend the Makefile and CI
-workflow to run the project's build, full test suite, type checks, security
-checks, and other required quality gates.
+`make lint` checks file formats, Markdown formatting and links, shell scripts,
+pipeline contracts and security readiness. Secret scanning is a separate target,
+`make scan-secrets`. `make test` is the quick-feedback target for development.
+It currently runs this template's own script test suites, and some integration
+tests require a running Docker daemon. Add fast project and system tests, such
+as unit tests, to this target. Keep slower test tiers separate. Extend the
+Makefile and CI workflow to run the project's build, full test suite, type
+checks, security checks, and other required quality gates.
 
 ## Open a pull request 🔀
 
@@ -86,14 +89,14 @@ template.
 
 ## When main is broken 🚨
 
-The CI/CD pipeline runs every stage on each push to `main`. When that run
-fails, it posts a message to the team's Microsoft Teams channel, and it posts
-again when `main` is green. Only the newest finished run reports, so a slow run
-of an older commit does not undo the news of a newer one. A run that a person
-cancels is not reported.
+The CI/CD pipeline runs every stage on each push to `main`. When that run fails,
+it posts a message to the team's Microsoft Teams channel, and it posts again
+when `main` is green. Only the newest finished run reports, so a slow run of an
+older commit does not undo the news of a newer one. A run that a person cancels
+is not reported.
 
-- Stop merging to `main` until it is green again. Only the fix or the revert
-  may merge.
+- Stop merging to `main` until it is green again. Only the fix or the revert may
+  merge.
 - The author of the breaking change owns the fix. Anyone may help.
 - Fix forward only when the fix is quick. If `main` is still broken 10 minutes
   after the message, revert the change and fix it on a branch.
@@ -103,8 +106,7 @@ cancels is not reported.
 
 A project can change the time limit when it adopts this template. Update the
 message in
-[notify-pipeline-status.jq](../scripts/cicd/notify-pipeline-status.jq) to
-match.
+[notify-pipeline-status.jq](../scripts/cicd/notify-pipeline-status.jq) to match.
 
 ## Tailor this guide when adopting the template 🧩
 

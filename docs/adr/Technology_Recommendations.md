@@ -5,11 +5,11 @@ this template, not the NHS Tech Radar. It does not grant technology approval.
 Consult the current internal NHS Tech Radar for approval status and requirements
 before selecting a tool.
 
-Python and TypeScript are orgnaisation-approved Mainstream languages on the NHS
-Tech Radar. PostgreSQL is an orgnaisation-approved Mainstream database. [Django],
-[FastAPI] and [React] are also approved. Teams are asked to use [OpenFeature] for
-feature toggling. The remaining tools below are provisional suggestions, not
-ratified defaults.
+Python and TypeScript are organisation-approved Mainstream languages on the NHS
+Tech Radar. PostgreSQL is an organisation-approved Mainstream database.
+[Django], [FastAPI] and [React] are also approved. Teams are asked to use
+[OpenFeature] for feature toggling. The remaining tools below are provisional
+suggestions, not ratified defaults.
 
 ## Python ecosystem 🐍
 

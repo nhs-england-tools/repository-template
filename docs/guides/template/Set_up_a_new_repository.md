@@ -7,9 +7,12 @@
 
 ## Create and prepare the repository 📦
 
-1. On GitHub, choose **New repository**. In **Choose a template**, select the
+1. On GitHub, choose **New repository**. If this repository template is not the
+   default template in your organisation, use **Choose a template** to select
+   the
    [repository template](https://github.com/nhs-england-tools/repository-template).
-   Choose the owner, name and visibility, then create the repository.
+   Choose the owner, name and visibility, then create the repository from the
+   template.
 2. In the new repository, copy its HTTPS URL from **Code** and clone it. Replace
    `OWNER` and `REPOSITORY` below with your new repository's details:
 
@@ -68,20 +71,19 @@ Make these changes on a branch for the initial setup pull request:
      Replace the example with your team's organisation and slug. Individual
      owners and teams from other organisations can be added, but they do not
      count towards the check.
-   - **Visible teams:** every team from that organisation mentioned in the
-     file, including in comments, must exist and be visible rather than
-     secret.
+   - **Visible teams:** every team from that organisation mentioned in the file,
+     including in comments, must exist and be visible rather than secret.
    - **At least two members:** those teams must have at least two members
      between them, so ownership does not rest with one person.
 
 4. Enable the following GitHub security settings. Template files do not enable
-   them. The central checks require them for public repositories and report
-   them as not applicable to private and internal repositories:
+   them. The central checks require them for public repositories and report them
+   as not applicable to private and internal repositories:
    - **Secret scanning:** GitHub scans the repository for exposed credentials
      and secrets.
    - **Push protection:** GitHub blocks pushes that contain detected secrets.
-   - **Security advisories:** maintainers can privately discuss, fix and
-     publish a vulnerability from the repository's **Security** tab.
+   - **Security advisories:** maintainers can privately discuss, fix and publish
+     a vulnerability from the repository's **Security** tab.
    - **Private vulnerability reporting:** people can report a vulnerability to
      maintainers without disclosing it in a public issue.
 
@@ -90,8 +92,8 @@ Make these changes on a branch for the initial setup pull request:
    GitHub Secret Protection, so enable them where the organisation's licence
    allows and before the repository is made public. The central checks count a
    permissions error as a failure, and it is not evidence that a setting is
-   enabled. If one is reported, ask the repository or organisation
-   administrator to grant the access the checks need.
+   enabled. If one is reported, ask the repository or organisation administrator
+   to grant the access the checks need.
 
 5. Protect the default branch with a ruleset, so that the code owner review and
    CI checks are enforced. The central checks do not inspect rulesets, so ask
@@ -130,15 +132,13 @@ Make these changes on a branch for the initial setup pull request:
 9. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and
    `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
-10. Connect the pipeline to the team's Microsoft Teams channel, so the team is
-    told when `main` breaks, when it is green again, and when a release is
-    published or deployed. In the channel menu,
-    open **Workflows** and create a workflow from the **Send webhook alerts to a
-    channel** template. Add a co-owner, as a workflow stops when its only owner
-    leaves. Set the workflow's webhook URL as the
-    `TEAMS_NOTIFICATION_WEBHOOK_URL` Actions secret. Without it, a failed run
-    only shows a warning in its summary. Office 365 connector webhooks no longer
-    work.
+10. [Configure pipeline notifications](Configure_pipeline_notifications.md) for
+    the team's Microsoft Teams channel, so the team is told when `main` breaks,
+    when it is green again, and when a release is published or deployed. Follow
+    the guide's Power Automate setup, card mapping, co-owner and delivery
+    verification steps. Set the flow's webhook URL as the
+    `TEAMS_NOTIFICATION_WEBHOOK_URL` Actions secret. Without it, a reportable
+    run writes its summary and warns that the team was not notified.
 
 You are ready to verify when the setup branch contains the project's updated
 documentation, policies, Make targets and dependency decisions, and the required
