@@ -16,6 +16,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/quality-test.lib.sh"
+
 readonly MARKDOWN_HEADING='# Heading'
 readonly EXIT_STATUS_LABEL='exit status'
 readonly FRONTMATTER_TITLE='title: x'
@@ -24,13 +27,13 @@ readonly FRONTMATTER_TITLE='title: x'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-format.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/markdownlint.yaml scripts/config/.markdownlintignore)
+
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-format.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh scripts/docker/docker.lib.sh scripts/config/markdownlint.yaml scripts/config/.markdownlintignore)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check files BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check files BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER GITHUB_ACTIONS
+  export FORCE_USE_DOCKER=false
 
   MARKDOWNLINT_IMAGE=ghcr.io/igorshubovych/markdownlint-cli:v2.0.0@sha256:2222222222222222222222222222222222222222222222222222222222222222
 
@@ -76,7 +79,7 @@ function test-check-markdown-format-rejects-unknown-mode() {
   for mode in "${modes[@]}"; do
     test-capture env "check=$mode" ./scripts/quality/check-markdown-format.sh
     assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
-    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+    assert-equal "ERROR: Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
   done
   # Assert
   assert-stub-not-called markdownlint
@@ -128,7 +131,7 @@ function test-check-markdown-format-preserves-unusual-paths-through-frontmatter(
 
   # Arrange
   local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md' non_ascii_file='docs/café.md'
-  local native_status
+  local docker_status native_status
   quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md' "$non_ascii_file"
   test-isolate-path python3
   test-stub markdownlint
@@ -136,12 +139,13 @@ function test-check-markdown-format-preserves-unusual-paths-through-frontmatter(
   printf '%s\n' '---' "$FRONTMATTER_TITLE" '---' '# Heading' > "$TEST_TMP/repo/$newline_file"
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=all ./scripts/quality/check-markdown-format.sh
+  test-capture env -u FORCE_USE_DOCKER check=all ./scripts/quality/check-markdown-format.sh
+  docker_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=false check=all ./scripts/quality/check-markdown-format.sh
   native_status="$TEST_STATUS"
-  test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/check-markdown-format.sh
   # Assert
+  assert-equal 1 "$docker_status" "default Docker exit status"
   assert-equal 1 "$native_status" "native $EXIT_STATUS_LABEL"
-  assert-equal 1 "$TEST_STATUS" "Docker $EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$newline_file")"
   assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$glob_file")"
   assert-contains "$(test-stub-calls markdownlint)" "$(printf '%q' "$non_ascii_file")"

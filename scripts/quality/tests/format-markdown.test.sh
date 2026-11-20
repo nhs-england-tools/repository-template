@@ -15,6 +15,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/quality-test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 readonly DOC_WITH_SPACE='docs/my doc.md'
 
@@ -22,13 +25,13 @@ readonly DOC_WITH_SPACE='docs/my doc.md'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/format-markdown.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/prettierrc.yaml scripts/config/.prettierignore)
+
+  QUALITY_FIXTURE_PATHS=(scripts/quality/format-markdown.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh scripts/docker/docker.lib.sh scripts/config/prettierrc.yaml scripts/config/.prettierignore)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE files FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE files FORCE_USE_DOCKER GITHUB_ACTIONS
+  export FORCE_USE_DOCKER=false
 
   NODE_IMAGE=node:7.0.0-slim@sha256:7777777777777777777777777777777777777777777777777777777777777777
   PRETTIER_VERSION=8.0.0
@@ -101,7 +104,7 @@ function test-format-markdown-rejects-unknown-mode() {
   for mode in "${modes[@]}"; do
     test-capture env "check=$mode" ./scripts/quality/format-markdown.sh
     assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
-    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+    assert-equal "ERROR: Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
   done
   # Assert
   assert-stub-not-called prettier
@@ -226,19 +229,20 @@ function test-format-markdown-preserves-unusual-filenames() {
   local glob_file='docs/strange[1]*.md'
   local glob_match='docs/strange1-other.md'
   local newline_file=$'docs/line\nbreak.md'
-  local non_ascii_file='docs/café.md' native_status
+  local non_ascii_file='docs/café.md' docker_status native_status
   quality-create-fixture-repo README.md "$glob_file" "$glob_match" "$newline_file" "$non_ascii_file"
   test-isolate-path
   test-stub prettier
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=all ./scripts/quality/format-markdown.sh
+  test-capture env -u FORCE_USE_DOCKER check=all ./scripts/quality/format-markdown.sh
+  docker_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=false check=all ./scripts/quality/format-markdown.sh
   native_status="$TEST_STATUS"
-  test-capture env FORCE_USE_DOCKER=true check=all ./scripts/quality/format-markdown.sh
   # Assert
+  assert-equal 0 "$docker_status" "default Docker $EXIT_STATUS_LABEL"
   assert-equal 0 "$native_status" "native $EXIT_STATUS_LABEL"
-  assert-equal 0 "$TEST_STATUS" "Docker $EXIT_STATUS_LABEL"
   assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$glob_file")"
   assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$glob_match")"
   assert-contains "$(test-stub-calls prettier)" "$(printf '%q' "$newline_file")"

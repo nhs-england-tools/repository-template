@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# Hadolint command wrapper. It will run hadolint natively if it is installed,
-# otherwise it will run it in a Docker container.
+# Hadolint command wrapper. It runs in Docker by default and natively only when
+# FORCE_USE_DOCKER=false and hadolint is installed.
 #
 # Usage:
 #   $ [options] ./dockerfile-linter.sh
@@ -11,10 +11,13 @@ set -euo pipefail
 # Arguments (provided as environment variables):
 #   file=Dockerfile         # Dockerfile to lint, relative to the repository
 #                           # root, default is './Dockerfile.effective'
-#   FORCE_USE_DOCKER=true   # Run in a Docker container, default is 'false'
+#   FORCE_USE_DOCKER=false  # Opt out of Docker when hadolint is installed
 #   VERBOSE=true            # Show all the executed commands, default is 'false'
 
 # ==============================================================================
+
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/docker.lib.sh"
 
 # Lint the Dockerfile natively or in Docker.
 function main() {
@@ -23,7 +26,7 @@ function main() {
 
   local file=${file:-./Dockerfile.effective}
   local rc=0
-  if command -v hadolint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  if command -v hadolint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
     file="$file" run-hadolint-natively || rc=$?
   else
     file="$file" run-hadolint-in-docker || rc=$?
@@ -51,14 +54,11 @@ function run-hadolint-natively() {
 #   file=[path to the Dockerfile to lint, relative to the repository root]
 function run-hadolint-in-docker() {
 
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
-
   local image
   image=$(name=hadolint/hadolint docker-get-image-version-and-pull) || return "$?"
   local rc=0
   # shellcheck disable=SC2001
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --network none \
     --volume "$PWD:/workdir:ro" \
     --workdir /workdir \

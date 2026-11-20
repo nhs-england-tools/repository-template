@@ -14,6 +14,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 readonly SELECTION_LABEL='selected and deleted paths'
 
@@ -21,10 +23,9 @@ readonly SELECTION_LABEL='selected and deleted paths'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
 
   # The caller's options must not reach the code under test
-  unset -v GITHUB_BASE_REF BRANCH_NAME QUALITY_PR_BASE
+  unset -v GITHUB_BASE_REF BRANCH_NAME QUALITY_PR_BASE GITHUB_ACTIONS
 
   test-run-suite \
     test-quality-collect-git-files-all-selects-existing-tracked-files \
@@ -36,6 +37,7 @@ function main() {
     test-quality-collect-git-files-branch-lists-a-deleted-file \
     test-quality-collect-git-files-ignores-deletions-without-a-deleted-array \
     test-quality-collect-git-files-rejects-an-unknown-mode \
+    test-quality-collect-git-files-annotates-an-unknown-mode-in-github-actions \
     test-quality-remove-ignored-paths-uses-git-ignore-rules-from-the-root \
     test-quality-remove-ignored-paths-keeps-every-path-without-an-ignore-file \
     test-quality-remove-ignored-paths-fails-when-git-fails
@@ -50,7 +52,8 @@ function main() {
 function git-files-test-create-repo() {
 
   local repo="$TEST_TMP/repo" file
-  test-create-repo "$repo" scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh
+  test-create-repo "$repo" scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh \
+    scripts/cicd/github-actions.lib.sh
   for file in "$@"; do
     test-mkdir-parent "$repo/$file"
     printf '%s\n' "$file" > "$repo/$file"
@@ -242,6 +245,21 @@ function test-quality-collect-git-files-rejects-an-unknown-mode() {
   # Assert
   assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "accepted modes"
+  assert-equal "" "$TEST_STDOUT" "$SELECTION_LABEL"
+
+  return 0
+}
+
+function test-quality-collect-git-files-annotates-an-unknown-mode-in-github-actions() {
+
+  # Arrange
+  git-files-test-create-repo a.md
+  cd "$TEST_TMP/repo"
+  # Act
+  GITHUB_ACTIONS=true test-capture git-files-test-collect bogus ''
+  # Assert
+  assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "::error::Unrecognised check mode: 'bogus'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "annotation"
   assert-equal "" "$TEST_STDOUT" "$SELECTION_LABEL"
 
   return 0

@@ -15,6 +15,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../docker.lib.sh"
+
 readonly DOCKER_TABLE_HEADER='[_.docker]'
 readonly FIXTURE_BUILD_DATETIME='2023-09-04T15:46:34+0000'
 readonly EXIT_STATUS_LABEL='exit status'
@@ -25,11 +28,9 @@ readonly PULL_AND_TAG_CALLS_LABEL='pull and tag calls'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/docker/docker.lib.sh
 
   # The caller's options must not reach the functions under test
-  unset -v args cmd check compose_dir dir docker_dir file project name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT CONFIRM
+  unset -v args cmd check compose_dir dir docker_dir file project name match_version MISE_TOML BUILD_DATETIME GITHUB_HEAD_REF GITHUB_REF CONTAINER_CLI CONTAINER_INFO_TIMEOUT CONFIRM GITHUB_ACTIONS
 
   DOCKER_IMAGE=repository-template/docker-test
   DOCKER_TITLE="Repository Template Docker Test"
@@ -89,6 +90,8 @@ function main() {
     test-docker-compose-run-prefers-top-level-compose-file \
     test-docker-compose-run-rejects-several-compose-dirs \
     test-docker-compose-run-rejects-repository-without-compose-file \
+    test-find-compose-dir-reports-a-missing-compose-file-locally \
+    test-find-compose-dir-annotates-a-missing-compose-file-in-github-actions \
     test-docker-compose-run-rejects-dir-without-compose-file \
     test-docker-compose-run-rejects-file-and-dir \
     test-docker-compose-run-rejects-missing-file \
@@ -697,8 +700,8 @@ function test-docker-pull-pinned-images-fails-when-pull-fails() {
   assert-equal "$(printf '%s\n' \
     "Checking docker (up to 10s)" \
     "pull failed" \
-    "ERROR Pulling ghcr.io/org/image with docker failed with exit status 23" \
-    "HINT Check the network connection and registry login, then run 'make docker-pull-pinned-images'")" \
+    "ERROR: Pulling ghcr.io/org/image with docker failed with exit status 23" \
+    "NOTICE: Check the network connection and registry login, then run 'make docker-pull-pinned-images'")" \
     "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
@@ -724,7 +727,7 @@ EOF
     "Pulling ghcr.io/org/first" \
     "OK ghcr.io/org/first:1.0.0@$DIGEST_A" \
     "Pulling ghcr.io/org/second")" "$TEST_STDOUT" "$STDOUT_LABEL"
-  assert-contains "$TEST_STDERR" "ERROR Pulling ghcr.io/org/second with docker failed with exit status 26"
+  assert-contains "$TEST_STDERR" "ERROR: Pulling ghcr.io/org/second with docker failed with exit status 26"
   assert-equal "$(printf '%s\n' \
     "pull --platform linux/amd64 ghcr.io/org/first@$DIGEST_A" \
     "tag ghcr.io/org/first@$DIGEST_A ghcr.io/org/first:1.0.0" \
@@ -747,8 +750,8 @@ function test-docker-pull-pinned-images-skips-when-runtime-hangs() {
   assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
   assert-equal "$(printf '%s\n' \
     "Checking docker (up to 3s)" \
-    "WARN Docker/Podman image pull skipped (docker: no response after 3s; podman: not installed)" \
-    "HINT Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
+    "WARNING: Docker/Podman image pull skipped (docker: no response after 3s; podman: not installed)" \
+    "NOTICE: Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
     "$TEST_STDERR" "$STDERR_LABEL"
   assert-equal "info" "$(test-stub-calls docker)" "Docker calls"
 
@@ -766,8 +769,8 @@ function test-docker-pull-pinned-images-skips-when-docker-is-missing() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
   assert-equal "$(printf '%s\n' \
-    "WARN Docker/Podman image pull skipped (docker: not installed; podman: not installed)" \
-    "HINT Install Docker or Podman, see README.md, then run 'make docker-pull-pinned-images'")" \
+    "WARNING: Docker/Podman image pull skipped (docker: not installed; podman: not installed)" \
+    "NOTICE: Install Docker or Podman, see README.md, then run 'make docker-pull-pinned-images'")" \
     "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
@@ -788,8 +791,8 @@ function test-docker-pull-pinned-images-skips-when-docker-is-unreachable() {
   assert-equal "$(printf '%s\n' \
     "Checking docker (up to 10s)" \
     "Checking podman (up to 10s)" \
-    "WARN Docker/Podman image pull skipped (docker: installed, not running; podman: installed, not running)" \
-    "HINT Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
+    "WARNING: Docker/Podman image pull skipped (docker: installed, not running; podman: installed, not running)" \
+    "NOTICE: Start Docker Desktop or run 'podman machine start', then run 'make docker-pull-pinned-images'")" \
     "$TEST_STDERR" "$STDERR_LABEL"
   assert-stub-called docker info
   assert-stub-called podman info
@@ -873,7 +876,7 @@ function test-docker-build-continues-without-base-labels-when-unresolved() {
   dir="$TEST_TMP" test-capture docker-build
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "WARN Base image labels left empty (no global ARG default for BASE_IMAGE)" \
+  assert-equal "WARNING: Base image labels left empty (no global ARG default for BASE_IMAGE)" \
     "$TEST_STDERR" "$STDERR_LABEL"
   build=" $(test-stub-calls docker | grep '^build ' || true) "
   assert-contains "$build" " --build-arg BASE_IMAGE= "
@@ -1261,6 +1264,40 @@ function test-docker-compose-run-rejects-repository-without-compose-file() {
   return 0
 }
 
+function test-find-compose-dir-reports-a-missing-compose-file-locally() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/api/compose.yaml.template)"
+  # Act
+  test-capture find-compose-dir-in "$repo"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDOUT" "captured Compose directory"
+  assert-equal "ERROR: No Compose file was found, set 'file' or 'dir'" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+
+  return 0
+}
+
+function test-find-compose-dir-annotates-a-missing-compose-file-in-github-actions() {
+
+  local repo
+
+  # Arrange
+  repo="$(make-compose-repo services/api/compose.yaml.template)"
+  # Act
+  GITHUB_ACTIONS=true test-capture find-compose-dir-in "$repo"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal "" "$TEST_STDOUT" "captured Compose directory"
+  assert-equal "::error::No Compose file was found, set 'file' or 'dir'" \
+    "$TEST_STDERR" "$STDERR_LABEL"
+
+  return 0
+}
+
 function test-docker-compose-run-rejects-dir-without-compose-file() {
 
   local repo
@@ -1350,7 +1387,8 @@ function test-docker-make-build-and-lint-honour-docker-dir() {
   test-stub hadolint
   test-stub docker
   # Act
-  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER \
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    FORCE_USE_DOCKER=false \
     DOCKER_IMAGE="$DOCKER_IMAGE" docker_dir="$TEST_TMP" MISE_TOML="$FIXTURE_MISE_TOML" \
     BUILD_DATETIME="$FIXTURE_BUILD_DATETIME" make docker-lint
   # Assert
@@ -1358,7 +1396,8 @@ function test-docker-make-build-and-lint-honour-docker-dir() {
   assert-equal "--config scripts/config/hadolint.yaml $effective" \
     "$(test-stub-calls hadolint)" "hadolint calls"
   # Build only once lint is proven, so it cannot write to the checkout
-  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES -u FORCE_USE_DOCKER \
+  test-capture env -u MAKEFLAGS -u MAKELEVEL -u GNUMAKEFLAGS -u MAKEFILES \
+    FORCE_USE_DOCKER=false \
     DOCKER_IMAGE="$DOCKER_IMAGE" docker_dir="$TEST_TMP" MISE_TOML="$FIXTURE_MISE_TOML" \
     BUILD_DATETIME="$FIXTURE_BUILD_DATETIME" make docker-build
   assert-equal 0 "$TEST_STATUS" "docker-build exit status"
@@ -1449,7 +1488,7 @@ function test-docker-lint-runs-hadolint-on-effective-dockerfile() {
 
   # Arrange
   use-empty-mise-toml
-  unset FORCE_USE_DOCKER
+  export FORCE_USE_DOCKER=false
   test-isolate-path
   test-stub hadolint
   test-stub docker
@@ -1469,7 +1508,7 @@ function test-docker-lint-returns-hadolint-failure-in-conditional-call() {
   # Arrange
   local status=0
   use-empty-mise-toml
-  unset FORCE_USE_DOCKER
+  export FORCE_USE_DOCKER=false
   test-isolate-path
   test-stub hadolint 'exit 42'
   test-stub docker
@@ -1625,7 +1664,7 @@ function assert-base-image-unresolved() {
   dir="$TEST_TMP" test-capture _get-effective-base-image
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL for: $*"
   assert-equal "" "$TEST_STDOUT" "base image for: $*"
-  assert-equal "WARN Base image labels left empty ($reason)" \
+  assert-equal "WARNING: Base image labels left empty ($reason)" \
     "$TEST_STDERR" "$STDERR_LABEL for: $*"
 
   return 0
@@ -1668,6 +1707,17 @@ function compose-run-in() {
   cd "$1" || return "$?"
   shift
   _docker-compose-run "$@" || return "$?"
+
+  return 0
+}
+
+# Run _find-compose-dir from the given directory.
+# Arguments:
+#   $1=[directory]
+function find-compose-dir-in() {
+
+  cd "$1" || return "$?"
+  _find-compose-dir || return "$?"
 
   return 0
 }

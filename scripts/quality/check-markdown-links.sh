@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# Check that links in Markdown files resolve. It runs lychee natively when
-# installed, otherwise in a Docker container.
+# Check that links in Markdown files resolve. It runs in Docker by default, or
+# natively when FORCE_USE_DOCKER=false and lychee is installed.
 #
 # Usage:
 #   $ [options] ./scripts/quality/check-markdown-links.sh
@@ -14,8 +14,8 @@ set -euo pipefail
 #   BRANCH_NAME=base-branch
 #       Local base for the branch mode, chosen automatically when unset, as
 #       './scripts/quality/git-base.lib.sh' describes
-#   FORCE_USE_DOCKER=true
-#       Run in a Docker container, default is 'false'
+#   FORCE_USE_DOCKER=false
+#       Opt out of Docker when lychee is installed
 #   VERBOSE=true
 #       Show all the executed commands, default is 'false'
 #
@@ -34,18 +34,21 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-files.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../docker/docker.lib.sh"
+
 # Run markdown links checks in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  # shellcheck disable=SC1091
-  source ./scripts/quality/git-files.lib.sh
   local -a files=()
   quality-collect-git-files files "${check:-working-tree-changes}" '*.md' || return "$?"
 
   if [[ ${#files[@]} -gt 0 ]]; then
-    if command -v lychee > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    if command -v lychee > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
       run-lychee-natively "${files[@]}" || return "$?"
     else
       run-lychee-in-docker "${files[@]}" || return "$?"
@@ -105,16 +108,13 @@ function run-lychee-natively() {
 #   $@=[files to check]
 function run-lychee-in-docker() {
 
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
-
   local image
   image=$(name=lycheeverse/lychee docker-get-image-version-and-pull) || return "$?"
 
   local -a escaped_files=()
   escape-lychee-path-globs escaped_files "$@" || return "$?"
 
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --network none \
     --volume "$PWD":/workdir:ro \
     --workdir /workdir \

@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # Check that Markdown files follow the markdownlint rules and that YAML
-# frontmatter is followed by a blank line. It runs markdownlint natively when
-# installed, otherwise in a Docker container.
+# frontmatter is followed by a blank line. It runs in Docker by default, or
+# natively when FORCE_USE_DOCKER=false and markdownlint is installed.
 #
 # Usage:
 #   $ [options] ./scripts/quality/check-markdown-format.sh
@@ -15,8 +15,8 @@ set -euo pipefail
 #   BRANCH_NAME=base-branch
 #       Local base for the branch mode, chosen automatically when unset, as
 #       './scripts/quality/git-base.lib.sh' describes
-#   FORCE_USE_DOCKER=true
-#       Run in a Docker container, default is 'false'
+#   FORCE_USE_DOCKER=false
+#       Opt out of Docker when markdownlint is installed
 #   VERBOSE=true
 #       Show all the executed commands, default is 'false'
 #
@@ -40,18 +40,21 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-files.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../docker/docker.lib.sh"
+
 # Run markdown format checks in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  # shellcheck disable=SC1091
-  source ./scripts/quality/git-files.lib.sh
   local -a files=()
   quality-collect-git-files files "${check:-working-tree-changes}" '*.md' || return "$?"
 
   if [[ ${#files[@]} -gt 0 ]]; then
-    if command -v markdownlint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    if command -v markdownlint > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
       run-markdownlint-natively "${files[@]}" || return "$?"
     else
       run-markdownlint-in-docker "${files[@]}" || return "$?"
@@ -81,13 +84,10 @@ function run-markdownlint-natively() {
 #   $@=[files to check]
 function run-markdownlint-in-docker() {
 
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
-
   local image
   image=$(name=ghcr.io/igorshubovych/markdownlint-cli docker-get-image-version-and-pull) || return "$?"
 
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --network none \
     --volume "$PWD":/workdir:ro \
     --workdir /workdir \

@@ -7,7 +7,8 @@
 
 DOCKER_IMAGE ?= $(or ${docker_image}, ${IMAGE}, ${image})
 DOCKER_TITLE ?= $(or ${docker_title}, ${TITLE}, ${title})
-FORCE_USE_DOCKER ?= false
+DOCKER_PLATFORM ?= linux/amd64
+FORCE_USE_DOCKER ?= true
 
 docker-compose-build: # Build Compose services - optional: compose_dir|dir=[directory with the Compose file, default is the top level, else the only one found], file=[Compose file instead of dir], project=[project name, default is the Compose default] @Build
 	$(MAKE) _docker docker_fn="compose-build" dir=. \

@@ -24,6 +24,11 @@ set -euo pipefail
 function quality-build-fixture-base() {
 
   test-create-repo "$SUITE_TMP/quality-fixture-base" "${QUALITY_FIXTURE_PATHS[@]}"
+  if [[ ! -f "$SUITE_TMP/quality-fixture-base/scripts/docker/docker.mk" ]]; then
+    mkdir -p "$SUITE_TMP/quality-fixture-base/scripts/docker" "$SUITE_TMP/quality-fixture-base/.git/info"
+    cp "$TEST_REPO_ROOT/scripts/docker/docker.mk" "$SUITE_TMP/quality-fixture-base/scripts/docker/docker.mk"
+    printf '%s\n' '/scripts/docker/docker.mk' >> "$SUITE_TMP/quality-fixture-base/.git/info/exclude"
+  fi
 
   return 0
 }

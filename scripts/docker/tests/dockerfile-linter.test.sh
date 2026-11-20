@@ -15,18 +15,21 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../../quality/tests/quality-test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/docker/dockerfile-linter.sh scripts/docker/docker.lib.sh scripts/config/hadolint.yaml)
+
+  QUALITY_FIXTURE_PATHS=(scripts/docker/dockerfile-linter.sh scripts/docker/docker.lib.sh scripts/cicd/github-actions.lib.sh scripts/config/hadolint.yaml)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version file FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version file FORCE_USE_DOCKER GITHUB_ACTIONS
+  export FORCE_USE_DOCKER=false
 
   HADOLINT_IMAGE=hadolint/hadolint:v3.0.0@sha256:3333333333333333333333333333333333333333333333333333333333333333
 
@@ -56,13 +59,18 @@ function test-dockerfile-linter-defaults-to-the-effective-dockerfile() {
   quality-create-fixture-repo images/app/Dockerfile
   test-isolate-path
   test-stub hadolint
+  test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture ./scripts/docker/dockerfile-linter.sh
+  test-capture env -u FORCE_USE_DOCKER ./scripts/docker/dockerfile-linter.sh
+  local docker_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=false ./scripts/docker/dockerfile-linter.sh
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "--config scripts/config/hadolint.yaml ./Dockerfile.effective" \
-    "$(test-stub-calls hadolint)" "the only hadolint call"
+  assert-contains "$(test-stub-calls hadolint)" \
+    "--config scripts/config/hadolint.yaml ./Dockerfile.effective"
+  assert-equal 0 "$docker_status" "default Docker status"
+  assert-contains "$(test-stub-calls docker)" 'run --rm --platform linux/amd64'
 
   return 0
 }

@@ -26,6 +26,11 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-base.lib.sh"
+
 # Run Git without caller pathspec overrides. The collector requests NUL output.
 # Arguments:
 #   $@=[Git subcommand and arguments]
@@ -73,16 +78,14 @@ function quality-collect-git-files() {
       quality-git-paths diff --diff-filter=ACMRTD --no-renames --name-status -z "${pathspec[@]}" > "$list_file" || rc=$?
       ;;
     branch)
-      # Sourced only here, so the other modes work without the base resolver
-      # shellcheck disable=SC1091
-      if source ./scripts/quality/git-base.lib.sh && quality-resolve-base base_ref fork_point; then
+      if quality-resolve-base base_ref fork_point; then
         quality-git-paths diff --diff-filter=ACMRTD --no-renames --name-status -z "$fork_point" "${pathspec[@]}" > "$list_file" || rc=$?
       else
         rc=$?
       fi
       ;;
     *)
-      echo "Unrecognised check mode: '$check_mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" >&2
+      print-diagnostic error "Unrecognised check mode: '$check_mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch"
       rc=126
       ;;
   esac

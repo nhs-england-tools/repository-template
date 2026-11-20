@@ -1,3 +1,7 @@
 {
-  "markdownlint.configFile": "scripts/config/markdownlint.yaml"
+  "markdownlint.configFile": "scripts/config/markdownlint.yaml",
+  "shellcheck.customArgs": [
+    "--rcfile=scripts/config/shellcheckrc"
+  ],
+  "shellcheck.useWorkspaceRootAsCwd": true
 }

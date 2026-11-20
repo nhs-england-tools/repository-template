@@ -5,7 +5,7 @@ set -euo pipefail
 # A set of Docker functions written in Bash.
 #
 # Usage:
-#   $ source ./docker.lib.sh
+#   $ source ./scripts/docker/docker.lib.sh
 #
 # Arguments (provided as environment variables):
 #   DOCKER_IMAGE=ghcr.io/org/repo      # Docker image name
@@ -15,6 +15,20 @@ set -euo pipefail
 #   CONTAINER_INFO_TIMEOUT=10          # Seconds to wait for '<runtime> info'
 #                                      # before the runtime counts as not
 #                                      # operational
+
+# ==============================================================================
+
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+
+if [[ -z "${DOCKER_PLATFORM:-}" ]]; then
+  DOCKER_PLATFORM="$(awk '$1 == "DOCKER_PLATFORM" && $2 == "?=" { print $3; exit }' "$(dirname "${BASH_SOURCE[0]}")/docker.mk")"
+fi
+if [[ -z "$DOCKER_PLATFORM" ]]; then
+  print-diagnostic error "DOCKER_PLATFORM is not set in scripts/docker/docker.mk"
+  return 1
+fi
+export DOCKER_PLATFORM
 
 # ==============================================================================
 # Functions to be used with custom images.
@@ -45,7 +59,7 @@ function docker-build() {
 
   docker build \
     --progress=plain \
-    --platform linux/amd64 \
+    --platform "$DOCKER_PLATFORM" \
     --build-arg BASE_IMAGE="${base_image}" \
     --build-arg BASE_DIGEST="${base_digest}" \
     --build-arg TITLE="${DOCKER_TITLE}" \
@@ -110,7 +124,7 @@ function docker-check-test() {
   # check is supplied by the environment, not declared as a local.
   # Intentional split: args and cmd environment strings contain multiple words.
   # shellcheck disable=SC2086,SC2154
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     ${args:-} \
     "${DOCKER_IMAGE}:$(_get-effective-version)" 2>/dev/null \
     ${cmd:-} \
@@ -133,7 +147,7 @@ function docker-run() {
 
   # Intentional split: args and cmd environment strings contain multiple words.
   # shellcheck disable=SC2086
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     ${args:-} \
     "${tag}" \
     ${cmd:-} || return "$?"
@@ -156,18 +170,18 @@ function _docker-compose-run() {
   local options=()
 
   if [[ -n "${file:-}" && -n "$compose_dir" ]]; then
-    echo "ERROR: Set either 'file' or 'dir', not both" >&2
+    print-diagnostic error "Set either 'file' or 'dir', not both"
     return 1
   fi
   if [[ -n "${file:-}" ]]; then
     [[ -f "$file" ]] || {
-      echo "ERROR: Compose file '$file' was not found" >&2
+      print-diagnostic error "Compose file '$file' was not found"
       return 1
     }
     options+=(--file "$file")
   elif [[ -n "$compose_dir" ]]; then
     _has-compose-file "$compose_dir" || {
-      echo "ERROR: No Compose file was found in '$compose_dir'" >&2
+      print-diagnostic error "No Compose file was found in '$compose_dir'"
       return 1
     }
   elif [[ -z "${COMPOSE_FILE:-}" ]]; then
@@ -175,17 +189,17 @@ function _docker-compose-run() {
   fi
   [[ -z "${project:-}" ]] || options+=(--project-name "$project")
   command -v docker > /dev/null 2>&1 || {
-    echo "ERROR: Docker CLI is required for Compose operations" >&2
+    print-diagnostic error "Docker CLI is required for Compose operations"
     return 1
   }
   docker compose version > /dev/null 2>&1 || {
-    echo "ERROR: Docker Compose v2 or later is required" >&2
+    print-diagnostic error "Docker Compose v2 or later is required"
     return 1
   }
 
   (
     cd "${compose_dir:-.}" || exit "$?"
-    docker compose ${options[@]+"${options[@]}"} "$@"
+    DOCKER_DEFAULT_PLATFORM="$DOCKER_PLATFORM" docker compose ${options[@]+"${options[@]}"} "$@"
   ) || return "$?"
 
   return 0
@@ -231,10 +245,9 @@ function _find-compose-dir() {
     echo "${found[0]}"
     return 0
   elif [[ ${#found[@]} -eq 0 ]]; then
-    echo "ERROR: No Compose file was found, set 'file' or 'dir'" >&2
+    print-diagnostic error "No Compose file was found, set 'file' or 'dir'"
   else
-    echo "ERROR: Compose files were found in several directories," \
-      "set 'dir' to one of: ${found[*]}" >&2
+    print-diagnostic error "Compose files were found in several directories, set 'dir' to one of: ${found[*]}"
   fi
 
   return 1
@@ -383,11 +396,11 @@ function docker-pull-pinned-images() {
   done
 
   if [[ -z "$container_cli" ]]; then
-    echo "WARN Docker/Podman image pull skipped (${runtime_states})" >&2
+    print-diagnostic warning "Docker/Podman image pull skipped (${runtime_states})"
     if [[ "$runtime_installed" == true ]]; then
-      echo "HINT Start Docker Desktop or run 'podman machine start', ${rerun}" >&2
+      print-diagnostic notice "Start Docker Desktop or run 'podman machine start', ${rerun}"
     else
-      echo "HINT Install Docker or Podman, see README.md, ${rerun}" >&2
+      print-diagnostic notice "Install Docker or Podman, see README.md, ${rerun}"
     fi
     return 0
   fi
@@ -399,8 +412,8 @@ function docker-pull-pinned-images() {
       echo "OK ${image_version}"
     else
       pull_status=$?
-      echo "ERROR Pulling ${image} with ${container_cli} failed with exit status ${pull_status}" >&2
-      echo "HINT Check the network connection and registry login, ${rerun}" >&2
+      print-diagnostic error "Pulling ${image} with ${container_cli} failed with exit status ${pull_status}"
+      print-diagnostic notice "Check the network connection and registry login, ${rerun}"
       return "$pull_status"
     fi
   done < <(_toml-table-entries "_.docker" "$config_file")
@@ -446,7 +459,7 @@ function docker-get-image-version-and-pull() {
   # Check if the image exists locally already.
   if ! "$container_cli" image inspect "${name}:${tag}" > /dev/null 2>&1; then
     "$container_cli" pull \
-      --platform linux/amd64 \
+      --platform "$DOCKER_PLATFORM" \
       "${name}@${digest}" \
     >&2 || return "$?"
     "$container_cli" tag "${name}@${digest}" "${name}:${tag}" || return "$?"
@@ -502,7 +515,7 @@ function _get-docker-image-version() {
       | head -n 1 || true)
   fi
   if [[ "$version" == "latest@"* || ! "$version" =~ ^[^@]+@sha256:[[:xdigit:]]{64}$ ]]; then
-    echo "ERROR: no pinned SHA-256 digest for $name in $config_file" >&2
+    print-diagnostic error "no pinned SHA-256 digest for $name in $config_file"
     return 1
   fi
   echo "$version"
@@ -790,13 +803,15 @@ function _get-effective-base-image() {
 
   local dir=${dir:-$PWD}
   local dockerfile="${dir}/Dockerfile.effective"
+  local output rc=0
 
   [[ -f "$dockerfile" ]] || {
-    echo "WARN Base image labels left empty ('$dockerfile' not found)" >&2
+    print-diagnostic warning "Base image labels left empty ('$dockerfile' not found)"
     return 1
   }
 
-  awk '
+  # On failure awk prints the reason instead of the base image
+  output="$(awk '
     function fail(reason) {
       if (error == "") error = reason
       return ""
@@ -1022,15 +1037,19 @@ function _get-effective-base-image() {
       if (pending != "") instruction(pending)
       if (!stages) base_error = "no FROM instruction"
       if (base_error != "") {
-        printf "WARN Base image labels left empty (%s)\n", base_error \
-          > "/dev/stderr"
+        print base_error
         exit 1
       }
       if (base != "") print base
     }
-  ' "$dockerfile"
+  ' "$dockerfile")" || rc=$?
+  if [[ $rc -ne 0 ]]; then
+    print-diagnostic warning "Base image labels left empty (${output:-the Dockerfile cannot be parsed})"
+    return "$rc"
+  fi
+  [[ -z "$output" ]] || printf '%s\n' "$output"
 
-  return "$?"
+  return 0
 }
 
 # Print top Docker image version.
