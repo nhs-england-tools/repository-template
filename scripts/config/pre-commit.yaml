@@ -36,18 +36,20 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
-      - id: check-workflow-security
-        name: Check workflow security
-        entry: make lint-workflow-security check=all
-        language: system
-        pass_filenames: false
-  - repo: local
-    hooks:
       - id: check-pipeline-contract
         name: Check pipeline contract
         entry: make lint-pipeline-contract check=all
         language: system
         pass_filenames: false
+  - repo: local
+    hooks:
+      - id: check-security-readiness
+        name: Check security readiness
+        entry: make lint-security-readiness check=all
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
   - repo: local
     hooks:
       - id: test

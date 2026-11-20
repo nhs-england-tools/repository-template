@@ -56,13 +56,65 @@ Make these changes on a branch for the initial setup pull request:
    define the project's scope, supported versions, private reporting route,
    response process and security update policy. Verify published contacts and
    links before inviting reports.
-3. Replace the example owner in [CODEOWNERS](../../../.github/CODEOWNERS) with
-   the GitHub users or teams responsible for the project. Each owner needs write
-   access to the repository. Cover every file, including the workflows.
-4. Document the project's applicable information governance, accessibility,
+3. Configure [CODEOWNERS](../../../.github/CODEOWNERS) for the adopting team.
+   Each owner needs write access to the repository, and the rules must cover
+   every file, including the workflows. The central security readiness checks
+   read the file from the default branch and expect:
+   - **Review date:** a comment on its own line in the exact format
+     `# Review-by: YYYY-MM-DD`. The check fails once the date has passed, so
+     review the owners and renew the date before it expires.
+   - **Owning team:** at least one team from the repository's own GitHub
+     organisation, for example `* @nhs-england-tools/engineering-experience`.
+     Replace the example with your team's organisation and slug. Individual
+     owners and teams from other organisations can be added, but they do not
+     count towards the check.
+   - **Visible teams:** every team from that organisation mentioned in the
+     file, including in comments, must exist and be visible rather than
+     secret.
+   - **At least two members:** those teams must have at least two members
+     between them, so ownership does not rest with one person.
+
+4. Enable the following GitHub security settings. Template files do not enable
+   them. The central checks require them for public repositories and report
+   them as not applicable to private and internal repositories:
+   - **Secret scanning:** GitHub scans the repository for exposed credentials
+     and secrets.
+   - **Push protection:** GitHub blocks pushes that contain detected secrets.
+   - **Security advisories:** maintainers can privately discuss, fix and
+     publish a vulnerability from the repository's **Security** tab.
+   - **Private vulnerability reporting:** people can report a vulnerability to
+     maintainers without disclosing it in a public issue.
+
+   Check them in the repository's **Settings** under **Advanced Security**. On a
+   private or internal repository, secret scanning and push protection need
+   GitHub Secret Protection, so enable them where the organisation's licence
+   allows and before the repository is made public. The central checks count a
+   permissions error as a failure, and it is not evidence that a setting is
+   enabled. If one is reported, ask the repository or organisation
+   administrator to grant the access the checks need.
+
+5. Protect the default branch with a ruleset, so that the code owner review and
+   CI checks are enforced. The central checks do not inspect rulesets, so ask
+   the repository or organisation administrator to confirm that it meets these
+   criteria:
+   - **Pull requests only:** changes reach the default branch through a pull
+     request.
+   - **Code owner approval:** a pull request needs approval from a code owner.
+     Naming a team in CODEOWNERS does not require its approval on its own.
+   - **Required checks:** the template's CI checks must pass before merging.
+     Follow the
+     [SonarQube Cloud branch protection instructions](Configure_SonarQube_Cloud.md#configure-branch-protection-)
+     when choosing them.
+   - **Reviewed bypass list:** only the people and apps that need it can bypass
+     the ruleset.
+
+   [Harden repository security](Harden_repository_security.md#limits-and-responsibilities-)
+   explains why these controls matter.
+
+6. Document the project's applicable information governance, accessibility,
    security and clinical safety requirements. Assign the appropriate owners and
    link to approved processes rather than publishing sensitive details.
-5. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
+7. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
    without renaming its targets. Add the project's checks to `lint` and
    `typecheck`, and its fast project and system tests, such as unit tests, to
    `test` alongside the template's Bash tests. Keep slower test tiers separate,
@@ -70,23 +122,23 @@ Make these changes on a branch for the initial setup pull request:
    test targets. Follow
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
    for extension patterns. Run `make help` to inspect the available targets.
-6. Review dependency sources, the
+8. Review dependency sources, the
    [Dependabot configuration](../../../.github/dependabot.yaml), the update
    cooldown and who owns updates. Check pinned tools and images in
    [`mise.toml`](../../../mise.toml), then record project-specific decisions and
    changes using [Update Dependencies](Update_Dependencies.md).
-7. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
+9. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and
    `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
-8. Connect the pipeline to the team's Microsoft Teams channel, so the team is
-   told when `main` breaks, when it is green again, and when a release is
-   published or deployed. In the channel menu,
-   open **Workflows** and create a workflow from the **Send webhook alerts to a
-   channel** template. Add a co-owner, as a workflow stops when its only owner
-   leaves. Set the workflow's webhook URL as the
-   `TEAMS_NOTIFICATION_WEBHOOK_URL` Actions secret. Without it, a failed run
-   only shows a warning in its summary. Office 365 connector webhooks no longer
-   work.
+10. Connect the pipeline to the team's Microsoft Teams channel, so the team is
+    told when `main` breaks, when it is green again, and when a release is
+    published or deployed. In the channel menu,
+    open **Workflows** and create a workflow from the **Send webhook alerts to a
+    channel** template. Add a co-owner, as a workflow stops when its only owner
+    leaves. Set the workflow's webhook URL as the
+    `TEAMS_NOTIFICATION_WEBHOOK_URL` Actions secret. Without it, a failed run
+    only shows a warning in its summary. Office 365 connector webhooks no longer
+    work.
 
 You are ready to verify when the setup branch contains the project's updated
 documentation, policies, Make targets and dependency decisions, and the required
@@ -106,10 +158,15 @@ the pull request.
    analysis job actually runs a scan, reports the quality gate and decorates the
    pull request. A successful job alone does not prove a scan ran when settings
    are missing.
-4. Add the setup pull request link to the issue. Keep the issue open until a
+4. Check CODEOWNERS, the security settings and the ruleset against the criteria
+   above. Use a test pull request to confirm that the ruleset blocks merging
+   while a required check fails or code-owner approval is missing. Record the
+   results in the setup pull request without secrets or sensitive settings.
+5. Add the setup pull request link to the issue. Keep the issue open until a
    project maintainer and the relevant security or policy owner approve the pull
    request.
 
 Setup is complete when the local checks pass, published contact routes and the
-SonarQube Cloud scan have been verified, and both approvals are recorded on the
-linked pull request. Only then close the issue and accept contributions.
+SonarQube Cloud scan have been verified, and the CODEOWNERS, security settings
+and ruleset results and both approvals are recorded on the linked pull request.
+Only then close the issue and accept contributions.

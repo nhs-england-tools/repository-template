@@ -100,7 +100,8 @@ file format: ok
 markdown format: ok
 markdown links: ok
 shell lint: ok
-workflow security checks: ok
+pipeline contract checks: ok
+security readiness: ok
 ```
 
 ## What it does ⚙️

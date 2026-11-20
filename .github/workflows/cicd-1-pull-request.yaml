@@ -39,15 +39,15 @@ jobs:
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
           BUILD_DATETIME=$datetime make version-create-effective-file
-          echo "build_datetime_london=$(TZ=Europe/London date --date=$datetime +'%Y-%m-%dT%H:%M:%S%z')" >> $GITHUB_OUTPUT
-          echo "build_datetime=$datetime" >> $GITHUB_OUTPUT
-          echo "build_epoch=$(date --date=$datetime -u +'%s')" >> $GITHUB_OUTPUT
-          echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          echo "build_datetime_london=$(TZ=Europe/London date --date=$datetime +'%Y-%m-%dT%H:%M:%S%z')" >> "$GITHUB_OUTPUT"
+          echo "build_datetime=$datetime" >> "$GITHUB_OUTPUT"
+          echo "build_epoch=$(date --date=$datetime -u +'%s')" >> "$GITHUB_OUTPUT"
+          echo "build_timestamp=$(date --date=$datetime -u +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
           source scripts/docker/docker.lib.sh
           echo "mise_version=$(_toml-table-entry "" min_version mise.toml)" >> "$GITHUB_OUTPUT"
           echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
-          echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> $GITHUB_OUTPUT
+          echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
       - name: "🔎 Check if pull request exists for this branch"
         id: pr_exists
         env:
@@ -57,10 +57,10 @@ jobs:
           echo "Current branch is '$branch_name'"
           if gh pr list --head "$branch_name" | grep -q .; then
             echo "Pull request exists"
-            echo "does_pull_request_exist=true" >> $GITHUB_OUTPUT
+            echo "does_pull_request_exist=true" >> "$GITHUB_OUTPUT"
           else
             echo "Pull request doesn't exist"
-            echo "does_pull_request_exist=false" >> $GITHUB_OUTPUT
+            echo "does_pull_request_exist=false" >> "$GITHUB_OUTPUT"
           fi
       - name: "📋 List variables"
         env:

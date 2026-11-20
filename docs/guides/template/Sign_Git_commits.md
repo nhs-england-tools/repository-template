@@ -47,7 +47,7 @@ gpg --full-generate-key
 To create the original example's ECDSA P-256 primary key and ECDH P-256
 encryption subkey without prompts, use a GnuPG batch parameter file. Replace the
 name, email and passphrase before running this. `Expire-Date: 0` means the key
-does not expire; change it to a duration such as `1y` if you want an expiry. The
+does not expire. Change it to a duration such as `1y` if you want an expiry. The
 parameter file contains your passphrase in plain text until removed. The quoted
 `'EOF'` keeps the passphrase literal, so the shell does not expand `$`,
 backticks or `$(...)` in it. GnuPG ignores leading and trailing spaces in the
@@ -121,7 +121,7 @@ gpg --list-secret-keys --keyid-format LONG
 
 If you need to remove a key locally, first confirm the ID and that you have a
 usable backup. These commands delete the private key, then its public key from
-your local GnuPG keyring; they do not remove keys from your GitHub account:
+your local GnuPG keyring. They do not remove keys from your GitHub account:
 
 ```shell
 KEY_ID=YOUR_KEY_ID
@@ -195,7 +195,7 @@ default-cache-ttl 10800
 max-cache-ttl 10800
 ```
 
-Stop the agent after changing the file; GnuPG restarts it on the next use:
+Stop the agent after changing the file. GnuPG restarts it on the next use:
 
 ```shell
 gpgconf --kill gpg-agent

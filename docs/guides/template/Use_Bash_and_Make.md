@@ -11,9 +11,10 @@
   - [Using Bash 🐚](#using-bash-)
   - [Make and Bash working together 🔗](#make-and-bash-working-together-)
   - [Conventions 📏](#conventions-)
-    - [Debugging](#debugging)
+    - [Structured data and jq](#structured-data-and-jq)
     - [Scripts](#scripts)
     - [Shell lint](#shell-lint)
+    - [Debugging](#debugging)
 
 ## Using Make 🧰
 
@@ -127,19 +128,19 @@ name stable either way.
 | `env`                                         | Placeholder for project environment setup.                        | Create or validate the language environment.                                  |
 | `setup`                                       | Optional convenience target, not a core requirement.              | Compose `config` and `deps` for one-command onboarding.                       |
 | `deps`                                        | Placeholder for project dependencies.                             | Install or synchronise locked application dependencies.                       |
-| `deps-prod`                                   | Optional; no core default.                                        | Install only production dependencies when they differ from development deps.  |
-| `deps-update`                                 | Optional; no core default.                                        | Update dependencies and their lock files explicitly.                          |
+| `deps-prod`                                   | Optional. No core default.                                        | Install only production dependencies when they differ from development deps.  |
+| `deps-update`                                 | Optional. No core default.                                        | Update dependencies and their lock files explicitly.                          |
 | `format`                                      | Formats Markdown files.                                           | Add language formatters as prerequisites.                                     |
 | `lint`                                        | Runs common file, Markdown, shell and workflow checks.            | Add language or domain linters as prerequisites.                              |
 | `typecheck`                                   | Placeholder for project type checking.                            | Add the selected static type checker.                                         |
-| `test`                                        | Fast development feedback; template suites run here               | Add fast project/system tests, such as unit tests                             |
-| `test-unit` / `test-integration` / `test-all` | Optional; no core default.                                        | Add slower integration and end-to-end tiers as separate targets.              |
-| `check`                                       | Runs `format`, `lint`, `typecheck` and `test`.                    | Extend component targets; keep ordered aggregate semantics stable.            |
+| `test`                                        | Fast development feedback. Template suites run here               | Add fast project/system tests, such as unit tests                             |
+| `test-unit` / `test-integration` / `test-all` | Optional. No core default.                                        | Add slower integration and end-to-end tiers as separate targets.              |
+| `check`                                       | Runs `format`, `lint`, `typecheck` and `test`.                    | Extend component targets. Keep ordered aggregate semantics stable.            |
 | `build`                                       | Placeholder for project artefact creation.                        | Build the package, binary, image or other artefact.                           |
-| `run`                                         | Optional; no core default.                                        | Run the application in the foreground for local development.                  |
-| `up` / `down`                                 | Optional; no core default.                                        | Start and stop an application or dependency stack.                            |
-| `start` / `stop`                              | Optional; no core default.                                        | Start and stop a background service, managing only project-owned resources.   |
-| `status` / `logs`                             | Optional; no core default.                                        | Inspect service state and view its logs.                                      |
+| `run`                                         | Optional. No core default.                                        | Run the application in the foreground for local development.                  |
+| `up` / `down`                                 | Optional. No core default.                                        | Start and stop an application or dependency stack.                            |
+| `start` / `stop`                              | Optional. No core default.                                        | Start and stop a background service, managing only project-owned resources.   |
+| `status` / `logs`                             | Optional. No core default.                                        | Inspect service state and view its logs.                                      |
 | `install` / `uninstall`                       | Optional when shipping an installable package or command.         | Install and safely reverse that installation.                                 |
 | `publish`                                     | Placeholder for publishing.                                       | Add publishing only when the project defines a release process.               |
 | `deploy`                                      | Placeholder for deployment.                                       | Add deployment only when the project defines an environment and release flow. |
@@ -407,41 +408,57 @@ foo=bar make some-target
 
 ## Conventions 📏
 
-### Debugging
+### Structured data and jq
 
-To assist in investigating scripting issues, the `VERBOSE` variable is available
-for both Make and Bash scripts. If it is set to `true` or `1`, it prints all the
-commands that the script executes to stderr. Here is how to use it:
+Separate command entrypoints, execution and structured-data logic:
 
-for Make targets
+- **Make exposes commands.** Targets such as `make lint-security-readiness`
+  provide the same interface locally, in Git hooks and in CI.
+- **Bash orchestrates execution.** Shell scripts select files, check required
+  tools, run commands and handle diagnostics and exit statuses.
+- **jq processes structured data.** It reads JSON and evaluates rules or
+  transforms objects and arrays. A `.jq` file contains jq source code, not
+  configuration. The `jq` executable runs that code.
 
-```shell
-VERBOSE=1 make docker-example-build
-```
+Use jq rather than `grep` or `sed` to extract fields from nested JSON. For YAML
+input, a shell script can use `yq` to convert it to JSON before passing it to
+jq. Keeping the rules separate avoids fragile shell text parsing and makes them
+easier to read and test.
 
-for Bash scripts
+For example,
+[check-security-readiness.sh](../../../scripts/quality/check-security-readiness.sh)
+handles file selection and reporting, while
+[check-security-readiness.jq](../../../scripts/quality/check-security-readiness.jq)
+contains the governance rules and returns diagnostics. The shell script turns
+those diagnostics into warnings or failures.
 
-```shell
-VERBOSE=1 scripts/quality/check-shell-lint.sh
-```
+A jq file can be a standalone program, executed with `jq -f`, or a module loaded
+with `include` from a directory supplied through `jq -L`. The security readiness
+rules use the module form. Both approaches keep structured-data logic out of
+Make recipes and shell orchestration.
 
 ### Scripts
 
-Most scripts provided with this repository template can use tools installed on
-your `PATH` if they are available or run them from within a Docker container. To
-force a script to use Docker, the `FORCE_USE_DOCKER` variable is provided. This
-feature allows you to use custom tooling if it is present on the command-line
-path. Here is how to use it:
+Most scripts provided with this template run their tools in pinned Docker
+containers by default. This limits access to the host's files and network. To
+use a native tool instead, set `FORCE_USE_DOCKER=false`. Native mode has the
+user's full access and is not recommended for repository quality checks. For
+example:
 
 ```shell
-FORCE_USE_DOCKER=1 scripts/quality/check-shell-lint.sh
+FORCE_USE_DOCKER=false scripts/quality/check-shell-lint.sh
 ```
 
-You can combine it with the `VERBOSE` flag to see the details of the execution
-flow:
+The same variable works for Make targets and shell profiles. For a CI composite
+action, set `FORCE_USE_DOCKER=false` in `.github/actions/<check>/action.yaml`
+and make the native tool available on the runner. This is not recommended. The
+pipeline-contract and security-readiness checks always run natively. Security
+readiness warns once, but does not fail, when native mode is selected.
+
+Combine the opt-out with `VERBOSE` to see the execution details:
 
 ```shell
-VERBOSE=1 FORCE_USE_DOCKER=1 scripts/quality/check-shell-lint.sh
+VERBOSE=1 FORCE_USE_DOCKER=false scripts/quality/check-shell-lint.sh
 ```
 
 ### Shell lint
@@ -469,4 +486,22 @@ For a one-file diagnostic, run ShellCheck directly:
 
 ```shell
 shellcheck -- scripts/quality/check-shell-lint.sh
+```
+
+### Debugging
+
+To assist in investigating scripting issues, the `VERBOSE` variable is available
+for both Make and Bash scripts. If it is set to `true` or `1`, it prints all the
+commands that the script executes to stderr. Here is how to use it:
+
+for Make targets
+
+```shell
+VERBOSE=1 make docker-example-build
+```
+
+for Bash scripts
+
+```shell
+VERBOSE=1 scripts/quality/check-shell-lint.sh
 ```
