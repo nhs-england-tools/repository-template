@@ -8,9 +8,9 @@
   - [Overrides and environment variables 🧩](#overrides-and-environment-variables-)
   - [Troubleshooting 🔍](#troubleshooting-)
 
-The targets in [docker.mk](../../../scripts/docker/docker.mk) wrap Docker
-Compose for a project's local services. The template supplies the commands. Add
-your own Compose file and application configuration.
+The targets in [docker.lib.mk](../../../scripts/docker/docker.lib.mk) wrap
+Docker Compose for a project's local services. The template supplies the
+commands. Add your own Compose file and application configuration.
 
 ## Prerequisites 📋
 

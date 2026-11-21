@@ -11,7 +11,7 @@ set -euo pipefail
 # scripts/toolchain/install-gnu-macos.sh to fix a failing check on macOS.
 # It also reports, but never installs, GNU make 3.82 or later and the CLI
 # version of a Docker or Podman container runtime on PATH, since
-# scripts/docker/docker.mk needs both prerequisites.
+# scripts/docker/docker.lib.mk needs both prerequisites.
 # It also enforces Bash 5.2 or later on PATH, since the repository's scripts
 # use associative arrays and other features the macOS-shipped Bash 3.2 lacks.
 #

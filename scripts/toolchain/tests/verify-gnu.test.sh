@@ -174,7 +174,7 @@ function test-version-ge-properties() {
       00) eq=$((eq + 1)) ;;
       01) gt=$((gt + 1)) ;;
       10) lt=$((lt + 1)) ;;
-      *) echo "Unexpected comparison statuses: $ab $ba ($where)" >&2; return 1 ;;
+      *) print-diagnostic error "Unexpected comparison statuses: $ab $ba ($where)"; return 1 ;;
     esac
   done
   # A generator that rarely yields one of the outcomes would leave that case
@@ -701,7 +701,7 @@ function random-version-pair() {
       PAIR_RIGHT="$prefix$REPLY"
       ;;
     *)
-      echo "Unexpected random version-pair selection" >&2
+      print-diagnostic error "Unexpected random version-pair selection"
       return 1
       ;;
   esac

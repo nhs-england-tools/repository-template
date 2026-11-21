@@ -139,7 +139,7 @@ function main() {
       resume-command || return "$?"
       ;;
     *)
-      echo "Unrecognised command: '$command'. Use one of: hook, run, list, pause, resume. Gates were not run. Inspect 'make quality-gate-list' and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "Unrecognised command: '$command'. Use one of: hook, run, list, pause, resume. Gates were not run. Inspect 'make quality-gate-list' and verify with 'make quality-gate'. $RECOVERY_SCOPE"
       return 126
       ;;
   esac
@@ -279,7 +279,7 @@ function record-baseline() {
       action=turn-already-open
     else
       rm -f "$state/$session.blocks" "$state/$session.blocked" || {
-        echo "Quality gate: cannot reset $state/$session.blocks and $state/$session.blocked. The continuation count is unknown. Inspect those paths and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+        print-diagnostic warning "Quality gate: cannot reset $state/$session.blocks and $state/$session.blocked. The continuation count is unknown. Inspect those paths and verify with 'make quality-gate'. $RECOVERY_SCOPE"
       }
       if ! write-baseline "$state/$session.baseline"; then
         action=snapshot-failed
@@ -311,7 +311,7 @@ function write-baseline() {
   fi
   head="$(git rev-parse --verify --quiet HEAD)" || head=none
   printf '=\t%s\0!\tunreadable\0' "$head" > "$baseline_file" || {
-    echo "Quality gate: cannot write baseline $baseline_file. Change selection is unknown. Inspect that path and verify with 'make quality-gate scope=all'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot write baseline $baseline_file. Change selection is unknown. Inspect that path and verify with 'make quality-gate scope=all'. $RECOVERY_SCOPE"
   }
 
   return 1
@@ -325,7 +325,7 @@ function remove-old-state() {
 
   # '-delete' visits a directory after its files, so '-empty' sees them gone
   if ! find "$1" -mindepth 1 \( -type f -mtime +7 -delete \) -o \( -type d -empty -mtime +7 -delete \); then
-    echo "Quality gate: cannot remove old state files from $1. Retention is incomplete. Inspect that directory and 'make quality-gate' output. $RECOVERY_SCOPE" >&2
+    print-diagnostic warning "Quality gate: cannot remove old state files from $1. Retention is incomplete. Inspect that directory and 'make quality-gate' output. $RECOVERY_SCOPE"
   fi
 
   return 0
@@ -346,7 +346,7 @@ function handle-stop() {
   fi
   decide-stop "$session" "$active" "$scratch" "$session_status" || rc=$?
   rm -rf "$scratch" || {
-    echo "Quality gate: cannot remove scratch directory $scratch. Cleanup is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic warning "Quality gate: cannot remove scratch directory $scratch. Cleanup is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
   }
 
   return "$rc"
@@ -492,10 +492,10 @@ function decide-stop() {
   if blocking-failure; then
     if [[ -n $session ]]; then
       printf '%s\n' "$((blocks + 1))" > "$state/$session.blocks" || {
-        echo "Quality gate: cannot write $state/$session.blocks. The continuation count is unknown. The failed gates still block. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+        print-diagnostic warning "Quality gate: cannot write $state/$session.blocks. The continuation count is unknown. The failed gates still block. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
       }
       if [[ $snapshot_ok == true ]] && ! cp "$current" "$state/$session.blocked"; then
-        echo "Quality gate: cannot write $state/$session.blocked, so the next stop reruns the gates even without an edit. Inspect that path. $RECOVERY_SCOPE" >&2
+        print-diagnostic warning "Quality gate: cannot write $state/$session.blocked, so the next stop reruns the gates even without an edit. Inspect that path. $RECOVERY_SCOPE"
       fi
     fi
     note-hook "$state" Stop "$session" blocked "$session_status" "$selection_reason" "$selection_scope"
@@ -518,7 +518,7 @@ function finish-turn() {
   local state_dir="$1" session="$2"
   if [[ -n $session ]]; then
     rm -f "$state_dir/$session.baseline" "$state_dir/$session.blocks" "$state_dir/$session.blocked" || {
-      echo "Quality gate: cannot close turn state $state_dir/$session.baseline, $state_dir/$session.blocks and $state_dir/$session.blocked. Turn tracking is unknown, not evidence of a pass. Inspect those paths and verify with 'make quality-gate scope=all'. $RECOVERY_SCOPE" >&2
+      print-diagnostic warning "Quality gate: cannot close turn state $state_dir/$session.baseline, $state_dir/$session.blocks and $state_dir/$session.blocked. Turn tracking is unknown, not evidence of a pass. Inspect those paths and verify with 'make quality-gate scope=all'. $RECOVERY_SCOPE"
     }
   fi
 
@@ -540,10 +540,10 @@ function pause-state() {
   expiry="$(cat "$file")" || expiry=unknown
   if [[ ! $expiry =~ ^[0-9]{1,12}$ ]] || (( 10#$expiry <= $(date +%s) )); then
     if [[ ! $expiry =~ ^[0-9]{1,12}$ ]]; then
-      echo "Quality gate: pause state $file is unreadable or invalid. No pause was applied and verification is not implied. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      print-diagnostic warning "Quality gate: pause state $file is unreadable or invalid. No pause was applied and verification is not implied. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     fi
     rm -f "$file" || {
-      echo "Quality gate: cannot remove expired or invalid pause $file. Pause tracking is unknown, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      print-diagnostic warning "Quality gate: cannot remove expired or invalid pause $file. Pause tracking is unknown, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     }
     echo none
     return 0
@@ -593,11 +593,11 @@ function note-hook() {
     --arg session_status "$session_status" --arg selection_reason "$selection_reason" --arg scope "$selection_scope" \
     '{time: (now | floor | todate), event: $event, session: $session, action: $action,
       session_status: $session_status, selection_reason: $selection_reason, scope: $scope}')"; then
-    echo "Quality gate: cannot encode $state_dir/last-hook.json. The event audit is incomplete. Inspect jq diagnostics and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic warning "Quality gate: cannot encode $state_dir/last-hook.json. The event audit is incomplete. Inspect jq diagnostics and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 0
   fi
   if ! { tmp="$(mktemp "$state_dir/.last-hook.XXXXXX")" && printf '%s\n' "$record" > "$tmp" && [[ ! -d $state_dir/last-hook.json ]] && mv "$tmp" "$state_dir/last-hook.json"; }; then
-    echo "Quality gate: cannot write $state_dir/last-hook.json. The event audit is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic warning "Quality gate: cannot write $state_dir/last-hook.json. The event audit is incomplete, not evidence of a pass. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
   fi
   if [[ -n $tmp ]]; then
     rm -f "$tmp" || audit-error "$tmp" 'temporary event cleanup failed'
@@ -720,7 +720,7 @@ function prune-history() {
 #   $1=[affected path] $2=[impact]
 function audit-error() {
 
-  echo "Quality gate: $2 at $1. The audit is incomplete, not evidence of a pass. Inspect that path, its permissions and free space, and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+  print-diagnostic warning "Quality gate: $2 at $1. The audit is incomplete, not evidence of a pass. Inspect that path, its permissions and free space, and verify with 'make quality-gate'. $RECOVERY_SCOPE"
 
   return 0
 }
@@ -737,7 +737,7 @@ function run-command() {
   case $scope in
     changed | all) ;;
     *)
-      echo "Unrecognised scope: '$scope'. Use one of: changed, all. Gates were not run. Verify with 'make quality-gate scope=changed' or 'make quality-gate scope=all'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "Unrecognised scope: '$scope'. Use one of: changed, all. Gates were not run. Verify with 'make quality-gate scope=changed' or 'make quality-gate scope=all'. $RECOVERY_SCOPE"
       return 126
       ;;
   esac
@@ -763,7 +763,7 @@ function run-gates() {
   fi
   create-state-dir || return "$?"
   collect-changed-paths "$changes" || {
-    echo "Quality gate: change selection is unknown, so gates were not run. Inspect 'git status --short' and the Git errors above, then verify with 'make quality-gate scope=all'. State: $state. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: change selection is unknown, so gates were not run. Inspect 'git status --short' and the Git errors above, then verify with 'make quality-gate scope=all'. State: $state. $RECOVERY_SCOPE"
     return 1
   }
   execute-gates "$config" "$changes" "$scope" 0 true "$state/logs/run" || return "$?"
@@ -792,7 +792,7 @@ function list-command() {
     return 2
   fi
   rows="$(jq -r '.gates[] | [.name, .target, .mode, "\(.timeout | floor)s", (if (.paths | length) == 0 then "all" else (.paths | join(" ")) end), .description] | @tsv' <<< "$config")" || {
-    echo "Quality gate: cannot list the validated configuration from $CONFIG_FILE and $CONFIG_DIR. Gates were not run. Inspect the jq errors above and verify with 'make quality-gate-list'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot list the validated configuration from $CONFIG_FILE and $CONFIG_DIR. Gates were not run. Inspect the jq errors above and verify with 'make quality-gate-list'. $RECOVERY_SCOPE"
     return 2
   }
   printf '%s\n' "$rows" \
@@ -814,7 +814,7 @@ function pause-command() {
   create-state-dir || return "$?"
   expiry=$(( $(date +%s) + hours * 3600 ))
   printf '%s\n' "$expiry" > "$state/paused" || {
-    echo "Quality gate: cannot write $state/paused. Pause state is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot write $state/paused. Pause state is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   }
   echo "Quality gate paused from the next prompt until $(format-time "$expiry"). Paused gates are not passed. State: $state/paused. When authorised, resume it with: make quality-gate-resume, then verify with 'make quality-gate'."
@@ -827,7 +827,7 @@ function resume-command() {
 
   create-state-dir || return "$?"
   rm -f "$STATE_DIR/paused" || {
-    echo "Quality gate: cannot remove $STATE_DIR/paused. Resume failed and gates were not run. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot remove $STATE_DIR/paused. Resume failed and gates were not run. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   }
   echo "Quality gate resumed. No gates ran during resume. Verify with 'make quality-gate'. State: $STATE_DIR/paused."
@@ -899,7 +899,7 @@ function read-config() {
   if [[ $from != working-tree ]] && git cat-file -e "$from:$CONFIG_RULES" 2> /dev/null; then
     rules="$2/rules.jq"
     git show "$from:$CONFIG_RULES" > "$rules" || {
-      echo "ERROR: cannot read $CONFIG_RULES from commit $from into $rules. Gates were not run. Inspect 'git show $from:$CONFIG_RULES' and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "cannot read $CONFIG_RULES from commit $from into $rules. Gates were not run. Inspect 'git show $from:$CONFIG_RULES' and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"
       return 2
     }
   fi
@@ -971,7 +971,7 @@ function list-drop-ins() {
 function create-state-dir() {
 
   if [[ ! -d $STATE_DIR/logs ]] && ! mkdir -p "$STATE_DIR/logs"; then
-    echo "Quality gate: cannot create $STATE_DIR/logs. State is unavailable and verification is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot create $STATE_DIR/logs. State is unavailable and verification is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   fi
 
@@ -986,7 +986,7 @@ function make-temp() {
 
   create-state-dir || return "$?"
   mktemp "$@" "$STATE_DIR/tmp.XXXXXX" || {
-    echo "Quality gate: cannot create temporary state under $STATE_DIR. Verification is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot create temporary state under $STATE_DIR. Verification is unknown. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   }
 
@@ -1236,7 +1236,7 @@ function execute-gates() {
   local name target mode timeout patterns limit remaining capped log rc seconds start outcome result
   local started=$SECONDS
   mkdir -p "$logs" || {
-    echo "Quality gate: cannot create log directory $logs. Gates were not run. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "Quality gate: cannot create log directory $logs. Gates were not run. Inspect that path and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   }
   # Gates run from other directories, so the private result path is absolute
@@ -1245,7 +1245,7 @@ function execute-gates() {
   while IFS=$'\x1f' read -r name target mode timeout patterns; do
     log="$logs/$name.log"
     if ! rm -f "$logs/$name.result" "$log"; then
-      echo "Quality gate: cannot remove stale results under $logs for make $target. Verification is unknown. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "Quality gate: cannot remove stale results under $logs for make $target. Verification is unknown. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE"
       return 1
     fi
     if [[ $scope == changed && -n $patterns && -n $changes ]] && ! changes-match "$changes" "$patterns"; then
@@ -1270,7 +1270,7 @@ function execute-gates() {
     fi
     start=$SECONDS
     if ! result="$(mktemp "$logs/$name.result.XXXXXX")" || ! rm -f "$result"; then
-      echo "Quality gate: cannot prepare a private result under $logs for make $target. This gate was not run and verification is unknown. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "Quality gate: cannot prepare a private result under $logs for make $target. This gate was not run and verification is unknown. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE"
       return 1
     fi
     rc=0
@@ -1292,7 +1292,7 @@ function execute-gates() {
       outcome=fail
     fi
     rm -f "$result" || {
-      echo "Quality gate: cannot remove private result $result. Cleanup is incomplete. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE" >&2
+      print-diagnostic warning "Quality gate: cannot remove private result $result. Cleanup is incomplete. Inspect that path and verify with 'make $target'. $RECOVERY_SCOPE"
     }
     record-result "$name" "$target" "$mode" "$outcome" "$rc" "$seconds" "$log"
     if [[ $progress == true ]]; then
@@ -1612,11 +1612,11 @@ function write-last-run() {
       session_status: $session_status, selection_reason: $selection_reason, scope: $scope,
       gates: (split("\n") | map(select(length > 0) | split("\t") | {name: .[0], state: .[1], status: (.[2] | tonumber), seconds: (.[3] | tonumber)}))}' \
     <<< "$rows")"; then
-    echo "Quality gate: cannot write $state_dir/last-run.json because encoding failed. Result history is unavailable, not evidence of a pass. Inspect jq diagnostics and $state_dir/logs, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic warning "Quality gate: cannot write $state_dir/last-run.json because encoding failed. Result history is unavailable, not evidence of a pass. Inspect jq diagnostics and $state_dir/logs, then verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 0
   fi
   if ! { tmp="$(mktemp "$state_dir/.last-run.XXXXXX")" && printf '%s\n' "$record" > "$tmp" && [[ ! -d $state_dir/last-run.json ]] && mv "$tmp" "$state_dir/last-run.json"; }; then
-    echo "Quality gate: cannot write $state_dir/last-run.json. Result history is unavailable, not evidence of a pass. Inspect that path and $state_dir/logs, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic warning "Quality gate: cannot write $state_dir/last-run.json. Result history is unavailable, not evidence of a pass. Inspect that path and $state_dir/logs, then verify with 'make quality-gate'. $RECOVERY_SCOPE"
   fi
   if [[ -n $tmp ]]; then
     rm -f "$tmp" || audit-error "$tmp" 'temporary run cleanup failed'

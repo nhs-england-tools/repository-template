@@ -63,7 +63,7 @@ function find-test-suites() {
   local -n result="$1" || return "$?"
   local dir="$2" base="${2%/}" tmp suite path rc=0
   tmp="$(mktemp -d)" || {
-    echo "ERROR: cannot create discovery scratch directory. Verification did not run. Diagnose with: mktemp -d" >&2
+    print-diagnostic error "cannot create discovery scratch directory. Verification did not run. Diagnose with: mktemp -d"
     return 1
   }
   if list-test-suites "$dir" "$tmp/list"; then
@@ -80,7 +80,7 @@ function find-test-suites() {
     rc=$?
   fi
   rm -rf "$tmp" || {
-    echo "ERROR: cannot remove discovery scratch directory '$tmp'. Inspect with: ls -ld '$tmp'" >&2
+    print-diagnostic error "cannot remove discovery scratch directory '$tmp'. Inspect with: ls -ld '$tmp'"
     return 1
   }
 
@@ -107,7 +107,7 @@ function list-test-suites() {
   fi
   # A conflicted path is listed once for each index stage
   LC_ALL=C sort -zu -o "$list" "$list" || {
-    echo "ERROR: cannot sort discovered suites in '$list'. Verification did not run. Diagnose with: sort --version" >&2
+    print-diagnostic error "cannot sort discovered suites in '$list'. Verification did not run. Diagnose with: sort --version"
     return 1
   }
 
@@ -120,10 +120,10 @@ function list-test-suites() {
 #   $@=[test suite paths]
 function run-test-suites() {
 
-  local logs suite rc reason i=0 failed=0 unavailable=0
+  local logs suite rc reason message i=0 failed=0 unavailable=0
   local -a pids=() paths=("$@") failures=()
   logs="$(mktemp -d)" || {
-    echo "ERROR: cannot create suite log directory. Verification did not run. Diagnose with: mktemp -d" >&2
+    print-diagnostic error "cannot create suite log directory. Verification did not run. Diagnose with: mktemp -d"
     return 1
   }
   # shellcheck disable=SC2064
@@ -161,7 +161,8 @@ function run-test-suites() {
           print-diagnostic error "Test suite failed: ${paths[$i]}: ${reason:-exit code $rc}"
         fi
         if [[ $rc -eq 126 || $rc -eq 127 ]]; then
-          printf 'ERROR: cannot execute suite %q. Verification failed. Inspect its mode and interpreter with: ls -l %q\n' "${paths[$i]}" "${paths[$i]}" >&2
+          printf -v message 'cannot execute suite %q. Verification failed. Inspect its mode and interpreter with: ls -l %q' "${paths[$i]}" "${paths[$i]}"
+          print-diagnostic error "$message"
         fi
       fi
     fi
@@ -171,7 +172,7 @@ function run-test-suites() {
   if [[ $unavailable -gt 0 ]]; then printf ', Unavailable: %s' "$unavailable"; fi
   printf '\n'
   rm -rf "$logs" || {
-    echo "ERROR: cannot remove suite logs '$logs'. Cleanup failed. Inspect with: ls -ld '$logs'" >&2
+    print-diagnostic error "cannot remove suite logs '$logs'. Cleanup failed. Inspect with: ls -ld '$logs'"
     return 1
   }
   trap - EXIT
@@ -203,11 +204,11 @@ function publish-result() {
   local value="$1" file="${QUALITY_GATE_RESULT_FILE-}"
   [[ ${QUALITY_GATE_RESULT_FILE+x} ]] || return 0
   if [[ "$file" != /* ]]; then
-    echo "ERROR: QUALITY_GATE_RESULT_FILE must be an absolute path, got '$file'. No trustworthy verdict can be published. Check with: declare -p QUALITY_GATE_RESULT_FILE" >&2
+    print-diagnostic error "QUALITY_GATE_RESULT_FILE must be an absolute path, got '$file'. No trustworthy verdict can be published. Check with: declare -p QUALITY_GATE_RESULT_FILE"
     return 1
   fi
   if ! printf '%s\n' "$value" > "$file"; then
-    echo "ERROR: cannot publish test-suite verdict to '$file'. Verification cannot be classified. Inspect the destination with: ls -ld '${file%/*}' '$file'" >&2
+    print-diagnostic error "cannot publish test-suite verdict to '$file'. Verification cannot be classified. Inspect the destination with: ls -ld '${file%/*}' '$file'"
     return 1
   fi
 

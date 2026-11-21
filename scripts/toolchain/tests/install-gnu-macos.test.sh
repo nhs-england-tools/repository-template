@@ -114,7 +114,7 @@ function test-install-gnu-macos-requires-homebrew() {
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home"
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Homebrew is not installed"
+  assert-contains "$TEST_STDERR" "ERROR: Homebrew is not installed"
 
   return 0
 }
@@ -132,7 +132,7 @@ function test-install-gnu-macos-installs-formulae-and-recommends-path() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-stub-called brew "install bash coreutils diffutils findutils gawk gnu-sed grep"
   assert-contains "$TEST_STDERR" "  $expected"
-  assert-contains "$TEST_STDERR" "Add the line above to your shell profile manually."
+  assert-contains "$TEST_STDERR" "NOTICE: Add the line above to your shell profile manually."
   assert-file-not-exists "$TEST_TMP/home/.zshrc"
 
   return 0
@@ -217,7 +217,7 @@ function test-install-gnu-macos-skips-when-rc-file-has-the-block() {
   run-install-gnu-macos SHELL=/bin/zsh HOME="$TEST_TMP/home" ZDOTDIR="$zdot"
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "$zdot/.zshrc already has a block added by this script"
+  assert-contains "$TEST_STDERR" "NOTICE: $zdot/.zshrc already has a block added by this script"
   assert-contains "$TEST_STDERR" "Update the existing block manually with the line above."
   assert-not-contains "$TEST_STDERR" "Restart your shell or run: source"
   assert-not-contains "$TEST_STDERR" "Add the line above to your shell profile manually."
@@ -243,8 +243,8 @@ function test-install-gnu-macos-uses-the-first-bash-login-file() {
   run-install-gnu-macos SHELL=/bin/bash HOME="$home"
   # Assert
   assert-equal "0 0" "$profile_status $TEST_STATUS" "exit status with only .profile, then with .bash_profile too"
-  assert-contains "$profile_stderr" "$home/.profile already has a block added by this script" "only .profile exists"
-  assert-contains "$TEST_STDERR" "$home/.bash_profile already has a block added by this script" ".bash_profile and .profile exist"
+  assert-contains "$profile_stderr" "NOTICE: $home/.profile already has a block added by this script" "only .profile exists"
+  assert-contains "$TEST_STDERR" "NOTICE: $home/.bash_profile already has a block added by this script" ".bash_profile and .profile exist"
   assert-files-identical "$TEST_TMP/profile.before" "$home/.profile"
   assert-files-identical "$TEST_TMP/bash_profile.before" "$home/.bash_profile"
 

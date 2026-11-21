@@ -106,7 +106,7 @@ function quality-find-pr-base() {
   local open_pattern='^OPEN ([^[:space:]]+)$'
   [[ "$seconds" =~ ^[1-9][0-9]*$ ]] || seconds=5
   if ! command -v gh > /dev/null 2>&1; then
-    echo 'GitHub CLI is unavailable, so the default branch is used.' >&2
+    print-diagnostic notice 'GitHub CLI is unavailable, so the default branch is used.'
     return 0
   fi
 
@@ -121,7 +121,7 @@ function quality-find-pr-base() {
       kill "$pid" 2> /dev/null || true
       wait "$pid" 2> /dev/null || true
       rm -f "$output"
-      echo "GitHub CLI did not answer within ${seconds}s, so the default branch is used." >&2
+      print-diagnostic notice "GitHub CLI did not answer within ${seconds}s, so the default branch is used."
       return 0
     fi
     sleep 0.1
@@ -130,7 +130,7 @@ function quality-find-pr-base() {
   response="$(< "$output")"
   rm -f "$output"
   if [[ $rc -ne 0 || ! "$response" =~ $open_pattern ]]; then
-    echo 'GitHub CLI found no open pull request for this branch, so the default branch is used.' >&2
+    print-diagnostic notice 'GitHub CLI found no open pull request for this branch, so the default branch is used.'
     return 0
   fi
   printf '%s\n' "${BASH_REMATCH[1]}"

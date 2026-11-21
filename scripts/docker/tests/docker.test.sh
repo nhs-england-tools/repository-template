@@ -100,10 +100,11 @@ function test-suite-teardown() {
 # Remove every local tag of this run's test images and report cleanup failures.
 function remove-test-images() {
 
-  local images tag removal_command
+  local images tag removal_command message
   local -a tags=()
   images="$(docker images --format '{{.Repository}}:{{.Tag}}')" || {
-    printf 'ERROR: cannot enumerate test images for %s and %s. Cleanup is incomplete and test images may remain. Diagnose with: docker images --format %q\n' "$DOCKER_IMAGE" "$CLEAN_IMAGE" '{{.Repository}}:{{.Tag}}' >&2
+    printf -v message 'cannot enumerate test images for %s and %s. Cleanup is incomplete and test images may remain. Diagnose with: docker images --format %q' "$DOCKER_IMAGE" "$CLEAN_IMAGE" '{{.Repository}}:{{.Tag}}'
+    print-diagnostic error "$message"
     return 1
   }
   while IFS= read -r tag; do

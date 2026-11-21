@@ -1415,7 +1415,7 @@ function test-docker-make-requires-docker-fn() {
     make _docker docker_fn=
   # Assert
   assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "docker_fn is required"
+  assert-contains "$TEST_STDERR" "ERROR: docker_fn is required"
   assert-contains "$TEST_STDERR" "make _docker docker_fn=run"
 
   return 0

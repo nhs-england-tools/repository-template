@@ -92,7 +92,7 @@ function test-run-suite() {
     test-suite-setup
     if [[ $- != *e* ]]; then
       set -e
-      echo "ERROR: test-suite-setup left errexit off. Setup assertions cannot be trusted. Inspect its shell options, then rerun this suite with VERBOSE=true." >&2
+      print-diagnostic error "test-suite-setup left errexit off. Setup assertions cannot be trusted. Inspect its shell options, then rerun this suite with VERBOSE=true."
       return 1
     fi
     _TEST_SUITE_SETUP=false
@@ -276,7 +276,7 @@ function _test-run-isolated() {
   _TEST_NAME="$test"
   _TEST_RETURNED=""
   _test-mktemp-dir TEST_TMP || {
-    echo "ERROR: cannot create scratch directory for test '$test' under '${TMPDIR:-/tmp}'. This test did not run. Diagnose with: mktemp -d" >&2
+    print-diagnostic error "cannot create scratch directory for test '$test' under '${TMPDIR:-/tmp}'. This test did not run. Diagnose with: mktemp -d"
     return 1
   }
   trap '_test-isolated-exit' EXIT
@@ -347,7 +347,7 @@ function _test-suite-exit() {
       trap '[[ "$_TEST_TEARDOWN_RETURNED" == true ]] || exit 1' EXIT
       test-suite-teardown
       if [[ $- != *e* ]]; then
-        echo "ERROR: test-suite-teardown left errexit off. Cleanup assertions cannot be trusted. Inspect its shell options, then rerun this suite with VERBOSE=true." >&2
+        print-diagnostic error "test-suite-teardown left errexit off. Cleanup assertions cannot be trusted. Inspect its shell options, then rerun this suite with VERBOSE=true."
         exit 1
       fi
       _TEST_TEARDOWN_RETURNED=true
@@ -439,7 +439,7 @@ function _test-remove-dir() {
 
   local dir="$1"
   if [[ -n "$dir" && -d "$dir" ]] && ! rm -rf "$dir"; then
-    echo "ERROR: cannot remove test scratch directory '$dir'. Cleanup failed. Inspect it with: ls -ld '$dir'" >&2
+    print-diagnostic error "cannot remove test scratch directory '$dir'. Cleanup failed. Inspect it with: ls -ld '$dir'"
     return 1
   fi
 
@@ -533,7 +533,7 @@ function test-isolate-path() {
   local -a tools=("${TEST_BASE_TOOLS[@]}" "$@") batch=()
   for tool in "$@"; do
     if [[ ! "$tool" =~ ^[A-Za-z0-9._+-]+$ ]]; then
-      echo "ERROR: test-isolate-path was given an invalid tool name '$tool'. Fix the test's tool list." >&2
+      print-diagnostic error "test-isolate-path was given an invalid tool name '$tool'. Fix the test's tool list."
       return 1
     fi
   done
@@ -547,7 +547,7 @@ function test-isolate-path() {
     for tool in "${tools[@]}"; do
       type -P "$tool" > /dev/null && continue
       if ( PATH="$TEST_ORIGINAL_PATH" && type -P "$tool" > /dev/null ); then
-        echo "ERROR: test-isolate-path cannot find '$tool' because the test changed PATH before isolating it. List every tool in the first test-isolate-path call." >&2
+        print-diagnostic error "test-isolate-path cannot find '$tool' because the test changed PATH before isolating it. List every tool in the first test-isolate-path call."
         return 1
       fi
       echo "PREREQUISITE: '$tool' is not on PATH. Diagnose with: command -v '$tool'. Tests that need it cannot run, so verification is unknown." >&2
