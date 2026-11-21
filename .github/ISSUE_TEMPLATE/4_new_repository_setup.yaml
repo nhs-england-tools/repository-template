@@ -28,6 +28,7 @@ body:
         - label: Record applicable information governance, accessibility, security, and clinical safety requirements in the project documentation.
         - label: Resolve the documentation TODOs and verify that links and published contact routes work.
         - label: Implement the recipes for every TODO-marked target in the Makefile. Keep the existing target names.
+        - label: Extend format, lint and test with project formatters, checks and fast tests. Keep the existing formatting, checks and Bash tests.
         - label: Review dependency sources, Dependabot, cooldown and update ownership using docs/guides/template/Update_Dependencies.md. Record project-specific changes.
         - label: Configure the required SonarQube Cloud integration using docs/guides/template/Configure_SonarQube_Cloud.md. Verify a pull request scan and quality gate result.
         - label: Configure the Power Automate flow and TEAMS_NOTIFICATION_WEBHOOK_URL Actions secret using docs/guides/template/Configure_pipeline_notifications.md. Verify delivery to the team's channel for pipeline failures, recovery and release outcomes.

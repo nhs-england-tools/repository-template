@@ -3,6 +3,9 @@ include scripts/init.mk
 # ==============================================================================
 # Project targets
 
+# Extend lifecycle targets as described in
+# docs/guides/template/Use_Bash_and_Make.md#compose-with-root-lifecycle-targets
+
 env: # Set up project environment @Configuration
 	# TODO: Implement environment setup steps
 
@@ -12,6 +15,7 @@ deps: # Install dependencies needed to build and test the project @Build
 format: check ?= all
 format: # Auto-format code (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	$(MAKE) format-markdown
+	# TODO: Add project formatters while keeping the existing formatting
 
 lint: check ?= all
 lint: # Run linter to check code style and errors (set check=all|staged-changes|working-tree-changes|branch for the file checks) @Quality
@@ -25,12 +29,14 @@ lint: # Run linter to check code style and errors (set check=all|staged-changes|
 	$(MAKE) lint-shell
 	$(MAKE) lint-pipeline-contract
 	$(MAKE) lint-security-readiness
+	# TODO: Add project linters while keeping the existing checks
 
 typecheck: # Run type checker @Quality
 	# TODO: Implement type checking required for this repository
 
 test: # Run all tests @Quality
 	./scripts/tests/run-test-suites.sh
+	# TODO: Add fast project tests while keeping the existing Bash tests
 
 check: # Run all format, lint, type and test checks @Quality
 	$(MAKE) format
@@ -39,12 +45,15 @@ check: # Run all format, lint, type and test checks @Quality
 	$(MAKE) test
 
 build: # Build the project artefact @Build
+	# Called by .github/workflows/stage-3-build.yaml
 	# TODO: Implement the artefact build step
 
 publish: # Publish the project artefact @Release
+	# Called after release creation by .github/workflows/cicd-2-publish.yaml
 	# TODO: Implement the artefact publishing step
 
 deploy: # Deploy the project artefact to the target environment @Release
+	# Called for the selected tag by .github/workflows/cicd-3-deploy.yaml
 	# TODO: Implement the artefact deployment step
 
 config:: # Configure development environment (main) @Configuration

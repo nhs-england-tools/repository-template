@@ -122,6 +122,14 @@ placeholders for the adopting project. Implement a missing capability in the
 root recipe or add it through an auto-loaded extension. Keep the public target
 name stable either way.
 
+The build stage calls `make build` in its first artefact job. The publish
+workflow calls `make publish` after creating the GitHub release. The deploy
+workflow checks out the selected tag and calls `make deploy`, with `TAG` set to
+that tag. These jobs install the pinned mise tools before calling the targets.
+Implement the project recipes and configure dependency installation, artefact
+transfer, credentials and environments where needed. The second build job
+remains an example for projects with another artefact.
+
 | Target                                        | Template default                                                  | Project or extension responsibility                                           |
 | --------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `config`                                      | Installs shared tools, hooks and pinned helper images.            | Add independent setup with a `config::` rule when needed.                     |

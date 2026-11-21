@@ -45,14 +45,32 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 3
+    env:
+      BUILD_DATETIME_LONDON: ${{ inputs.build_datetime_london }}
+      BUILD_DATETIME: ${{ inputs.build_datetime }}
+      BUILD_EPOCH: ${{ inputs.build_epoch }}
+      BUILD_TIMESTAMP: ${{ inputs.build_timestamp }}
+      MISE_VERSION: ${{ inputs.mise_version }}
+      NODEJS_VERSION: ${{ inputs.nodejs_version }}
+      PYTHON_VERSION: ${{ inputs.python_version }}
+      VERSION: ${{ inputs.version }}
     steps:
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: "🧰 Set up mise"
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: ${{ inputs.mise_version }}
+          install: true
+          persist_github_token: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: "🔨 Build artefact 1"
+        id: build
         run: |
-          echo "Building artefact 1 ..."
+          make build
       - name: "🔍 Check artefact 1"
         run: |
           echo "Checking artefact 1 ..."
