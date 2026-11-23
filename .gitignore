@@ -11,3 +11,7 @@
 !project.code-workspace
 
 # Please, add your custom content below!
+
+# Temporary files and directories
+tmp/*
+temp/*

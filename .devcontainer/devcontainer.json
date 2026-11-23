@@ -27,7 +27,10 @@
     }
   },
   "postCreateCommand": "pipx install pre-commit && make config && echo 'export GPG_TTY=$TTY' | cat - ~/.zshrc > temp && mv temp ~/.zshrc",
+  "postStartCommand": "bash -c '[ -x /opt/eng-central/scripts/setup.sh ] && /opt/eng-central/scripts/setup.sh --no-hooks --quiet || true'",
+  "initializeCommand": "bash -c 'mkdir -p ~/.eng-central'",
   "mounts": [
-    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.eng-central,target=/opt/eng-central,type=bind,readonly"
   ]
 }
