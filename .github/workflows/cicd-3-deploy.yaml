@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "This is the tag that is going to be deployed"
+        description: "Release tag to deploy, for example v1.2.3"
         required: true
 
 # Only one deployment runs at a time, and a running deployment is never
@@ -32,6 +32,7 @@ jobs:
       python_version: ${{ steps.variables.outputs.python_version }}
       version: ${{ steps.variables.outputs.version }}
       tag: ${{ steps.tag.outputs.tag }}
+      commit: ${{ steps.variables.outputs.commit }}
     steps:
       - name: "🔖 Validate tag"
         id: tag
@@ -39,7 +40,7 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           git check-ref-format "refs/tags/$TAG" || { printf '::error::Invalid tag: %q\n' "${TAG//'%'/%25}"; exit 1; }
-          [[ "$TAG" != "latest" ]] || { echo "::error::The 'latest' tag cannot be deployed, use a release tag"; exit 1; }
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::Use a protected release tag such as v1.2.3"; exit 1; }
           printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,8 +59,10 @@ jobs:
           echo "mise_version=$(_toml-table-entry "" min_version mise.toml)" >> "$GITHUB_OUTPUT"
           echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
-          # Template placeholder: use the version output from the caller workflow.
-          echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
+          version="$(./scripts/cicd/read-repository-version.sh)"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          commit=$(git rev-parse --verify 'HEAD^{commit}')
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
       - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
@@ -94,7 +97,7 @@ jobs:
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ needs.metadata.outputs.tag }}
+          ref: ${{ needs.metadata.outputs.commit }}
           persist-credentials: false
       - name: "🧰 Set up mise"
         uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10

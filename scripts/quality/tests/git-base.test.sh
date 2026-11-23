@@ -52,7 +52,7 @@ function main() {
   return 0
 }
 
-# Seed origin/main and origin/v2 at the first commit, with feature one ahead.
+# Seed both remote branches at the first commit, with feature one ahead.
 function test-suite-setup() {
 
   local repo="$SUITE_TMP/repo" base_commit
@@ -65,7 +65,7 @@ function test-suite-setup() {
   git -C "$repo" commit -q -m base
   base_commit="$(git -C "$repo" rev-parse HEAD)"
   git -C "$repo" update-ref refs/remotes/origin/main "$base_commit"
-  git -C "$repo" update-ref refs/remotes/origin/v2 "$base_commit"
+  git -C "$repo" update-ref refs/remotes/origin/integration "$base_commit"
   git -C "$repo" switch -q -c feature
   printf 'feature\n' >> "$repo/a.txt"
   git -C "$repo" commit -q -am feature
@@ -120,11 +120,11 @@ function test-quality-resolve-base-prefers-github-base-ref() {
   test-stub gh 'printf "OPEN main\n"'
   cd "$TEST_TMP/repo"
   # Act
-  GITHUB_BASE_REF=v2 BRANCH_NAME=origin/main test-capture quality-test-resolve-base
+  GITHUB_BASE_REF=integration BRANCH_NAME=origin/main test-capture quality-test-resolve-base
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "origin/v2 $base_commit" "$TEST_STDOUT" "base ref and fork point"
-  assert-contains "$TEST_STDERR" "Comparing with origin/v2 (GITHUB_BASE_REF, fork ${base_commit:0:7}"
+  assert-equal "origin/integration $base_commit" "$TEST_STDOUT" "base ref and fork point"
+  assert-contains "$TEST_STDERR" "Comparing with origin/integration (GITHUB_BASE_REF, fork ${base_commit:0:7}"
   assert-stub-not-called gh
 
   return 0
@@ -135,14 +135,14 @@ function test-quality-resolve-base-prefers-the-remote-copy-of-a-github-base() {
   # Arrange
   local base_commit
   base_commit="$(quality-test-create-repo)"
-  git -C "$TEST_TMP/repo" branch v2 feature
+  git -C "$TEST_TMP/repo" branch integration feature
   test-isolate-path
   cd "$TEST_TMP/repo"
   # Act
-  GITHUB_BASE_REF=v2 test-capture quality-test-resolve-base
+  GITHUB_BASE_REF=integration test-capture quality-test-resolve-base
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "origin/v2 $base_commit" "$TEST_STDOUT" "remote copy of the base"
+  assert-equal "origin/integration $base_commit" "$TEST_STDOUT" "remote copy of the base"
 
   return 0
 }
@@ -169,19 +169,19 @@ function test-quality-resolve-base-uses-branch-name-as-given() {
   local head_commit branch_output branch_status
   quality-test-create-repo > /dev/null
   head_commit="$(git -C "$TEST_TMP/repo" rev-parse HEAD)"
-  git -C "$TEST_TMP/repo" branch v2 feature
+  git -C "$TEST_TMP/repo" branch integration feature
   git -C "$TEST_TMP/repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
   test-isolate-path
   test-stub gh 'printf "OPEN main\n"'
   cd "$TEST_TMP/repo"
   # Act
-  BRANCH_NAME=v2 test-capture quality-test-resolve-base
+  BRANCH_NAME=integration test-capture quality-test-resolve-base
   branch_output="$TEST_STDOUT"
   branch_status="$TEST_STATUS"
   BRANCH_NAME=HEAD test-capture quality-test-resolve-base
   # Assert
   assert-equal 0 "$branch_status" "exit status with a local branch"
-  assert-equal "v2 $head_commit" "$branch_output" "local branch, not its remote copy"
+  assert-equal "integration $head_commit" "$branch_output" "local branch, not its remote copy"
   assert-equal 0 "$TEST_STATUS" "exit status with HEAD"
   assert-equal "HEAD $head_commit" "$TEST_STDOUT" "HEAD, not origin/HEAD"
   assert-stub-not-called gh
@@ -194,7 +194,7 @@ function test-quality-resolve-base-fails-when-branch-name-is-missing() {
   # Arrange
   quality-test-create-repo > /dev/null
   test-isolate-path
-  test-stub gh 'printf "OPEN v2\n"'
+  test-stub gh 'printf "OPEN integration\n"'
   cd "$TEST_TMP/repo"
   # Act
   BRANCH_NAME=missing test-capture quality-test-resolve-base
@@ -230,15 +230,15 @@ function test-quality-resolve-base-uses-the-open-pull-request-base() {
   base_commit="$(quality-test-create-repo)"
   expected_call="$(printf '%q ' pr view --json state,baseRefName --jq '.state + " " + .baseRefName')"
   test-isolate-path
-  test-stub gh 'printf "OPEN v2\n"'
+  test-stub gh 'printf "OPEN integration\n"'
   cd "$TEST_TMP/repo"
   # Act
   test-capture quality-test-resolve-base
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "origin/v2 $base_commit" "$TEST_STDOUT" "base ref and fork point"
+  assert-equal "origin/integration $base_commit" "$TEST_STDOUT" "base ref and fork point"
   assert-stub-called gh "${expected_call% }"
-  assert-contains "$TEST_STDERR" "Comparing with origin/v2 (open pull request,"
+  assert-contains "$TEST_STDERR" "Comparing with origin/integration (open pull request,"
 
   return 0
 }
@@ -266,13 +266,13 @@ function test-quality-resolve-base-ignores-closed-and-merged-pull-requests() {
   local base_commit merged_output merged_stderr
   base_commit="$(quality-test-create-repo)"
   test-isolate-path
-  test-stub gh 'printf "MERGED v2\n"'
+  test-stub gh 'printf "MERGED integration\n"'
   cd "$TEST_TMP/repo"
   # Act
   test-capture quality-test-resolve-base
   merged_output="$TEST_STDOUT"
   merged_stderr="$TEST_STDERR"
-  test-stub gh 'printf "CLOSED v2\n"'
+  test-stub gh 'printf "CLOSED integration\n"'
   test-capture quality-test-resolve-base
   # Assert
   assert-equal "origin/main $base_commit" "$merged_output" "base with a merged pull request"
@@ -342,7 +342,7 @@ function test-quality-resolve-base-stops-waiting-for-a-slow-gh() {
   local base_commit start_us elapsed_us
   base_commit="$(quality-test-create-repo)"
   test-isolate-path
-  test-stub gh 'sleep 5; printf "OPEN v2\n"'
+  test-stub gh 'sleep 5; printf "OPEN integration\n"'
   cd "$TEST_TMP/repo"
   # Act
   # Strip the locale's decimal separator to get whole microseconds
@@ -367,13 +367,13 @@ function test-quality-resolve-base-reuses-a-shared-pull-request-base() {
   test-stub gh 'printf "OPEN main\n"'
   cd "$TEST_TMP/repo"
   # Act
-  QUALITY_PR_BASE=v2 test-capture quality-test-resolve-base
+  QUALITY_PR_BASE=integration test-capture quality-test-resolve-base
   shared_output="$TEST_STDOUT"
   shared_status="$TEST_STATUS"
   QUALITY_PR_BASE='' test-capture quality-test-resolve-base
   # Assert
   assert-equal 0 "$shared_status" "exit status with a shared base"
-  assert-equal "origin/v2 $base_commit" "$shared_output" "shared pull request base"
+  assert-equal "origin/integration $base_commit" "$shared_output" "shared pull request base"
   assert-equal 0 "$TEST_STATUS" "exit status with no shared base"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "default base"
   assert-stub-not-called gh
@@ -386,13 +386,13 @@ function test-quality-export-pr-base-calls-gh-once-for-several-checks() {
   # Arrange
   quality-test-create-repo > /dev/null
   test-isolate-path
-  test-stub gh 'printf "OPEN v2\n"'
+  test-stub gh 'printf "OPEN integration\n"'
   cd "$TEST_TMP/repo"
   # Act
   test-capture quality-test-export-and-resolve-twice
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "origin/v2 origin/v2 v2" "$TEST_STDOUT" "both bases and the shared base"
+  assert-equal "origin/integration origin/integration integration" "$TEST_STDOUT" "both bases and the shared base"
   assert-equal 1 "$(test-stub-calls gh | awk 'END { print NR }')" "number of GitHub CLI calls"
 
   return 0
@@ -407,12 +407,12 @@ function test-quality-export-pr-base-skips-gh-when-a-base-is-given() {
   test-stub gh 'printf "OPEN main\n"'
   cd "$TEST_TMP/repo"
   # Act
-  GITHUB_BASE_REF=v2 test-capture quality-test-export-and-resolve-twice
+  GITHUB_BASE_REF=integration test-capture quality-test-export-and-resolve-twice
   github_output="$TEST_STDOUT"
-  BRANCH_NAME=origin/v2 test-capture quality-test-export-and-resolve-twice
+  BRANCH_NAME=origin/integration test-capture quality-test-export-and-resolve-twice
   # Assert
-  assert-equal "origin/v2 origin/v2 unset" "$github_output" "bases with GITHUB_BASE_REF"
-  assert-equal "origin/v2 origin/v2 unset" "$TEST_STDOUT" "bases with BRANCH_NAME"
+  assert-equal "origin/integration origin/integration unset" "$github_output" "bases with GITHUB_BASE_REF"
+  assert-equal "origin/integration origin/integration unset" "$TEST_STDOUT" "bases with BRANCH_NAME"
   assert-stub-not-called gh
 
   return 0
@@ -423,15 +423,15 @@ function test-quality-resolve-base-uses-origin-head() {
   # Arrange
   local base_commit
   base_commit="$(quality-test-create-repo)"
-  git -C "$TEST_TMP/repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/v2
+  git -C "$TEST_TMP/repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/integration
   test-isolate-path
   cd "$TEST_TMP/repo"
   # Act
   test-capture quality-test-resolve-base
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "origin/v2 $base_commit" "$TEST_STDOUT" "origin/HEAD target"
-  assert-contains "$TEST_STDERR" "Comparing with origin/v2 (origin/HEAD,"
+  assert-equal "origin/integration $base_commit" "$TEST_STDOUT" "origin/HEAD target"
+  assert-contains "$TEST_STDERR" "Comparing with origin/integration (origin/HEAD,"
 
   return 0
 }

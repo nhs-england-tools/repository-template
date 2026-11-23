@@ -1,12 +1,34 @@
 name: "📦 CI/CD publish"
 
+# Release every push to 'main' that semantic-release finds a release for. The
+# 'plan' job fixes the version, 'publish-artefacts' publishes the artefacts
+# under it, and 'release' creates the release commit, tag and GitHub Release.
+# A push that does not release finishes green and notifies nobody. See
+# docs/guides/template/Publish_releases.md.
+
 on:
-  pull_request:
-    types: [closed]
-    branches:
-      - main
+  push:
+    branches: [main]
 
 permissions: {}
+
+# Runs queue in push order, so a release is never cancelled halfway
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# semantic-release and its plugins for the plan and release jobs. Dependabot
+# cannot update them, so update them by hand after the seven-day cooldown in
+# docs/guides/template/Update_Dependencies.md. Keep them compatible with
+# @semantic-release/release-notes-generator 14, which needs
+# conventional-changelog-conventionalcommits 8.
+env:
+  SEMANTIC_RELEASE_VERSION: 25.0.9
+  SEMANTIC_RELEASE_PLUGINS: |
+    @semantic-release/exec@7.1.0
+    @semantic-release/git@11.0.1
+    @semantic-release/github@12.0.11
+    conventional-changelog-conventionalcommits@8.0.0
 
 jobs:
   metadata:
@@ -14,7 +36,6 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
-    if: github.event.pull_request.merged == true
     timeout-minutes: 1
     outputs:
       build_datetime_london: ${{ steps.variables.outputs.build_datetime_london }}
@@ -24,7 +45,6 @@ jobs:
       mise_version: ${{ steps.variables.outputs.mise_version }}
       nodejs_version: ${{ steps.variables.outputs.nodejs_version }}
       python_version: ${{ steps.variables.outputs.python_version }}
-      version: ${{ steps.variables.outputs.version }}
     steps:
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -34,7 +54,6 @@ jobs:
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
-          BUILD_DATETIME=$datetime make version-create-effective-file
           echo "build_datetime_london=$(TZ=Europe/London date --date=$datetime +'%Y-%m-%dT%H:%M:%S%z')" >> "$GITHUB_OUTPUT"
           echo "build_datetime=$datetime" >> "$GITHUB_OUTPUT"
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> "$GITHUB_OUTPUT"
@@ -43,9 +62,6 @@ jobs:
           echo "mise_version=$(_toml-table-entry "" min_version mise.toml)" >> "$GITHUB_OUTPUT"
           echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
-          # Each merge needs its own release tag, so VERSION resolves to the second
-          version="$(head -n 1 .version)"
-          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
       - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
@@ -55,16 +71,53 @@ jobs:
           MISE_VERSION: ${{ steps.variables.outputs.mise_version }}
           NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
           PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
-          VERSION: ${{ steps.variables.outputs.version }}
         run: |
           make list-variables
-  publish:
-    name: "📦 Publish packages"
+
+  # The authenticated dry run fixes the version before artefacts are published
+  plan:
+    name: "🗓️ Plan the release"
     runs-on: ubuntu-26.04
     permissions:
-      contents: write
-    needs: [metadata]
-    if: github.event.pull_request.merged == true
+      contents: read
+    timeout-minutes: 5
+    outputs:
+      release: ${{ steps.verify.outputs.new_release_published }}
+      version: ${{ steps.verify.outputs.new_release_version }}
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: "🔐 Create the release App token"
+        id: app-token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          app-id: ${{ vars.GH_VERSIONING_RELEASE_APP_ID || vars.NHS_GH_VERSIONING_RELEASE_APP_ID }}
+          private-key: ${{ secrets.GH_VERSIONING_RELEASE_APP_PRIVATE_KEY || secrets.NHS_GH_VERSIONING_RELEASE_APP_PRIVATE_KEY }}
+          # The dry run checks that the token can push
+          permission-contents: write
+      - name: "🔏 Plan the release"
+        id: verify
+        uses: cycjimmy/semantic-release-action@ad51787758d9654d5a75150a89a6fa9b3ccef95e # v8.1.4
+        with:
+          semantic_version: ${{ env.SEMANTIC_RELEASE_VERSION }}
+          extra_plugins: ${{ env.SEMANTIC_RELEASE_PLUGINS }}
+          dry_run: true
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          DEBUG: ${{ runner.debug == '1' && 'semantic-release:*' || '' }}
+
+  # Runs before the release, so 'make publish' must be safe to repeat for the
+  # same version
+  publish-artefacts:
+    name: "📦 Publish artefacts"
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    needs: [metadata, plan]
+    if: needs.plan.outputs.release == 'true'
     timeout-minutes: 3
     env:
       BUILD_DATETIME_LONDON: ${{ needs.metadata.outputs.build_datetime_london }}
@@ -74,12 +127,10 @@ jobs:
       MISE_VERSION: ${{ needs.metadata.outputs.mise_version }}
       NODEJS_VERSION: ${{ needs.metadata.outputs.nodejs_version }}
       PYTHON_VERSION: ${{ needs.metadata.outputs.python_version }}
-      VERSION: ${{ needs.metadata.outputs.version }}
     steps:
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
       - name: "🧰 Set up mise"
         uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
@@ -90,43 +141,142 @@ jobs:
           cache: false
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: "📥 Get the artefacts"
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
           echo "Getting the artefacts created by the build stage ..."
           # Template placeholder: connect the project's build artifact handoff.
-      - name: "🚀 Create release"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.metadata.outputs.version }}
-        run: |
-          gh release create "$VERSION" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Release $VERSION" \
-            --notes "Release of $VERSION"
       - name: "📦 Publish project artefacts"
         id: publish
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
           make publish
-      # - name: "📤 Upload release asset"
+      # Example: publish a Docker image to a Nexus registry. Before enabling
+      # these steps:
+      # - Replace [sample-url] with the HTTPS-enabled Docker registry endpoint
+      #   of a writable Nexus repository, as its host and optional port. It is
+      #   not the Nexus web UI or a raw artefact repository URL. The runner
+      #   must be able to reach it.
+      # - Set IMAGE_DIR to an existing image directory, and IMAGE_NAME to a
+      #   valid lowercase name under that registry, with the path your Nexus
+      #   configuration needs. The image name is not a local directory.
+      # - Add the NEXUS_USERNAME and NEXUS_PASSWORD Actions secrets for an
+      #   account or token scoped to the target repository.
+      # - Confirm that the target repository permits updates to 'latest'.
+      # - Raise this job's 'timeout-minutes', because building and pushing an
+      #   image takes longer than the 3 minutes the placeholder needs.
+      # The helper writes '.version' in IMAGE_DIR, builds with the repository
+      # root as the Docker context, and pushes the planned version and
+      # 'latest'. A service with its own context or a module-scoped platform
+      # uses its service Makefile or named module target instead, see
+      # docs/guides/template/Build_Docker_images.md. A failed push can leave
+      # some image tags in Nexus without a GitHub Release, so inspect them
+      # before a rerun. Nexus uses its own credentials, so this job needs no
+      # GitHub 'packages: write' permission.
+      # - name: "📥 Checkout code"
+      #   uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      #   with:
+      #     persist-credentials: false
+      # - name: "🔓 Log in to Nexus"
       #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     VERSION: ${{ needs.metadata.outputs.version }}
-      #   run: gh release upload "$VERSION" "./repository-template-$VERSION.tar.gz"
-  # Report the outcome of every job in needs, including failures.
+      #     DOCKER_CONFIG: ${{ runner.temp }}/docker-config
+      #     NEXUS_REGISTRY: "[sample-url]"
+      #     NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+      #     NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+      #   run: |
+      #     mkdir -p "$DOCKER_CONFIG"
+      #     printf '%s' "$NEXUS_PASSWORD" | docker login \
+      #       --username "$NEXUS_USERNAME" --password-stdin "$NEXUS_REGISTRY"
+      # - name: "🐳 Build and push the image"
+      #   env:
+      #     DOCKER_CONFIG: ${{ runner.temp }}/docker-config
+      #     VERSION: ${{ needs.plan.outputs.version }}
+      #     IMAGE_NAME: "[sample-url]/example/image-name"
+      #     IMAGE_DIR: path/to/image-directory
+      #     IMAGE_TITLE: "Example image"
+      #   run: |
+      #     # Only in the job workspace, it is not part of the release commit
+      #     printf '%s\n' "$VERSION" > "$IMAGE_DIR/VERSION"
+      #     make docker-build docker_dir="$IMAGE_DIR" DOCKER_IMAGE="$IMAGE_NAME" DOCKER_TITLE="$IMAGE_TITLE"
+      #     make docker-push docker_dir="$IMAGE_DIR" DOCKER_IMAGE="$IMAGE_NAME" DOCKER_TITLE="$IMAGE_TITLE"
+      # - name: "🧹 Remove the Nexus credentials"
+      #   if: always()
+      #   env:
+      #     DOCKER_CONFIG: ${{ runner.temp }}/docker-config
+      #   run: rm -rf "$DOCKER_CONFIG"
+
+  # Creates the release commit, tag and GitHub Release with the App token, so
+  # the job grants no GitHub token write permission. Release assets attach
+  # through the 'assets' option of '@semantic-release/github' in '.releaserc'.
+  release:
+    name: "🚀 Release"
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    needs: [metadata, plan, publish-artefacts]
+    if: needs.plan.outputs.release == 'true'
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.semantic-release.outputs.new_release_version }}
+      tag: ${{ steps.semantic-release.outputs.new_release_git_tag }}
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: "🔐 Create the release App token"
+        id: app-token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          app-id: ${{ vars.GH_VERSIONING_RELEASE_APP_ID || vars.NHS_GH_VERSIONING_RELEASE_APP_ID }}
+          private-key: ${{ secrets.GH_VERSIONING_RELEASE_APP_PRIVATE_KEY || secrets.NHS_GH_VERSIONING_RELEASE_APP_PRIVATE_KEY }}
+          # Contents for the release commit, tags and GitHub Release. Issues
+          # and pull requests for the github plugin's default success comments,
+          # released labels and failure issue.
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      # The only signing step. Replace it to change how release commits are
+      # signed.
+      - name: "🔑 Import the signing key"
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GIT_SIGNING_BOT_GPG_PRIVATE_KEY || secrets.NHS_GIT_SIGNING_BOT_GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GIT_SIGNING_BOT_GPG_PASSPHRASE || secrets.NHS_GIT_SIGNING_BOT_GPG_PASSPHRASE }}
+          BOT_NAME: ${{ vars.GIT_SIGNING_BOT_NAME || vars.NHS_GIT_SIGNING_BOT_NAME }}
+          BOT_EMAIL: ${{ vars.GIT_SIGNING_BOT_EMAIL || vars.NHS_GIT_SIGNING_BOT_EMAIL }}
+        run: ./scripts/cicd/import-signing-key.sh
+      - name: "🚀 Release"
+        id: semantic-release
+        uses: cycjimmy/semantic-release-action@ad51787758d9654d5a75150a89a6fa9b3ccef95e # v8.1.4
+        with:
+          semantic_version: ${{ env.SEMANTIC_RELEASE_VERSION }}
+          extra_plugins: ${{ env.SEMANTIC_RELEASE_PLUGINS }}
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GIT_AUTHOR_NAME: ${{ vars.GIT_SIGNING_BOT_NAME || vars.NHS_GIT_SIGNING_BOT_NAME }}
+          GIT_COMMITTER_NAME: ${{ vars.GIT_SIGNING_BOT_NAME || vars.NHS_GIT_SIGNING_BOT_NAME }}
+          GIT_AUTHOR_EMAIL: ${{ vars.GIT_SIGNING_BOT_EMAIL || vars.NHS_GIT_SIGNING_BOT_EMAIL }}
+          GIT_COMMITTER_EMAIL: ${{ vars.GIT_SIGNING_BOT_EMAIL || vars.NHS_GIT_SIGNING_BOT_EMAIL }}
+          DEBUG: ${{ runner.debug == '1' && 'semantic-release:*' || '' }}
+
+  # Report the outcome of every job in needs, including failures. A run that
+  # publishes no release sets no tag and sends nothing.
   notify:
     name: "📣 Notify pipeline status"
     permissions:
       actions: read
       contents: read
-    needs: [metadata, publish]
-    if: ${{ !cancelled() && github.event.pull_request.merged == true }}
+    needs: [metadata, plan, publish-artefacts, release]
+    if: ${{ !cancelled() }}
     uses: ./.github/workflows/notify-pipeline-status.yaml
     with:
       needs: ${{ toJSON(needs) }}
-      details: "Version: ${{ needs.metadata.outputs.version }}"
-      success_title: "PUBLISHED: Release ${{ needs.metadata.outputs.version }}"
-      success_text: "Release ${{ needs.metadata.outputs.version }} is published. It holds the changes merged in pull request #${{ github.event.pull_request.number }}."
-      success_link: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.metadata.outputs.version }}
+      details: "${{ needs.release.outputs.tag != '' && format('Version: {0}', needs.release.outputs.version) || '' }}"
+      success_title: "${{ needs.release.outputs.tag != '' && format('PUBLISHED: Release {0}', needs.release.outputs.tag) || '' }}"
+      success_text: "${{ needs.release.outputs.tag != '' && format('Release {0} is published from {1}.', needs.release.outputs.tag, github.ref_name) || '' }}"
+      success_link: "${{ needs.release.outputs.tag != '' && format('{0}/{1}/releases/tag/{2}', github.server_url, github.repository, needs.release.outputs.tag) || '' }}"
     secrets:
       TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL }}
       TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}

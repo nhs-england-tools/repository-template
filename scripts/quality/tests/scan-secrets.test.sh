@@ -96,14 +96,14 @@ function test-scan-secrets-builds-the-command-for-each-mode() {
     expected-gitleaks-call "$r" working-tree-changes
     expected-gitleaks-call "$r" branch origin/main..HEAD
     expected-gitleaks-call "$r" branch dev..HEAD
-    expected-gitleaks-call "$r" branch origin/v2..HEAD
+    expected-gitleaks-call "$r" branch origin/integration..HEAD
     expected-gitleaks-call "$r" last-commit
   )"
   create-awkward-fixture-repo a.txt
   test-isolate-path
   test-stub gitleaks "$GITLEAKS_RECORD_ENV"
   git -C "$r" update-ref refs/heads/dev refs/remotes/origin/main
-  git -C "$r" update-ref refs/remotes/origin/v2 refs/remotes/origin/main
+  git -C "$r" update-ref refs/remotes/origin/integration refs/remotes/origin/main
   cd "$r"
   # Act
   test-capture env check=staged-changes ./scripts/quality/scan-secrets.sh
@@ -114,7 +114,7 @@ function test-scan-secrets-builds-the-command-for-each-mode() {
   statuses="$statuses$TEST_STATUS"
   test-capture env check=branch BRANCH_NAME=dev ./scripts/quality/scan-secrets.sh
   statuses="$statuses$TEST_STATUS"
-  test-capture env check=branch GITHUB_BASE_REF=v2 BRANCH_NAME=origin/main ./scripts/quality/scan-secrets.sh
+  test-capture env check=branch GITHUB_BASE_REF=integration BRANCH_NAME=origin/main ./scripts/quality/scan-secrets.sh
   statuses="$statuses$TEST_STATUS"
   test-capture env check=last-commit ./scripts/quality/scan-secrets.sh
   statuses="$statuses$TEST_STATUS"

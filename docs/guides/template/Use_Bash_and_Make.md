@@ -357,7 +357,8 @@ for the adopting project. Implement a missing capability in the root recipe or
 add it through a module. Keep the public target name stable either way.
 
 The build stage calls `make build` in its first artefact job. The publish
-workflow calls `make publish` after creating the GitHub release. The deploy
+workflow calls `make publish` with the planned `VERSION` before it creates the
+GitHub release, so publishing must be safe to repeat. The deploy
 workflow checks out the selected tag and calls `make deploy`, with `TAG` set to
 that tag. These jobs install the pinned mise tools before calling the targets.
 Implement the project recipes and configure dependency installation, artefact
@@ -690,25 +691,14 @@ Make recipes and shell orchestration.
 ### Scripts
 
 Most scripts provided with this template run their tools in pinned Docker
-containers by default. This limits access to the host's files and network. To
-use a native tool instead, set `FORCE_USE_DOCKER=false`. Native mode has the
-user's full access and is not recommended for repository quality checks. For
-example:
+containers by default. See
+[Use native tools or Docker](Run_and_configure_quality_checks.md#use-native-tools-or-docker-)
+for the opt-out and its risks.
+
+Use `VERBOSE` to see the execution details:
 
 ```shell
-FORCE_USE_DOCKER=false scripts/quality/check-shell-lint.sh
-```
-
-The same variable works for Make targets and shell profiles. For a CI composite
-action, set `FORCE_USE_DOCKER=false` in `.github/actions/<check>/action.yaml`
-and make the native tool available on the runner. This is not recommended. The
-pipeline-contract and security-readiness checks always run natively. Security
-readiness warns once, but does not fail, when native mode is selected.
-
-Combine the opt-out with `VERBOSE` to see the execution details:
-
-```shell
-VERBOSE=1 FORCE_USE_DOCKER=false scripts/quality/check-shell-lint.sh
+VERBOSE=1 scripts/quality/check-shell-lint.sh
 ```
 
 ### Diagnostics

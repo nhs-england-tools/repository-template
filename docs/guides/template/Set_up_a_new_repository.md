@@ -7,32 +7,10 @@
 
 ## Create and prepare the repository 📦
 
-1. On GitHub, choose **New repository**. If this repository template is not the
-   default template in your organisation, use **Choose a template** to select
-   the
-   [repository template](https://github.com/nhs-england-tools/repository-template).
-   Choose the owner, name and visibility, then create the repository from the
-   template.
-2. In the new repository, copy its HTTPS URL from **Code** and clone it. Replace
-   `OWNER` and `REPOSITORY` below with your new repository's details:
-
-   ```shell
-   git clone https://github.com/OWNER/REPOSITORY.git
-   cd REPOSITORY
-   ```
-
-3. Check the [prerequisites](../../../README.md#prerequisites) and review
-   [`mise.toml`](../../../mise.toml). From the new repository, run:
-
-   ```shell
-   mise trust mise.toml
-   make toolchain-verify-gnu
-   make config
-   ```
-
-   If the verifier reports missing tools, install them before `make config`.
-
-4. In the new repository, choose **Issues > New issue > New repository setup**
+1. Follow the [quick start](../../../README.md#quick-start-) to create and clone
+   the repository, verify prerequisites and configure the local tools. If the
+   verifier reports missing tools, install them before `make config`.
+2. In the new repository, choose **Issues > New issue > New repository setup**
    and assign the issue to a maintainer. Do not include private reports,
    personal data or sensitive contact details in the issue.
 
@@ -50,7 +28,9 @@ Make these changes on a branch for the initial setup pull request:
    [issue forms](../../../.github/ISSUE_TEMPLATE/).
    Update the README with the project's configuration and contribution workflow,
    and tailor the [contributing guide](../../../.github/CONTRIBUTING.md) to
-   cover setup, tests, review rules and releases.
+   cover setup, tests, review rules and releases. GitHub requires absolute URLs
+   for the Code of Conduct links in issue forms, the security link in the issue
+   form configuration and the support link in the README.
 2. Confirm reporting routes with the relevant owners. In the
    [Code of Conduct](../../../.github/CODE_OF_CONDUCT.md), set a monitored
    private route, an alternative for conflicts of interest and the approved
@@ -112,10 +92,17 @@ Make these changes on a branch for the initial setup pull request:
    [Harden repository security](Harden_repository_security.md#limits-and-responsibilities-)
    explains why these controls matter.
 
-6. Document the project's applicable information governance, accessibility,
+6. Follow the [release setup instructions](Publish_releases.md#set-up-a-repository-️)
+   for the required title check, release App, organisation values, rulesets and
+   squash merging. Ask the repository or organisation administrator to confirm
+   each setting. The organisation provides the release App and signing values,
+   so do not create them in the repository. Tell contributors to
+   [sign their branch commits](Sign_Git_commits.md#signed-commits-on-main-).
+
+7. Document the project's applicable information governance, accessibility,
    security and clinical safety requirements. Assign the appropriate owners and
    link to approved processes rather than publishing sensitive details.
-7. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
+8. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
    without renaming its targets. Extend `format` with project formatters, `lint`
    with project checks and `test` with fast project and system tests, such as
    unit tests. Keep the existing formatting, checks and Bash tests. Add project
@@ -125,15 +112,15 @@ Make these changes on a branch for the initial setup pull request:
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
    for target composition patterns. Run `make help` to inspect the available
    targets.
-8. Review dependency sources, the
+9. Review dependency sources, the
    [Dependabot configuration](../../../.github/dependabot.yaml), the update
    cooldown and who owns updates. Check pinned tools and images in
    [`mise.toml`](../../../mise.toml), then record project-specific decisions and
    changes using [Update Dependencies](Update_Dependencies.md).
-9. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
-   Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and
-   `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
-10. [Configure pipeline notifications](Configure_pipeline_notifications.md) for
+10. Configure [SonarQube Cloud](Configure_SonarQube_Cloud.md) with the NHS
+    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret
+    and `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
+11. [Configure pipeline notifications](Configure_pipeline_notifications.md) for
     the team's Microsoft Teams channels, so the team is told when `main`
     breaks, when it is green again, and when a release is published or
     deployed. Follow the guide's Power Automate setup, card mapping, co-owner
@@ -162,10 +149,15 @@ the pull request.
    analysis job actually runs a scan, reports the quality gate and decorates the
    pull request. A successful job alone does not prove a scan ran when settings
    are missing.
-4. Check CODEOWNERS, the security settings and the ruleset against the criteria
-   above. Use a test pull request to confirm that the ruleset blocks merging
-   while a required check fails or code-owner approval is missing. Record the
-   results in the setup pull request without secrets or sensitive settings.
+4. Check CODEOWNERS, the security settings and the rulesets against the criteria
+   above. Confirm that the pull request and signed commits rulesets are active
+   and target the default branch. A ruleset that targets no branches does not
+   protect it. Use a test pull request to confirm that the ruleset blocks
+   merging while a required check fails or code-owner approval is missing. On
+   the same pull request, confirm that a title such as `Update files` fails
+   `🏷️ Check pull request title`, then correct it and confirm the check passes.
+   Record the results in the setup pull request without secrets or sensitive
+   settings.
 5. Add the setup pull request link to the issue. Keep the issue open until a
    project maintainer and the relevant security or policy owner approve the pull
    request.

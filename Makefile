@@ -49,7 +49,10 @@ build: # Build the project artefact @Build
 	# TODO: Implement the artefact build step
 
 publish: # Publish the project artefact @Release
-	# Called after release creation by .github/workflows/cicd-2-publish.yaml
+	# Called by .github/workflows/cicd-2-publish.yaml before the release is
+	# created, with the planned VERSION. It must be safe to repeat for the same
+	# version, because a failed release is retried with it, and a superseded
+	# run's version may be published again with newer content by the next run.
 	# TODO: Implement the artefact publishing step
 
 deploy: # Deploy the project artefact to the target environment @Release

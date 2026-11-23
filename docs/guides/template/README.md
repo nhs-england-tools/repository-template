@@ -39,9 +39,10 @@ builds, publishing and deployment remain placeholders. CI/CD already calls
 `make build`, `make publish` and `make deploy` in their corresponding stages.
 Implement these recipes and configure artefact transfer to complete the
 application delivery pipeline. SonarQube Cloud and Teams delivery need
-configuration. Signing commits is guidance, not an installed signing service.
-The technology recommendations do not install application frameworks or grant
-technology approval.
+configuration. Release commits are signed by the release workflow, but signing
+your own commits is guidance, not an installed signing service. The technology
+recommendations do not install application frameworks or grant technology
+approval.
 
 | Capability                                    | Tool                               | Run it                                                                                                 | Entry point                                                                         | Guide                                                                          |
 | --------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -64,9 +65,10 @@ technology approval.
 | Dockerfile lint                               | Hadolint                           | `make docker-lint`, also required by `make docker-build`                                               | [dockerfile-linter.sh](../../../scripts/docker/dockerfile-linter.sh)                | [Build Docker images]                                                          |
 | Compose services                              | Docker Compose                     | `make docker-compose-up`, `make docker-compose-status`, `make docker-compose-logs` for a project stack | [docker.lib.mk](../../../scripts/docker/docker.lib.mk)                              | [Run services with Docker Compose](Run_Docker_Compose_services.md)             |
 | Effective version files                       | Bash                               | `make version-create-effective-file`                                                                   | [docker.lib.sh](../../../scripts/docker/docker.lib.sh)                              | [Versioning](Build_Docker_images.md#versioning)                                |
-| CI/CD stage structure and release workflow    | GitHub Actions                     | Pull requests, merge queue and `main` pushes, publication on merge to `main`, manual tag deployment    | [workflows](../../../.github/workflows/)                                            | [Workflow controls](Harden_repository_security.md#github-actions-)             |
+| CI/CD stage structure and release workflow    | GitHub Actions                     | Pull requests, merge queue and `main` pushes, release on push to `main`, manual tag deployment         | [workflows](../../../.github/workflows/)                                            | [Workflow controls](Harden_repository_security.md#github-actions-)             |
+| Semantic versioning and releases              | semantic-release                   | Pull request title check and release on push to `main`                                                 | [.releaserc](../../../.releaserc)                                                   | [Publish releases](Publish_releases.md)                                        |
 | Static analysis                               | SonarQube Cloud                    | CI test stage when the token and project variables are set, unless `SONAR_DISABLED` is `true`          | [stage-2-test.yaml](../../../.github/workflows/stage-2-test.yaml)                   | [Configure SonarQube Cloud](Configure_SonarQube_Cloud.md)                      |
-| Pipeline notifications                        | Microsoft Teams and Power Automate | `main` failure and recovery, publish and deploy outcomes                                               | [notify-pipeline-status.sh](../../../scripts/cicd/notify-pipeline-status.sh)        | [Configure pipeline notifications](Configure_pipeline_notifications.md)        |
+| Pipeline notifications                        | Microsoft Teams and Power Automate | `main` failure and recovery, publish failures and releases, deploy outcomes                            | [notify-pipeline-status.sh](../../../scripts/cicd/notify-pipeline-status.sh)        | [Configure pipeline notifications](Configure_pipeline_notifications.md)        |
 | Dependency update PRs                         | Dependabot                         | Daily checks for Docker, GitHub Actions, npm and uv, with a seven-day cooldown                         | [dependabot.yaml](../../../.github/dependabot.yaml)                                 | [Update Dependencies]                                                          |
 | File and Docker resource cleanup              | Git and Docker helpers             | `make clean` previews Git cleanup and removes Docker build artefacts                                   | [init.mk](../../../scripts/init.mk)                                                 | [Cleanup options](Use_Bash_and_Make.md#clean-up-files-and-docker-resources-)   |
 | Commit signing guidance                       | GPG or SSH                         | Follow the guide to configure signing                                                                  | [Sign_Git_commits.md](Sign_Git_commits.md)                                          | [Sign Git commits](Sign_Git_commits.md)                                        |
@@ -86,24 +88,25 @@ technology approval.
 
 ## Find a guide by task 🔎
 
-| I want to…                                                | Guide                                                                          |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Set up a new repository                                   | [Set up a new repository](Set_up_a_new_repository.md)                          |
-| Set up the development tools                              | [Quick start](../../../README.md#quick-start-)                                 |
-| Add a Make target or script                               | [Use Bash and Make](Use_Bash_and_Make.md)                                      |
-| Remove generated files or local Docker resources          | [Cleanup options](Use_Bash_and_Make.md#clean-up-files-and-docker-resources-)   |
-| Run linters, format Markdown or configure exclusions      | [Run and configure quality checks](Run_and_configure_quality_checks.md)        |
-| Write or debug a shell test suite                         | [Write and run Bash tests](Write_and_run_Bash_tests.md)                        |
-| Build, tag and run a Docker image                         | [Build Docker images](Build_Docker_images.md)                                  |
-| Start and inspect a local service stack                   | [Run services with Docker Compose](Run_Docker_Compose_services.md)             |
-| Understand the checks that run on commit                  | [Run Git hooks on commit](Run_Git_hooks_on_commit.md)                          |
-| Configure checks when a Copilot agent finishes            | [Run the quality gate when the agent stops](Run_quality_gate_on_agent_stop.md) |
-| Scan for committed or uncommitted secrets                 | [Scan secrets](Scan_secrets.md)                                                |
-| Sign commits with GPG or SSH                              | [Sign Git commits](Sign_Git_commits.md)                                        |
-| Review workflow permissions and security controls         | [Harden repository security](Harden_repository_security.md)                    |
-| Connect SonarQube Cloud analysis                          | [Configure SonarQube Cloud](Configure_SonarQube_Cloud.md)                      |
-| Send pipeline notifications to a Teams channel            | [Configure pipeline notifications](Configure_pipeline_notifications.md)        |
-| Update tools, images, actions or application dependencies | [Update Dependencies](Update_Dependencies.md)                                  |
+| I want to…                                                            | Guide                                                                          |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Set up a new repository                                               | [Set up a new repository](Set_up_a_new_repository.md)                          |
+| Set up the development tools                                          | [Quick start](../../../README.md#quick-start-)                                 |
+| Add a Make target or script                                           | [Use Bash and Make](Use_Bash_and_Make.md)                                      |
+| Remove generated files or local Docker resources                      | [Cleanup options](Use_Bash_and_Make.md#clean-up-files-and-docker-resources-)   |
+| Run linters, format Markdown or configure exclusions                  | [Run and configure quality checks](Run_and_configure_quality_checks.md)        |
+| Write or debug a shell test suite                                     | [Write and run Bash tests](Write_and_run_Bash_tests.md)                        |
+| Build, tag and run a Docker image                                     | [Build Docker images](Build_Docker_images.md)                                  |
+| Start and inspect a local service stack                               | [Run services with Docker Compose](Run_Docker_Compose_services.md)             |
+| Understand the checks that run on commit                              | [Run Git hooks on commit](Run_Git_hooks_on_commit.md)                          |
+| Configure checks when a Copilot agent finishes                        | [Run the quality gate when the agent stops](Run_quality_gate_on_agent_stop.md) |
+| Scan for committed or uncommitted secrets                             | [Scan secrets](Scan_secrets.md)                                                |
+| Sign commits with GPG or SSH                                          | [Sign Git commits](Sign_Git_commits.md)                                        |
+| Review workflow permissions and security controls                     | [Harden repository security](Harden_repository_security.md)                    |
+| Connect SonarQube Cloud analysis                                      | [Configure SonarQube Cloud](Configure_SonarQube_Cloud.md)                      |
+| Name a pull request or fix a failed release                           | [Publish releases](Publish_releases.md)                                        |
+| Send pipeline notifications to a Teams channel                        | [Configure pipeline notifications](Configure_pipeline_notifications.md)        |
+| Update tools, images, actions or application dependencies             | [Update Dependencies](Update_Dependencies.md)                                  |
 
 ## Related documentation 🔗
 

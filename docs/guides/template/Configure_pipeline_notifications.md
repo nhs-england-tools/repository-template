@@ -39,8 +39,10 @@ The template's notification jobs report these events:
 - Pushes to `main` report failures and recovery after a broken streak. A failure
   asks the team to stop merging. A routine passing run does not send a message.
   Pull request runs do not send these trunk notifications.
-- The publish workflow reports failures and successful publication after a pull
-  request is merged.
+- The publish workflow runs on every push to `main`. It reports failures, and it
+  reports success only when it publishes a release. A push that does not
+  release, a superseded run and an already released commit send nothing. See
+  [Publish releases](./Publish_releases.md).
 - The deploy workflow reports failures and successful deployments.
 
 A cancelled workflow does not notify. A job that fails or is cancelled within a
@@ -235,9 +237,10 @@ not run on pull request events.
 ## Verify pipeline delivery ✅
 
 Use the next expected notification from a normal pipeline run. A routine passing
-push to `main` is intentionally silent. A successful publish or deploy run is
-suitable when that operation is already planned. Do not publish, deploy or break
-`main` just to test notifications. Use the direct webhook test first.
+push to `main` is intentionally silent. A publish run that releases or a
+successful deploy run is suitable when that operation is already planned. Do not
+publish, deploy or break `main` just to test notifications. Use the direct
+webhook test first.
 
 In GitHub Actions, open the run and its notification job. Check the pipeline
 message in the step summary, then confirm that the **Notify Microsoft Teams**

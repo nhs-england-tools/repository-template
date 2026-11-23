@@ -29,7 +29,9 @@ came from. Review updates and run the repository checks before merging them.
 - **GitHub Actions:** external actions are referenced in
   [workflow files](../../../.github/workflows/) by full commit SHA, with a
   release tag comment. Workflows also select the GitHub-hosted runner image with
-  `runs-on`.
+  `runs-on`. The
+  [publish workflow](../../../.github/workflows/cicd-2-publish.yaml) also pins
+  semantic-release and its plugins as npm versions in its `env`.
 - **Application packages:** the expected dependencies are Python and npm
   (TypeScript) packages, as these language ecosystems are supported by
   Engineering and approved on the NHS Tech Radar, see
@@ -191,6 +193,17 @@ action.
 Dependabot does not generate vulnerability alerts for actions pinned to commit
 SHAs. Review Dependabot version-update pull requests and upstream security
 advisories.
+
+Dependabot cannot update the semantic-release and plugin versions in the `env`
+of the [publish workflow](../../../.github/workflows/cicd-2-publish.yaml), so
+update them by hand under the seven-day cooldown. Change every pin in that
+block together and keep them compatible. For example,
+`conventional-changelog-conventionalcommits` 8 is needed while the bundled
+release-notes-generator is version 14, which uses writer 8. Check that the pull
+request title passes `🏷️ Check pull request title`. To verify the update, use a
+sandbox repository. After a representative change merges to `main`, inspect
+`🗓️ Plan the release` for the expected version and the published release for its
+notes. There is no pre-merge prediction or notes preview.
 
 Runner labels such as `ubuntu-26.04` are not action dependencies and are not
 updated by Dependabot. Check GitHub's

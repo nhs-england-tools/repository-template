@@ -64,8 +64,7 @@ On GitHub, choose **New repository**. If this repository template is not the
 default template in your organisation, select
 `nhs-england-tools/repository-template` from **Choose a template**. Choose the
 owner, name and visibility, then create the repository from the template. Follow
-the [repository setup guide](docs/guides/template/Set_up_a_new_repository.md) to
-configure it for your project.
+the steps below to configure your local checkout.
 
 Clone your new repository using its **Code** URL, replacing `OWNER` and
 `REPOSITORY` with its details:
@@ -85,6 +84,10 @@ mise trust mise.toml
 make toolchain-verify-gnu
 make config
 ```
+
+Then follow the
+[repository setup guide](docs/guides/template/Set_up_a_new_repository.md) to
+configure the new repository for your project.
 
 ### First run
 
