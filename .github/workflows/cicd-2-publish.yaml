@@ -26,7 +26,6 @@ env:
   SEMANTIC_RELEASE_VERSION: 25.0.9
   SEMANTIC_RELEASE_PLUGINS: |
     @semantic-release/exec@7.1.0
-    @semantic-release/git@11.0.1
     @semantic-release/github@12.0.11
     conventional-changelog-conventionalcommits@8.0.0
 
@@ -207,8 +206,9 @@ jobs:
       #   run: rm -rf "$DOCKER_CONFIG"
 
   # Creates the release commit, tag and GitHub Release with the App token, so
-  # the job grants no GitHub token write permission. Release assets attach
-  # through the 'assets' option of '@semantic-release/github' in '.releaserc'.
+  # the job grants no GitHub token write permission. GitHub signs the release
+  # commit it creates through the API. Release assets attach through the
+  # 'assets' option of '@semantic-release/github' in '.releaserc'.
   release:
     name: "🚀 Release"
     runs-on: ubuntu-26.04
@@ -238,15 +238,6 @@ jobs:
           permission-contents: write
           permission-issues: write
           permission-pull-requests: write
-      # The only signing step. Replace it to change how release commits are
-      # signed.
-      - name: "🔑 Import the signing key"
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GIT_SIGNING_BOT_GPG_PRIVATE_KEY || secrets.NHS_GIT_SIGNING_BOT_GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GIT_SIGNING_BOT_GPG_PASSPHRASE || secrets.NHS_GIT_SIGNING_BOT_GPG_PASSPHRASE }}
-          BOT_NAME: ${{ vars.GIT_SIGNING_BOT_NAME || vars.NHS_GIT_SIGNING_BOT_NAME }}
-          BOT_EMAIL: ${{ vars.GIT_SIGNING_BOT_EMAIL || vars.NHS_GIT_SIGNING_BOT_EMAIL }}
-        run: ./scripts/cicd/import-signing-key.sh
       - name: "🚀 Release"
         id: semantic-release
         uses: cycjimmy/semantic-release-action@ad51787758d9654d5a75150a89a6fa9b3ccef95e # v8.1.4
@@ -255,10 +246,6 @@ jobs:
           extra_plugins: ${{ env.SEMANTIC_RELEASE_PLUGINS }}
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GIT_AUTHOR_NAME: ${{ vars.GIT_SIGNING_BOT_NAME || vars.NHS_GIT_SIGNING_BOT_NAME }}
-          GIT_COMMITTER_NAME: ${{ vars.GIT_SIGNING_BOT_NAME || vars.NHS_GIT_SIGNING_BOT_NAME }}
-          GIT_AUTHOR_EMAIL: ${{ vars.GIT_SIGNING_BOT_EMAIL || vars.NHS_GIT_SIGNING_BOT_EMAIL }}
-          GIT_COMMITTER_EMAIL: ${{ vars.GIT_SIGNING_BOT_EMAIL || vars.NHS_GIT_SIGNING_BOT_EMAIL }}
           DEBUG: ${{ runner.debug == '1' && 'semantic-release:*' || '' }}
 
   # Report the outcome of every job in needs, including failures. A run that

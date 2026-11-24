@@ -11,7 +11,7 @@
     - [Required checks](#required-checks)
     - [Release App](#release-app)
     - [Organisation values](#organisation-values)
-    - [Signing key of the release bot](#signing-key-of-the-release-bot)
+    - [Release commit signing](#release-commit-signing)
     - [Rulesets](#rulesets)
     - [Squash merging](#squash-merging)
   - [Versions and artefacts 📦](#versions-and-artefacts-)
@@ -23,7 +23,6 @@
     - [Use Re-run failed jobs](#use-re-run-failed-jobs)
     - [Release settings are missing](#release-settings-are-missing)
     - [Authenticated dry run failed](#authenticated-dry-run-failed)
-    - [Signing key import failed](#signing-key-import-failed)
     - [Release step failed](#release-step-failed)
     - [Partial release](#partial-release)
     - [Partial image tags in Nexus](#partial-image-tags-in-nexus)
@@ -34,8 +33,8 @@
 Every push to `main` can publish a release. The title of the pull request
 decides whether it does and which version it gets. The repository uses
 [semantic-release](https://semantic-release.gitbook.io/) with the Conventional
-Commits preset. A release creates a signed commit that updates `VERSION`, a
-`vX.Y.Z` tag and a GitHub Release with notes.
+Commits preset. A release creates a commit signed by GitHub that updates
+`VERSION`, a `vX.Y.Z` tag and a GitHub Release with notes.
 
 This guide is for contributors who name pull requests and for maintainers who
 set up a repository or recover a failed release.
@@ -130,10 +129,11 @@ flowchart LR
    failure here publishes nothing in the current attempt.
 4. **`📦 Publish artefacts`.** The job runs `make publish` with `VERSION` set to
    the planned version.
-5. **`🚀 Release`.** The job creates the App token, imports the signing key and
-   runs semantic-release. semantic-release writes `VERSION`, pushes the signed
-   release commit `chore(release): X.Y.Z [skip actions]`, pushes the `vX.Y.Z`
-   tag and creates the GitHub Release. It comments on the released pull request
+5. **`🚀 Release`.** The job creates the App token and runs semantic-release.
+   semantic-release writes `VERSION`. A local plugin then creates the release
+   commit `chore(release): X.Y.Z [skip actions]` through the GitHub API, so
+   GitHub signs it. semantic-release pushes the `vX.Y.Z` tag and creates the
+   GitHub Release. It comments on the released pull request
    and labels it.
 6. **`📣 Notify pipeline status`.** Teams gets `PUBLISHED: Release vX.Y.Z` when
    a release is published, and a message for any failed job. See
@@ -167,7 +167,7 @@ events. Its current inputs read the title and description from `pull_request`.
 ### Release App
 
 The release uses a GitHub App, not `GITHUB_TOKEN`. The App bypasses the rulesets
-on `main` and `v*` tags, so it can push the release commit and tags.
+on `main` and `v*` tags, so it can create the release commit and push tags.
 `GITHUB_TOKEN` cannot bypass rulesets, and its pushes start no workflows.
 
 The App needs these repository permissions:
@@ -194,38 +194,28 @@ needs no release configuration of its own once an organisation admin includes it
 in the access policy of each value. A repository can set the unprefixed name to
 override the organisation value.
 
-| Kind     | Organisation name                           | Repository override                     | Used for                           |
-| -------- | ------------------------------------------- | --------------------------------------- | ---------------------------------- |
-| Variable | `NHS_GH_VERSIONING_RELEASE_APP_ID`          | `GH_VERSIONING_RELEASE_APP_ID`          | App token in plan and release      |
-| Secret   | `NHS_GH_VERSIONING_RELEASE_APP_PRIVATE_KEY` | `GH_VERSIONING_RELEASE_APP_PRIVATE_KEY` | App token in plan and release      |
-| Variable | `NHS_GIT_SIGNING_BOT_NAME`                  | `GIT_SIGNING_BOT_NAME`                  | Release commit author              |
-| Variable | `NHS_GIT_SIGNING_BOT_EMAIL`                 | `GIT_SIGNING_BOT_EMAIL`                 | Release commit email and key       |
-| Secret   | `NHS_GIT_SIGNING_BOT_GPG_PRIVATE_KEY`       | `GIT_SIGNING_BOT_GPG_PRIVATE_KEY`       | Signing key in release             |
-| Secret   | `NHS_GIT_SIGNING_BOT_GPG_PASSPHRASE`        | `GIT_SIGNING_BOT_GPG_PASSPHRASE`        | Signing key in release             |
+| Kind     | Organisation name                           | Repository override                     | Used for                      |
+| -------- | ------------------------------------------- | --------------------------------------- | ----------------------------- |
+| Variable | `NHS_GH_VERSIONING_RELEASE_APP_ID`          | `GH_VERSIONING_RELEASE_APP_ID`          | App token in plan and release |
+| Secret   | `NHS_GH_VERSIONING_RELEASE_APP_PRIVATE_KEY` | `GH_VERSIONING_RELEASE_APP_PRIVATE_KEY` | App token in plan and release |
 
 Every push needs access to the release App ID and private key, even when it
-does not release. The signing values are needed only when a release is due.
+does not release.
 
-### Signing key of the release bot
+### Release commit signing
 
-The release commit is signed with the GPG key of the release bot. GitHub shows
-it as verified only when the bot's GitHub account holds the public key and a
-verified email that matches `GIT_SIGNING_BOT_EMAIL`. The signing key secret
-should hold only the bot's secret key. When several keys match the email, the
-first is selected.
+GitHub signs commits that a GitHub App creates through its API. The release
+plugin `scripts/cicd/semantic-release-api-commit.mjs` creates the release commit
+this way with the App token. GitHub shows it as verified. The author is the App
+bot, such as `nhs-versioning-release-app[bot]`, and the committer is `GitHub`.
 
-The release job runs `import-signing-key.sh` to import the key before
-semantic-release runs. Nothing warns before the key expires, so track its expiry
-date. To rotate the key:
+There is no signing key to import or rotate. The App private key is still a
+shared organisation secret. A later change will replace it with short-lived
+tokens from a central service.
 
-1. Extend its expiry with `gpg --quick-set-expire`, or create a new key with a
-   user ID for the bot email.
-2. Add the new public key to the bot's GitHub account. Keep the old public key
-   there so earlier release commits stay verified.
-3. Ask an organisation admin to update the key and passphrase secrets.
-
-The bot key is temporary. When GitHub-native signing replaces it, only the
-signing step and the Git identity of the release step change.
+The plugin checks its settings in the plan job dry run, so missing settings fail
+there. It does not retry. If `main` moves during a release, the run fails
+without a tag and the newer run releases.
 
 ### Rulesets
 
@@ -233,7 +223,7 @@ Template files cannot create rulesets, so set them up by hand:
 
 - **Pull request ruleset on `main`.** Require a pull request and the
   [release-specific check](#required-checks). Add the release App to the
-  bypass list with **Always**, so it can push the release commit.
+  bypass list with **Always**, so it can create the release commit.
 - **Signed commits ruleset on `main`.** Require signed commits and leave the
   bypass list empty. A bypass covers a whole ruleset, so keeping this rule
   separate makes the App's own commits need a signature too.
@@ -261,6 +251,10 @@ The release commit changes only the root `VERSION` file. The notes live in the
 GitHub Release and in the body of the release commit. There is no
 `CHANGELOG.md`, so a release never conflicts with open pull requests. The
 `[skip actions]` marker stops the release commit from starting another run.
+
+The plugin resets the checkout to the API-created commit. It discards any other
+uncommitted files that a prepare step writes, so list such files in the `assets`
+of the plugin in `.releaserc`.
 
 The notes list features, bug fixes, performance improvements, code refactoring
 and reverts. They hide `build`, `chore`, `ci`, `docs`, `style` and `test`
@@ -317,7 +311,8 @@ release and artefact state before recovery. Never move, delete or recreate an
 existing release tag by hand. The deploy workflow trusts these tags.
 
 On failure, semantic-release also opens an issue labelled `semantic-release`.
-The next successful release closes it.
+The next successful release closes it. Release commit failures from the release
+step open no issue. The Teams notification and the run log are the signal.
 
 ### Use Re-run failed jobs
 
@@ -332,11 +327,10 @@ rerun may finish green without publishing anything. See
 
 ### Release settings are missing
 
-"These release settings are empty: …"
+"The release commit settings are incomplete, so nothing was released:"
 
-The signing key import in the release job lists the missing bot name, email, key
-or passphrase. The artefact job has already succeeded, so artefacts may exist.
-The release job has not run semantic-release in this attempt.
+The plugin lists each problem. The plan job dry run reports it first, so no
+artefacts exist yet. If the release job reports it, artefacts may exist.
 
 A missing App ID or private key can also cause
 `🔐 Create the release App token` to fail. In the plan job,
@@ -361,32 +355,41 @@ Read the error in the `🔏 Plan the release` step. Check that the App is
 installed, has every requested [permission](#release-app), and bypasses the
 rulesets on `main` and `v*` tags.
 
-### Signing key import failed
-
-The release job runs `import-signing-key.sh` after the artefact job succeeds and
-before semantic-release runs. Artefacts may exist. Fix the cause, then use
-**Re-run failed jobs**.
-
-- "…has no secret key for the email '…'…": set `GIT_SIGNING_BOT_EMAIL` to the
-  key email. If the secret holds only a public key, export the secret key with
-  `gpg --armor --export-secret-keys <fingerprint>`.
-- "…could not be unlocked with the passphrase…": check the passphrase and key
-  expiry. Only the first line of the passphrase secret is used.
-- "…could not be imported…": export the key again in ASCII armour.
-- "gpg-agent could not be restarted…": use **Re-run failed jobs** on a new
-  runner.
-- "These release settings are empty: …": see
-  [Release settings are missing](#release-settings-are-missing).
-
 ### Release step failed
 
 The `🚀 Release` step shows a semantic-release error. Read the error:
 
-- A push to `main` was rejected by the signed commits rule. Check that the bot's
-  GitHub account holds the public key and a verified email that matches
-  `GIT_SIGNING_BOT_EMAIL`.
-- A push to `main` was rejected by the pull request rule. Add the App to the
-  bypass list of the pull request ruleset.
+- "`main` moved after this run started, so GitHub did not create the release
+  commit and nothing was released": the newer publish run releases it. Check
+  that run and do not rerun this one.
+- "GitHub refused the release App's request to create the release commit":
+  check that the App is installed, has contents read and write permission and
+  is on the bypass list of the `main` ruleset. Then use **Re-run failed jobs**.
+- "GitHub created the release commit … but this job could not check it out, so
+  no tag was created. Do not rerun": follow
+  [The tag does not exist](#the-tag-does-not-exist).
+- "GitHub refused …" or "GitHub did not create the release commit …": a ruleset
+  on `main` may have rejected the request. Add the App to the bypass list of
+  the pull request ruleset.
+- "The request to GitHub … failed (…), so this job cannot tell whether GitHub
+  created it", "GitHub answered … with HTTP 5xx, so this job cannot tell whether
+  GitHub created it" or "GitHub returned an unexpected response …": GitHub may
+  already have created the commit. A rerun after that finishes green with no
+  tag and no notification. Check `main` first. If a
+  `chore(release): X.Y.Z [skip actions]` commit is at its tip, follow
+  [The tag does not exist](#the-tag-does-not-exist). Otherwise use
+  **Re-run failed jobs**.
+- "semantic-release gave no valid commit to release…" or "…runs outside the
+  repository's top-level directory…": nothing was released. Run
+  semantic-release from the repository's top-level directory, then use
+  **Re-run failed jobs**.
+- "The release asset … was deleted": nothing was released. The plugin only adds
+  or updates files. Check `assets` in `.releaserc` and any prepare step that
+  deletes one of those files, then use **Re-run failed jobs**.
+- "GitHub did not create the release commit on `main` (HTTP …)": nothing was
+  released. This covers HTTP 4xx and GraphQL errors. Check the status code in
+  the message and [GitHub status](https://www.githubstatus.com/), then use
+  **Re-run failed jobs**.
 
 The authenticated dry run in the plan job checks that the token can push. It
 uses `git push --dry-run`, which sends no update, so it cannot prove that the

@@ -24,8 +24,8 @@ set -euo pipefail
 # ==============================================================================
 
 source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/semantic-release.test-lib.sh"
 
-readonly WORKFLOW_FILE=.github/workflows/cicd-2-publish.yaml
 readonly BREAKING_NOTE='drop the legacy widget API'
 
 # Set up the suite and run every test.
@@ -49,18 +49,8 @@ function test-suite-setup() {
   local semantic preset
   semantic="$(workflow-pin 'SEMANTIC_RELEASE_VERSION: ' '')" || return 1
   preset="$(workflow-pin '' 'conventional-changelog-conventionalcommits@')" || return 1
-  if ! command -v npm > /dev/null || ! command -v node > /dev/null; then
-    echo "PREREQUISITE: npm or node is not on PATH. Diagnose with: command -v npm node. The pinned plugins cannot run, so verification is unknown." >&2
-    return 77
-  fi
-  mkdir -p "$SUITE_TMP/npm"
-  if ! (cd "$SUITE_TMP/npm" && npm install --no-save --no-audit --no-fund --ignore-scripts \
-    --loglevel=error "semantic-release@$semantic" "conventional-changelog-conventionalcommits@$preset" \
-    > "$SUITE_TMP/npm.log" 2>&1); then
-    sed 's/^/    /' "$SUITE_TMP/npm.log" >&2
-    echo "PREREQUISITE: npm cannot install semantic-release@$semantic and conventional-changelog-conventionalcommits@$preset, for example without network access. Diagnose with: npm view semantic-release@$semantic version. Verification is unknown." >&2
-    return 77
-  fi
+  semantic-release-install "semantic-release@$semantic" \
+    "conventional-changelog-conventionalcommits@$preset" || return "$?"
 
   return 0
 }
@@ -99,28 +89,6 @@ function test-hidden-chore-without-footer-releases-nothing() {
 
 # ==============================================================================
 
-# Print a version pinned in the publish workflow, from the line that
-# starts with the prefix or holds the package marker.
-# Arguments:
-#   $1=[line prefix after the indentation, or empty]
-#   $2=[package marker before the version, or empty]
-function workflow-pin() {
-
-  local prefix="$1" marker="$2" version
-  if [[ -n "$prefix" ]]; then
-    version="$(sed -n "s/^ *$prefix\\([0-9][0-9.]*\\)\$/\\1/p" "$WORKFLOW_FILE")"
-  else
-    version="$(sed -n "s/^ *$marker\\([0-9][0-9.]*\\)\$/\\1/p" "$WORKFLOW_FILE")"
-  fi
-  if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    print-diagnostic error "Cannot read the pin '$prefix$marker' from $WORKFLOW_FILE, so the pinned version is unknown. Keep it as an exact 'X.Y.Z' on its own line."
-    return 1
-  fi
-  printf '%s\n' "$version"
-
-  return 0
-}
-
 # Create a repository with the release 'v1.0.0' on 'main' and the repository
 # '.releaserc'.
 function release-set-up() {
@@ -151,7 +119,7 @@ function release-plan() {
     ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"] | index($name)))' \
     "$repo/.releaserc" > "$TEST_TMP/releaserc"
   mv "$TEST_TMP/releaserc" "$repo/.releaserc"
-  test-capture release-dry-run "$repo" "file://$TEST_TMP/mirror.git"
+  test-capture semantic-release-run "$repo" "file://$TEST_TMP/mirror.git" --dry-run
 
   return 0
 }
@@ -164,21 +132,6 @@ function release-notes() {
 
   local version="$1"
   sed -n "/Release note for version $version:\$/,\$p" <<< "$TEST_STDOUT" | tail -n +2
-
-  return 0
-}
-
-# Run the installed semantic-release as a dry run outside CI mode.
-# Arguments:
-#   $1=[repository path]
-#   $2=[mirror URL]
-function release-dry-run() {
-
-  local repo="$1" url="$2"
-  cd "$repo"
-  env -u GITHUB_ACTIONS -u CI -u GITHUB_TOKEN -u GH_TOKEN \
-    node "$SUITE_TMP/npm/node_modules/semantic-release/bin/semantic-release.js" \
-    --dry-run --no-ci --repository-url "$url" || return "$?"
 
   return 0
 }

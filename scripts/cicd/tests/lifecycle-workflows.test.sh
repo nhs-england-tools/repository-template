@@ -35,6 +35,7 @@ function main() {
     test-deploy-rejects-unprotected-tags \
     test-deploy-runs-the-commit-the-tag-resolves-to \
     test-publish-credentials-include-fallbacks \
+    test-publish-release-is-signed-by-github \
     test-publish-plan-uses-one-authenticated-dry-run \
     test-publish-release-reports-the-semantic-release-tag \
     test-publish-plan-blocks-artefacts-on-check-failures \
@@ -241,39 +242,48 @@ function test-publish-credentials-include-fallbacks() {
 
   # Arrange
   test-isolate-path yq
-  local workflow=.github/workflows/cicd-2-publish.yaml input context setting plan release signing identity
+  local workflow=.github/workflows/cicd-2-publish.yaml input context setting plan release
   local token_query='.jobs[strenv(JOB)].steps[] | select(.id == "app-token") | .with[strenv(INPUT)]'
-  local signing_query='.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .env[strenv(INPUT)]'
   while read -r input context setting; do
     # Act
-    if [[ "$input" == app-id || "$input" == private-key ]]; then
-      plan="$(JOB=plan INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
-      release="$(JOB=release INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
-      assert-equal "$release" "$plan" "plan and release use the same $input"
-    else
-      release="$(INPUT="$input" yq -r "$signing_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
-    fi
+    plan="$(JOB=plan INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
+    release="$(JOB=release INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
     # Assert
+    assert-equal "$release" "$plan" "plan and release use the same $input"
     assert-equal "\${{$context.$setting||$context.NHS_$setting}}" "$release" "$input uses an NHS fallback"
   done <<'INPUTS'
 app-id vars GH_VERSIONING_RELEASE_APP_ID
 private-key secrets GH_VERSIONING_RELEASE_APP_PRIVATE_KEY
-GPG_PRIVATE_KEY secrets GIT_SIGNING_BOT_GPG_PRIVATE_KEY
-GPG_PASSPHRASE secrets GIT_SIGNING_BOT_GPG_PASSPHRASE
-BOT_NAME vars GIT_SIGNING_BOT_NAME
-BOT_EMAIL vars GIT_SIGNING_BOT_EMAIL
 INPUTS
-  # Act
-  signing="$(yq -r '.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .env
-    | [.BOT_NAME, .BOT_NAME, .BOT_EMAIL, .BOT_EMAIL] | .[]' "$workflow" | sed "$REMOVE_WHITESPACE")"
-  identity="$(yq -r '.jobs.release.steps[] | select(.id == "semantic-release") | .env
-    | [.GIT_AUTHOR_NAME, .GIT_COMMITTER_NAME, .GIT_AUTHOR_EMAIL, .GIT_COMMITTER_EMAIL] | .[]' "$workflow" | sed "$REMOVE_WHITESPACE")"
   # Assert
-  assert-equal "$signing" "$identity" 'release uses the signing bot identity'
   assert-equal '${{ steps.app-token.outputs.token }}' \
     "$(yq -r '.jobs.release.steps[] | select(.id == "semantic-release") | .env.GITHUB_TOKEN' "$workflow")" 'release uses the App token'
-  assert-equal './scripts/cicd/import-signing-key.sh' \
-    "$(yq -r '.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .run' "$workflow")" 'release imports the signing key'
+
+  return 0
+}
+
+# shellcheck disable=SC2016 # GitHub expressions, not shell ones
+function test-publish-release-is-signed-by-github() {
+
+  # Arrange
+  test-isolate-path yq
+  local workflow=.github/workflows/cicd-2-publish.yaml
+  local plugin=./scripts/cicd/semantic-release-api-commit.mjs
+  local names identity plugins order
+  # Act
+  names="$(yq -r '.jobs.release.steps[].name' "$workflow")"
+  identity="$(yq -r '.jobs.release.steps[] | select(.id == "semantic-release") | .env | keys | .[]' "$workflow" \
+    | grep -E '^GIT_(AUTHOR|COMMITTER)_' || true)"
+  plugins="$(yq -r '.env.SEMANTIC_RELEASE_PLUGINS' "$workflow")"
+  order="$(yq -r '.plugins[] | ((select(tag == "!!seq") | .[0]) // .)' .releaserc | grep -xF -e @semantic-release/exec -e "$plugin" -e @semantic-release/github)"
+  # Assert
+  assert-not-contains "$names" '🔑 Import the signing key'
+  assert-equal '' "$identity" 'release sets no git identity'
+  assert-equal '' "$(git grep -nE 'GPG_PRIVATE_KEY|GPG_PASSPHRASE|GIT_SIGNING_BOT' -- .github/workflows || true)" 'no signing references'
+  assert-not-contains "$plugins" '@semantic-release/git@'
+  assert-equal "@semantic-release/exec
+$plugin
+@semantic-release/github" "$order" 'plugin runs between exec and github'
 
   return 0
 }
