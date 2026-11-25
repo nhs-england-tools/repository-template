@@ -47,8 +47,7 @@ Make these changes on a branch for the initial setup pull request:
 
 1. Replace template URLs and support links in the
    [root README](../../../README.md) and
-   [issue forms](../../../.github/ISSUE_TEMPLATE/), including the
-   [issue form configuration](../../../.github/ISSUE_TEMPLATE/config.yml).
+   [issue forms](../../../.github/ISSUE_TEMPLATE/).
    Update the README with the project's configuration and contribution workflow,
    and tailor the [contributing guide](../../../.github/CONTRIBUTING.md) to
    cover setup, tests, review rules and releases.
