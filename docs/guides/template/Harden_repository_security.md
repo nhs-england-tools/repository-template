@@ -55,11 +55,9 @@ authentication, data handling, network exposure and deployment controls.
 
 Every [workflow](../../../.github/workflows/) sets `permissions: {}`, so each
 job starts with no `GITHUB_TOKEN` permissions and declares the ones it needs.
-Most jobs need only `contents: read`. The `metadata` job of the pull request
-workflow also reads pull requests to find one for the branch. The `publish` job
-holds the only write permission, `contents: write`, which `gh release create`
-needs. It does not check out the repository, so no repository code runs with
-that token.
+Most jobs need only `contents: read`. The `publish` job holds the only write
+permission, `contents: write`, which `gh release create` needs. It does not
+check out the repository, so no repository code runs with that token.
 
 ### Publish and deploy
 

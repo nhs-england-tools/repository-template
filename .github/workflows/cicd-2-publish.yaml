@@ -34,6 +34,7 @@ jobs:
         id: variables
         run: |
           datetime=$(date -u +'%Y-%m-%dT%H:%M:%S%z')
+          BUILD_DATETIME=$datetime make version-create-effective-file
           echo "build_datetime_london=$(TZ=Europe/London date --date=$datetime +'%Y-%m-%dT%H:%M:%S%z')" >> "$GITHUB_OUTPUT"
           echo "build_datetime=$datetime" >> "$GITHUB_OUTPUT"
           echo "build_epoch=$(date --date=$datetime -u +'%s')" >> "$GITHUB_OUTPUT"
@@ -42,8 +43,9 @@ jobs:
           echo "mise_version=$(_toml-table-entry "" min_version mise.toml)" >> "$GITHUB_OUTPUT"
           echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
-          # Template placeholder: use the version output from the caller workflow.
-          echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
+          # Each merge needs its own release tag, so VERSION resolves to the second
+          version="$(head -n 1 .version)"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
       - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}

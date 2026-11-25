@@ -17,7 +17,10 @@ SonarQube Cloud scan when the token and both variables are available. The
 configured. When configured, it waits for the quality gate and fails if the gate
 fails.
 
-Organisation admins can also
+The scan runs on pull requests, which adds pull request decoration, and on
+pushes to `main`, which updates the `main` branch analysis. It does not run for
+other branches, and it is skipped in the merge queue because the pull request
+has already been analysed. Organisation admins can also
 [disable analysis across the organisation](#disable-analysis-across-the-organisation-).
 
 ## Configure workflow credentials 🔐
