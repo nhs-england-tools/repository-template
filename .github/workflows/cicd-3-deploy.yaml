@@ -126,4 +126,5 @@ jobs:
       success_title: "DEPLOYED: ${{ needs.metadata.outputs.tag }}"
       success_text: "${{ needs.metadata.outputs.tag }} is deployed."
     secrets:
-      TEAMS_NOTIFICATION_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
+      TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL }}
+      TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}

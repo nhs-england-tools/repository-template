@@ -126,4 +126,5 @@ jobs:
       success_text: "Release ${{ needs.metadata.outputs.version }} is published. It holds the changes merged in pull request #${{ github.event.pull_request.number }}."
       success_link: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.metadata.outputs.version }}
     secrets:
-      TEAMS_NOTIFICATION_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
+      TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL }}
+      TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}
