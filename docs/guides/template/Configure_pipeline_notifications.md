@@ -69,7 +69,7 @@ You need:
   for private channels.
 - Permission to create a GitHub Actions repository secret, or help from a
   repository administrator.
-- Bash and `curl` for the optional direct webhook test.
+- Bash or zsh and `curl` for the optional direct webhook test.
 
 Agree which channel should receive pipeline messages and who will maintain the
 flow. Select your own team if the repository belongs elsewhere. Ask the platform
@@ -138,12 +138,13 @@ URL is generated after saving. Confirm that the flow is turned on.
 
 ## Test the webhook 🧪
 
-Tell the channel that you are sending a test message. In a local **Bash**
+Tell the channel that you are sending a test message. In a local Bash or zsh
 terminal with command tracing disabled, run the following. Paste the webhook URL
 at the hidden prompt. This keeps the literal URL out of your shell history.
 
 ```bash
-read -r -s -p 'Teams webhook URL: ' teams_webhook_url
+printf 'Teams webhook URL: ' >&2
+read -r -s teams_webhook_url
 printf '\n'
 curl --fail --silent --show-error \
   --output /dev/null --write-out 'HTTP %{http_code}\n' \
