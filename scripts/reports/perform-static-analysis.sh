@@ -25,12 +25,24 @@ set -euo pipefail
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
+  check-required-vars
 
   if command -v sonar-scanner > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
     run-sonar-scanner-natively
   else
     run-sonar-scanner-in-docker
   fi
+}
+
+function check-required-vars() {
+
+  local variable
+  for variable in BRANCH_NAME SONAR_ORGANISATION_KEY SONAR_PROJECT_KEY SONAR_TOKEN; do
+    if [[ -z "${!variable:-}" ]]; then
+      echo "Error: $variable must be set" >&2
+      exit 1
+    fi
+  done
 }
 
 function run-sonar-scanner-natively() {
