@@ -71,6 +71,9 @@ checks, security checks, and other required quality gates.
 
 ## Open a pull request 🔀
 
+CI runs on pull requests, the merge queue and pushes to `main`, not on a pushed
+branch alone. Open a draft pull request to see CI results early.
+
 Use the [pull request template](PULL_REQUEST_TEMPLATE.md) and:
 
 - Explain what changed and why. Link the related issue or decision where

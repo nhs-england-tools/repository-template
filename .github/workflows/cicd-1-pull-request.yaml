@@ -4,10 +4,16 @@ name: "🔀 CI/CD pull request"
 
 on:
   push:
-    branches:
-      - "**"
+    branches: [main]
   pull_request:
     types: [opened, reopened, synchronize]
+  merge_group:
+
+# A newer commit cancels the run for an older one, except on main, where each
+# run gets a group of its own and is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions: {}
 
@@ -17,7 +23,6 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
-      pull-requests: read
     timeout-minutes: 1
     outputs:
       build_datetime_london: ${{ steps.variables.outputs.build_datetime_london }}
@@ -28,7 +33,6 @@ jobs:
       nodejs_version: ${{ steps.variables.outputs.nodejs_version }}
       python_version: ${{ steps.variables.outputs.python_version }}
       version: ${{ steps.variables.outputs.version }}
-      does_pull_request_exist: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
     steps:
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,20 +52,6 @@ jobs:
           echo "nodejs_version=$(_toml-table-entry tools node mise.toml)" >> "$GITHUB_OUTPUT"
           echo "python_version=$(_toml-table-entry tools python mise.toml)" >> "$GITHUB_OUTPUT"
           echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
-      - name: "🔎 Check if pull request exists for this branch"
-        id: pr_exists
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          branch_name=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          echo "Current branch is '$branch_name'"
-          if gh pr list --head "$branch_name" | grep -q .; then
-            echo "Pull request exists"
-            echo "does_pull_request_exist=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Pull request doesn't exist"
-            echo "does_pull_request_exist=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: "📋 List variables"
         env:
           BUILD_DATETIME_LONDON: ${{ steps.variables.outputs.build_datetime_london }}
@@ -72,7 +62,6 @@ jobs:
           NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
           PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
           VERSION: ${{ steps.variables.outputs.version }}
-          DOES_PULL_REQUEST_EXIST: ${{ steps.pr_exists.outputs.does_pull_request_exist }}
         run: |
           make list-variables
   commit-stage: # Recommended maximum execution time is 2 minutes
@@ -113,7 +102,6 @@ jobs:
       contents: read
     needs: [metadata, test-stage]
     uses: ./.github/workflows/stage-3-build.yaml
-    if: github.ref == 'refs/heads/main' || needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime_london: "${{ needs.metadata.outputs.build_datetime_london }}"
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"
@@ -129,7 +117,6 @@ jobs:
       contents: read
     needs: [metadata, build-stage]
     uses: ./.github/workflows/stage-4-acceptance.yaml
-    if: github.ref == 'refs/heads/main' || needs.metadata.outputs.does_pull_request_exist == 'true' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened'))
     with:
       build_datetime_london: "${{ needs.metadata.outputs.build_datetime_london }}"
       build_datetime: "${{ needs.metadata.outputs.build_datetime }}"

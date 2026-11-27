@@ -110,7 +110,7 @@ The same Make targets run at four points, from your terminal to the pipeline:
 | On demand       | When you run it                                             | `make lint`, one `make lint-*` target or `make check`, with any `check=` mode                         |
 | Agent Stop hook | When a Copilot agent finishes a turn that changed files     | The gates in `quality-gates.yaml`, which are `make lint` and `make test` by default                   |
 | Git pre-commit  | On every commit, once `make config` has installed the hooks | Each lint check, `make scan-secrets` and `make test`                                                  |
-| CI/CD pipeline  | On every push and pull request                              | Each lint check and the secret scan in the commit stage, then `make typecheck test` in the test stage |
+| CI/CD pipeline  | On pull requests, the merge queue and pushes to `main`      | Each lint check and the secret scan in the commit stage, then `make typecheck test` in the test stage |
 
 Every stage calls the same target with the same pinned tools, so a finding means
 the same thing everywhere. Each stage also catches what the one before it

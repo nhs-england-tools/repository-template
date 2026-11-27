@@ -25,7 +25,9 @@ function main() {
     test-build-workflow-runs-project-build \
     test-publish-workflow-runs-project-publish \
     test-deploy-workflow-runs-project-deploy \
-    test-lifecycle-workflows-propagate-target-failures
+    test-lifecycle-workflows-propagate-target-failures \
+    test-publish-metadata-sets-a-unique-dated-version \
+    test-publish-metadata-fails-without-a-version-file
 
   return 0
 }
@@ -83,7 +85,60 @@ CASES
   return 0
 }
 
+function test-publish-metadata-sets-a-unique-dated-version() {
+
+  # Arrange
+  metadata-prepare
+  cp "$TEST_REPO_ROOT/VERSION" VERSION
+  # Act
+  metadata-run cicd-2-publish.yaml
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "publish metadata: $TEST_STDERR"
+  assert-matches "$(grep '^version=' "$TEST_TMP/output")" '^version=[0-9]{14}$' "version to the second"
+
+  return 0
+}
+
+function test-publish-metadata-fails-without-a-version-file() {
+
+  # Arrange
+  metadata-prepare
+  rm -f VERSION
+  # Act
+  metadata-run cicd-2-publish.yaml
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "publish metadata without VERSION"
+  assert-equal "" "$(awk '/^version=/' "$TEST_TMP/output")" "version output"
+
+  return 0
+}
+
 # ==============================================================================
+
+function metadata-prepare() {
+
+  test-isolate-path yq make
+  test-create-repo "$TEST_TMP/project" Makefile mise.toml
+  ln -s "$TEST_REPO_ROOT/scripts" "$TEST_TMP/project/scripts"
+  cd "$TEST_TMP/project"
+
+  return 0
+}
+
+# Run the metadata variables step without inheriting the caller's environment.
+# Arguments:
+#   $1=[workflow file name]
+function metadata-run() {
+
+  local workflow="$1" commands
+  commands="$(yq -r '.jobs.metadata.steps[] | select(.id == "variables") | .run' \
+    "$TEST_REPO_ROOT/.github/workflows/$workflow")"
+  : > "$TEST_TMP/output"
+  test-capture env -i PATH="$PATH" GITHUB_OUTPUT="$TEST_TMP/output" \
+    bash --noprofile --norc -eo pipefail -c "$commands"
+
+  return 0
+}
 
 # Run a workflow step with real Make and isolated project targets.
 # Arguments:
