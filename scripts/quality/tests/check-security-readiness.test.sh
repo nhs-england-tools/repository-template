@@ -33,6 +33,9 @@ jobs:
           persist-credentials: false'
 readonly SAFE_JOB=$'name: test\non:\n  push:\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest\n'
 readonly EXIT_STATUS_LABEL='exit status'
+readonly DIAGNOSTIC_LABEL='diagnostic'
+readonly STDOUT_LABEL='stdout'
+readonly CODEOWNERS_ERROR='ERROR: .github/CODEOWNERS:'
 readonly PRIVILEGED_TRIGGER_ERROR='privileged triggers pull_request_target and workflow_run are prohibited'
 readonly PRIVILEGED_WORKFLOW=$'name: test\non: pull_request_target\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest'
 readonly SECRET_SCOPE_ERROR='secret values must not be set in workflow, job, container, or service environment'
@@ -482,7 +485,7 @@ function test-security-readiness-rejects-mise-cache-in-publish-workflow() {
 
   security-readiness-check-fixture "$SAFE_JOB$TIMEOUT_AND_MISE_STEPS"$'          cache: true\n'
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: .github/workflows/test.yaml: $MISE_CACHE_ERROR" "$TEST_STDERR" "diagnostic"
+  assert-equal "ERROR: .github/workflows/test.yaml: $MISE_CACHE_ERROR" "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -492,7 +495,7 @@ function test-security-readiness-rejects-mise-cache-left-at-its-true-default-in-
 
   security-readiness-check-fixture "${SAFE_JOB/push:/workflow_dispatch:}$TIMEOUT_AND_MISE_STEPS"
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-equal "ERROR: .github/workflows/test.yaml: $MISE_CACHE_ERROR" "$TEST_STDERR" "diagnostic"
+  assert-equal "ERROR: .github/workflows/test.yaml: $MISE_CACHE_ERROR" "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -558,7 +561,7 @@ function test-security-readiness-rejects-unquoted-github-output() {
   security-readiness-check-fixture "$SAFE_JOB"$'    timeout-minutes: 1\n    steps:\n      - run: |\n          echo "a=b" >> "$GITHUB_OUTPUT"\n          echo "c=d" >>$GITHUB_OUTPUT\n'
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   # shellcheck disable=SC2016
-  assert-equal 'ERROR: .github/workflows/test.yaml: run scripts must quote $GITHUB_OUTPUT where they write to it, as >> "$GITHUB_OUTPUT"' "$TEST_STDERR" "diagnostic"
+  assert-equal 'ERROR: .github/workflows/test.yaml: run scripts must quote $GITHUB_OUTPUT where they write to it, as >> "$GITHUB_OUTPUT"' "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -580,7 +583,7 @@ function test-security-readiness-rejects-unquoted-github-output-through-tee() {
   security-readiness-check-fixture "$SAFE_JOB"$'    timeout-minutes: 1\n    steps:\n      - run: echo "a=b" | tee -a $GITHUB_OUTPUT\n'
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   # shellcheck disable=SC2016
-  assert-contains "$TEST_STDERR" 'run scripts must quote $GITHUB_OUTPUT where they write to it' "diagnostic"
+  assert-contains "$TEST_STDERR" 'run scripts must quote $GITHUB_OUTPUT where they write to it' "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -590,7 +593,7 @@ function test-security-readiness-rejects-every-unquoted-tee-operand() {
   security-readiness-check-fixture "$SAFE_JOB"$'    timeout-minutes: 1\n    steps:\n      - run: echo "a=b" | tee -a "$GITHUB_OUTPUT" $GITHUB_STEP_SUMMARY\n'
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   # shellcheck disable=SC2016
-  assert-equal 'ERROR: .github/workflows/test.yaml: run scripts must quote $GITHUB_STEP_SUMMARY where they write to it, as >> "$GITHUB_STEP_SUMMARY"' "$TEST_STDERR" "diagnostic"
+  assert-equal 'ERROR: .github/workflows/test.yaml: run scripts must quote $GITHUB_STEP_SUMMARY where they write to it, as >> "$GITHUB_STEP_SUMMARY"' "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -600,7 +603,7 @@ function test-security-readiness-names-an-unquoted-github-file-with-a-default() 
   security-readiness-check-fixture "$SAFE_JOB"$'    timeout-minutes: 1\n    steps:\n      - run: echo "a=b" >> ${GITHUB_OUTPUT:-/dev/null}\n'
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   # shellcheck disable=SC2016
-  assert-equal 'ERROR: .github/workflows/test.yaml: run scripts must quote $GITHUB_OUTPUT where they write to it, as >> "$GITHUB_OUTPUT"' "$TEST_STDERR" "diagnostic"
+  assert-equal 'ERROR: .github/workflows/test.yaml: run scripts must quote $GITHUB_OUTPUT where they write to it, as >> "$GITHUB_OUTPUT"' "$TEST_STDERR" "$DIAGNOSTIC_LABEL"
 
   return 0
 }
@@ -649,7 +652,7 @@ function test-security-readiness-annotates-errors-in-github-actions() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "::error::.github/workflows/test.yaml: $PRIVILEGED_TRIGGER_ERROR" "$TEST_STDERR" "annotation"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -667,7 +670,7 @@ function test-security-readiness-annotates-a-captured-allowlist-error() {
   assert-contains "$TEST_STDERR" \
     '::error::approved_write_permissions in scripts/config/security-readiness.yaml must be a list of mappings' "annotation"
   assert-not-contains "$TEST_STDERR" 'ERROR:' "local text"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -944,7 +947,7 @@ function test-security-readiness-review-date-invalid-headers() {
     printf '%b\n' "$header" > "$TEST_TMP/repo/.github/CODEOWNERS"
     security-readiness-run-check
     assert-equal 1 "$TEST_STATUS" "invalid header: $header"
-    assert-contains "$TEST_STDERR" 'ERROR: .github/CODEOWNERS:' "invalid header diagnostic"
+    assert-contains "$TEST_STDERR" "$CODEOWNERS_ERROR" "invalid header diagnostic"
   done <<'CASES'
 * @example/team
 # Review-by: 2027-02-29
@@ -972,7 +975,7 @@ function test-security-readiness-review-date-missing-file() {
   security-readiness-run-check check=staged-changes
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" 'ERROR: .github/CODEOWNERS:' "missing file diagnostic"
+  assert-contains "$TEST_STDERR" "$CODEOWNERS_ERROR" "missing file diagnostic"
 
   return 0
 }
@@ -989,7 +992,7 @@ function test-security-readiness-review-date-rejects-symlink() {
   security-readiness-run-check
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" 'ERROR: .github/CODEOWNERS:' 'symlink cannot satisfy date policy'
+  assert-contains "$TEST_STDERR" "$CODEOWNERS_ERROR" 'symlink cannot satisfy date policy'
 
   return 0
 }
@@ -1022,7 +1025,7 @@ function test-security-readiness-review-date-clock-failure() {
     TEST_DATE_STUB="$clock"
     security-readiness-run-check
     assert-equal 1 "$TEST_STATUS" "unavailable or invalid clock must fail"
-    assert-contains "$TEST_STDERR" 'ERROR: .github/CODEOWNERS:' "clock diagnostic"
+    assert-contains "$TEST_STDERR" "$CODEOWNERS_ERROR" "clock diagnostic"
   done
 
   return 0
@@ -1229,7 +1232,7 @@ function test-security-readiness-repository-accepts-safe-baseline() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
   assert-equal '' "$TEST_STDERR" 'no diagnostics'
-  assert-equal '' "$TEST_STDOUT" 'stdout'
+  assert-equal '' "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -1244,7 +1247,7 @@ function test-security-readiness-repository-rejects-invalid-owners() {
     printf '%s\n' "$owners" > "$TEST_TMP/repo/.github/CODEOWNERS"
     security-readiness-repository-run-check
     assert-equal 1 "$TEST_STATUS" "invalid ownership: $owners"
-    assert-contains "$TEST_STDERR" 'ERROR: .github/CODEOWNERS:' 'owner diagnostic'
+    assert-contains "$TEST_STDERR" "$CODEOWNERS_ERROR" 'owner diagnostic'
   done
 
   return 0
@@ -1406,7 +1409,7 @@ function test-security-readiness-repository-ignores-untracked-codeowners() {
   security-readiness-repository-run-check
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" 'ERROR: .github/CODEOWNERS:' 'untracked preferred file cannot satisfy baseline'
+  assert-contains "$TEST_STDERR" "$CODEOWNERS_ERROR" 'untracked preferred file cannot satisfy baseline'
 
   return 0
 }
@@ -1439,7 +1442,7 @@ function test-security-readiness-repository-warns-for-adoption-placeholders() {
   assert-contains "$TEST_STDERR" '::warning::.github/SECURITY.md: ' 'CI adoption warning'
   assert-not-contains "$TEST_STDERR" 'WARNING:' 'no local adoption warning'
   assert-not-contains "$TEST_STDERR" '::warning file=' 'no second annotation'
-  assert-equal '' "$TEST_STDOUT" 'stdout'
+  assert-equal '' "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -1461,7 +1464,7 @@ function test-security-readiness-repository-warns-for-todos() {
     assert-equal 0 "$TEST_STATUS" "$file: $TEST_STDERR"
     assert-contains "$TEST_STDERR" "WARNING: $file: " 'file-specific TODO warning'
     assert-equal 1 "$(printf '%s\n' "$TEST_STDERR" | wc -l | tr -d '[:space:]')" 'one warning per file'
-    assert-equal '' "$TEST_STDOUT" 'stdout'
+    assert-equal '' "$TEST_STDOUT" "$STDOUT_LABEL"
     printf '%s\n' "$content" > "$TEST_TMP/repo/$file"
   done
 
@@ -1482,7 +1485,7 @@ function test-security-readiness-repository-todos-in-every-mode() {
     assert-equal 0 "$TEST_STATUS" "$mode: $TEST_STDERR"
     assert-contains "$TEST_STDERR" '::warning::README.md: ' 'CI TODO annotation'
     assert-not-contains "$TEST_STDERR" 'do not echo this' 'TODO contents stay private'
-    assert-equal '' "$TEST_STDOUT" 'stdout'
+    assert-equal '' "$TEST_STDOUT" "$STDOUT_LABEL"
   done
 
   return 0
