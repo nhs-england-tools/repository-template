@@ -137,6 +137,8 @@ contributions. Maintainers should:
 - Record applicable information governance, accessibility, security, and
   clinical safety requirements in the project documentation.
 - Implement the recipes for every TODO-marked target in the
-  [Makefile](../Makefile), keeping the target names intact.
+  [Makefile](../Makefile), keeping the target names intact. Extend `format`,
+  `lint` and `test` with the project's formatters, checks and fast tests while
+  keeping the existing formatting, checks and Bash tests.
 - Resolve documentation TODOs and verify that links and contact routes point to
   the adopted project.

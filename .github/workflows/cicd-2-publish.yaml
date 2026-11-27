@@ -74,6 +74,19 @@ jobs:
       PYTHON_VERSION: ${{ needs.metadata.outputs.python_version }}
       VERSION: ${{ needs.metadata.outputs.version }}
     steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+      - name: "🧰 Set up mise"
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: ${{ needs.metadata.outputs.mise_version }}
+          install: true
+          persist_github_token: false
+          cache: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: "📥 Get the artefacts"
         run: |
           echo "Getting the artefacts created by the build stage ..."
@@ -88,6 +101,10 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Release $VERSION" \
             --notes "Release of $VERSION"
+      - name: "📦 Publish project artefacts"
+        id: publish
+        run: |
+          make publish
       # - name: "📤 Upload release asset"
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

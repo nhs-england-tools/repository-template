@@ -117,11 +117,12 @@ Make these changes on a branch for the initial setup pull request:
    security and clinical safety requirements. Assign the appropriate owners and
    link to approved processes rather than publishing sensitive details.
 7. Implement every TODO-marked recipe in the [Makefile](../../../Makefile)
-   without renaming its targets. Add the project's checks to `lint` and
-   `typecheck`, and its fast project and system tests, such as unit tests, to
-   `test` alongside the template's Bash tests. Keep slower test tiers separate,
-   and keep `check` running the project's format, lint, type and quick-feedback
-   test targets. Follow
+   without renaming its targets. Extend `format` with project formatters, `lint`
+   with project checks and `test` with fast project and system tests, such as
+   unit tests. Keep the existing formatting, checks and Bash tests. Add project
+   type checking to `typecheck`. Keep slower test tiers separate, and keep
+   `check` running the project's format, lint, type and quick-feedback test
+   targets. Follow
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
    for extension patterns. Run `make help` to inspect the available targets.
 8. Review dependency sources, the
