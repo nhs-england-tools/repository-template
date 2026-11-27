@@ -236,7 +236,8 @@ Edit the relevant tool's rules and exclusions. Exclusion formats differ:
   [`.markdownlintignore`](../../../scripts/config/.markdownlintignore) excludes
   paths.
 - Markdown formatter:
-  [`prettierrc.yaml`](../../../scripts/config/prettierrc.yaml) sets rules.
+  [`prettier-markdown.yaml`](../../../scripts/config/prettier-markdown.yaml) sets
+  rules.
   [`.prettierignore`](../../../scripts/config/.prettierignore) uses Git ignore
   patterns.
 - Markdown links: [`lychee.toml`](../../../scripts/config/lychee.toml) checks

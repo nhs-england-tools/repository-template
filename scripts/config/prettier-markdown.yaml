@@ -1,0 +1,5 @@
+# YAML configuration for Prettier's Markdown formatting, including aligned
+# tables. Used by scripts/quality/format-markdown.sh.
+printWidth: 80
+proseWrap: always
+useTabs: false

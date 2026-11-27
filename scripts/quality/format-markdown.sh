@@ -80,7 +80,7 @@ function run-prettier-natively() {
   local rc=0
   # 'main' already applied the ignore file
   prettier \
-    --config "$PWD/scripts/config/prettierrc.yaml" \
+    --config "$PWD/scripts/config/prettier-markdown.yaml" \
     --ignore-path /dev/null \
     --write \
     -- \
@@ -111,7 +111,7 @@ function run-prettier-in-docker() {
     --workdir /workdir \
     "$image" \
     npx --yes "prettier@$version" \
-      --config /workdir/scripts/config/prettierrc.yaml \
+      --config /workdir/scripts/config/prettier-markdown.yaml \
       --ignore-path /dev/null \
       --write \
       -- \
