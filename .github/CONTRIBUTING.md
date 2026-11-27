@@ -124,8 +124,12 @@ contributions. Maintainers should:
 - Set a monitored private contact for conduct concerns in the
   [Code of Conduct](CODE_OF_CONDUCT.md), and confirm the security-reporting
   route in [SECURITY.md](SECURITY.md).
-- Replace the example owner in [CODEOWNERS](CODEOWNERS) with the GitHub users
-  or teams responsible for the project. Each owner needs write access.
+- Configure [CODEOWNERS](CODEOWNERS) to cover every file, with a future review
+  date and at least one visible team from the repository's organisation. Those
+  teams need at least two members between them, and each owner needs write
+  access.
+- Enable the applicable GitHub security settings and protect the default branch
+  with code owner approval and required CI checks, as the setup guide describes.
 - Document the project's development setup, test commands, review requirements,
   and release process.
 - Record applicable information governance, accessibility, security, and

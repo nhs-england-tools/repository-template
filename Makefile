@@ -23,8 +23,8 @@ lint: # Run linter to check code style and errors (set check=all|staged-changes|
 	$(MAKE) lint-markdown-format
 	$(MAKE) lint-markdown-links
 	$(MAKE) lint-shell
-	$(MAKE) lint-workflow-security
 	$(MAKE) lint-pipeline-contract
+	$(MAKE) lint-security-readiness
 
 typecheck: # Run type checker @Quality
 	# TODO: Implement type checking required for this repository

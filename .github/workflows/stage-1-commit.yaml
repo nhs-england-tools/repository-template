@@ -108,28 +108,6 @@ jobs:
           persist-credentials: false
       - name: "🐚 Check shell scripts"
         uses: ./.github/actions/check-shell-lint
-  check-workflow-security:
-    name: "🔒 Check workflow security"
-    runs-on: ubuntu-26.04
-    permissions:
-      contents: read
-    timeout-minutes: 2
-    steps:
-      - name: "📥 Checkout code"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: "🧰 Set up mise"
-        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          version: ${{ inputs.mise_version }}
-          install: true
-          install_args: "yq jq"
-          persist_github_token: false
-          cache: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: "🔒 Check workflow security"
-        run: make lint-workflow-security check=all
   check-pipeline-contract:
     name: "📜 Check pipeline contract"
     runs-on: ubuntu-26.04
@@ -152,3 +130,26 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: "📜 Check pipeline contract"
         run: make lint-pipeline-contract check=all
+  check-security-readiness:
+    name: "🔒 Check security readiness"
+    needs: check-pipeline-contract
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    timeout-minutes: 2
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: "🧰 Set up mise"
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: ${{ inputs.mise_version }}
+          install: true
+          install_args: "yq jq"
+          persist_github_token: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "🔒 Check security readiness"
+        run: make lint-security-readiness check=all

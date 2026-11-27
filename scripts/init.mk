@@ -33,13 +33,13 @@ lint-shell: check ?= all
 lint-shell: # Lint shell scripts and check shell and Make comment line length (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	check=$(check) ./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"
 
-lint-workflow-security: check ?= all
-lint-workflow-security: # Check GitHub Actions workflow security policy (set check=all|staged-changes|working-tree-changes|branch) @Quality
-	check=$(check) ./scripts/quality/check-workflow-security.sh && echo "workflow security checks: ok"
-
 lint-pipeline-contract: check ?= all
 lint-pipeline-contract: # Check GitHub Actions workflows keep the pipeline contract (set check=all|staged-changes|working-tree-changes|branch) @Quality
 	check=$(check) ./scripts/quality/check-pipeline-contract.sh && echo "pipeline contract checks: ok"
+
+lint-security-readiness: check ?= all
+lint-security-readiness: # Check security readiness (scoped workflows and actions, always the repository baseline) @Quality
+	check=$(check) ./scripts/quality/check-security-readiness.sh && echo "security readiness: ok"
 
 quality-gate: scope ?= changed
 quality-gate: # Run the gates in scripts/config/quality-gates.yaml, as the agent Stop hook does (set scope=changed|all) @Quality
@@ -246,8 +246,8 @@ ${VERBOSE}.SILENT: \
 	lint-markdown-format \
 	lint-markdown-links \
 	lint-pipeline-contract \
+	lint-security-readiness \
 	lint-shell \
-	lint-workflow-security \
 	list-variables \
 	quality-gate \
 	quality-gate-list \

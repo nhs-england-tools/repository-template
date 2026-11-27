@@ -45,7 +45,7 @@ defaults:
 gates:
   - name: lint
     target: lint
-    description: Formatting, links, shell lint and workflow security
+    description: Formatting, links, shell lint, pipeline contract and security readiness
   - name: test
     target: test
     timeout: 240
