@@ -6,6 +6,7 @@
   - [SonarQube Cloud integration 🔗](#sonarqube-cloud-integration-)
   - [Disable automatic analysis 🛑](#disable-automatic-analysis-)
   - [Configure branch protection 🔒](#configure-branch-protection-)
+  - [Disable analysis across the organisation 🔌](#disable-analysis-across-the-organisation-)
   - [Verify the integration ✅](#verify-the-integration-)
 
 ## Overview 🧭
@@ -15,6 +16,9 @@ SonarQube Cloud scan when the token and both variables are available. The
 `🔬 Perform static analysis` job reports success when the scan is not
 configured. When configured, it waits for the quality gate and fails if the gate
 fails.
+
+Organisation admins can also
+[disable analysis across the organisation](#disable-analysis-across-the-organisation-).
 
 ## Configure workflow credentials 🔐
 
@@ -90,9 +94,53 @@ protection rules for the default branch. Do not require SonarQube Cloud's
 projects or fork pull requests, which can block merges.
 
 Requiring this check does not by itself guarantee that a scan ran. The check
-also succeeds when configuration is missing, so make sure all three values are
-available wherever scans are expected. Fork pull requests are an expected
-exception because GitHub withholds secrets from them.
+also succeeds when configuration is missing or analysis is disabled across the
+organisation, so make sure all three values are available wherever scans are
+expected. Fork pull requests are an expected exception because GitHub withholds
+secrets from them.
+
+## Disable analysis across the organisation 🔌
+
+If the SonarQube Cloud subscription is suspended every configured scan fails and
+blocks merges. Organisation admins can switch analysis off for all repositories
+that use this workflow without changing their code.
+
+| Name             | GitHub setting                                         | Value                                        |
+| ---------------- | ------------------------------------------------------ | -------------------------------------------- |
+| `SONAR_DISABLED` | Organisation Actions variable, all repositories access | `true` disables analysis, `false` enables it |
+
+The variable is optional. When it is absent, or holds any value other than
+`true`, analysis runs as normal. GitHub compares the value without regard to
+case.
+
+To disable analysis, an organisation owner opens **Settings**, then **Secrets
+and variables**, **Actions** and **Variables** for the organisation. They create
+or edit `SONAR_DISABLED` with the value `true` and **All repositories** access.
+With the GitHub CLI and the `admin:org` scope, run:
+
+```bash
+gh variable set SONAR_DISABLED --org <organisation> --visibility all --body true
+```
+
+To restore analysis once the subscription is active again, set the value to
+`false` or delete the variable:
+
+```bash
+gh variable set SONAR_DISABLED --org <organisation> --visibility all --body false
+```
+
+While analysis is disabled, the **🔬 Perform static analysis** job still runs
+and passes, so required checks do not block merges. It skips the scan and shows
+the warning `Sonar is disabled by the SONAR_DISABLED variable`. Other jobs are
+not affected. The change applies to workflow runs that start after it. Re-run
+failed jobs to pick it up.
+
+> [!WARNING]
+>
+> A repository-level variable overrides an organisation variable with the same
+> name. Do not set `SONAR_DISABLED` in a repository, otherwise that repository
+> ignores the organisation switch. Each GitHub organisation needs its own
+> variable.
 
 ## Verify the integration ✅
 

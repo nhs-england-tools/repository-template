@@ -78,7 +78,8 @@ jobs:
       contents: read
     timeout-minutes: 5
     env:
-      HAS_SONAR_CONFIGURATION: ${{ secrets.SONAR_TOKEN != '' && vars.SONAR_ORGANISATION_KEY != '' && vars.SONAR_PROJECT_KEY != '' }}
+      IS_SONAR_DISABLED: ${{ vars.SONAR_DISABLED == 'true' }}
+      HAS_SONAR_CONFIGURATION: ${{ vars.SONAR_DISABLED != 'true' && secrets.SONAR_TOKEN != '' && vars.SONAR_ORGANISATION_KEY != '' && vars.SONAR_PROJECT_KEY != '' }}
     steps:
       - name: "📥 Checkout code"
         if: env.HAS_SONAR_CONFIGURATION == 'true'
@@ -116,4 +117,8 @@ jobs:
       - name: "🚫 Skip static analysis"
         if: env.HAS_SONAR_CONFIGURATION != 'true'
         run: |
-          echo "::warning::Sonar is not configured (missing token or org/project variables), skipping static analysis..."
+          if [[ "$IS_SONAR_DISABLED" == true ]]; then
+            echo "::warning::Sonar is disabled by the SONAR_DISABLED variable, skipping static analysis..."
+          else
+            echo "::warning::Sonar is not configured (missing token or org/project variables), skipping static analysis..."
+          fi
