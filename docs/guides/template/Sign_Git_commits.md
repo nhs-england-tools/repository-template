@@ -290,6 +290,5 @@ Two kinds of commit reach `main`:
   [require signed commits](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-signed-commits)
   rule. Pull requests from bots are checked the same way. If a bot cannot sign
   its commits, escalate to a maintainer.
-- **Release commits.** See
-  [Publish releases](Publish_releases.md#signing-key-of-the-release-bot) for the
-  release bot's signing key and its rotation.
+- **Release commits.** GitHub signs them. See
+  [Publish releases](Publish_releases.md#release-commit-signing) for how.

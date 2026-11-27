@@ -106,12 +106,15 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           # Each adopting Engineering team maintains sonar.*.coverage.reportPaths
-          # and sonar.exclusions for its tests and generated files.
+          # and sonar.exclusions for its tests and generated files. The Bash
+          # suites test the template's Node.js scripts, but Sonar cannot measure
+          # that, so they are excluded from coverage.
           args: >
             -Dsonar.organization=${{ vars.SONAR_ORGANISATION_KEY }}
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
             -Dsonar.sources=.
             -Dsonar.exclusions=.mise/locks/**/package.json
+            -Dsonar.coverage.exclusions=scripts/**/*.mjs
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
       - name: "🚫 Skip static analysis"

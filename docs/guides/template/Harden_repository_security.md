@@ -69,9 +69,10 @@ Every publish job declares only read permissions. The App token is created only
 in the plan and release jobs, which run on pushes to `main` and never run pull
 request code. The plan job uses it for an authenticated dry run on every push.
 The App
-bypasses the rulesets on `main` and `v*` tags so it can push the signed release
-commit and tags. See [Publish releases](Publish_releases.md#release-app) for its
-permissions.
+bypasses the rulesets on `main` and `v*` tags so it can create the GitHub-signed
+release commit through the API and push tags. The App key remains a shared
+organisation secret for now. See [Publish releases](Publish_releases.md#release-app)
+for its permissions.
 
 [cicd-3-deploy.yaml](../../../.github/workflows/cicd-3-deploy.yaml) requires a
 `tag` input with no default. It rejects `latest`, checks the value with

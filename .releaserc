@@ -50,7 +50,7 @@
       }
     ],
     [
-      "@semantic-release/git",
+      "./scripts/cicd/semantic-release-api-commit.mjs",
       {
         "assets": ["VERSION"],
         "message": "chore(release): ${nextRelease.version} [skip actions]\n\n${nextRelease.notes}"

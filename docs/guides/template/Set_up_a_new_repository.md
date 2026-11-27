@@ -95,7 +95,7 @@ Make these changes on a branch for the initial setup pull request:
 6. Follow the [release setup instructions](Publish_releases.md#set-up-a-repository-️)
    for the required title check, release App, organisation values, rulesets and
    squash merging. Ask the repository or organisation administrator to confirm
-   each setting. The organisation provides the release App and signing values,
+   each setting. The organisation provides the release App values,
    so do not create them in the repository. Tell contributors to
    [sign their branch commits](Sign_Git_commits.md#signed-commits-on-main-).
 
