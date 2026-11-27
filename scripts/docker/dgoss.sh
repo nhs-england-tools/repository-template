@@ -24,7 +24,7 @@ error() {
 cleanup() {
     set +e
     { kill "$log_pid" && wait "$log_pid"; } 2> /dev/null
-    if [ -n "$CONTAINER_LOG_OUTPUT" ]; then
+    if [[ -n "$CONTAINER_LOG_OUTPUT" ]]; then
         cp "$tmp_dir/docker_output.log" "$CONTAINER_LOG_OUTPUT"
     fi
     rm -rf "$tmp_dir"
@@ -47,7 +47,7 @@ run(){
     case "$GOSS_FILES_STRATEGY" in
       mount)
         info "Starting $CONTAINER_RUNTIME container"
-        if [ "$CONTAINER_RUNTIME" == "podman" -a $# == 2 ]; then
+        if [[ "$CONTAINER_RUNTIME" == "podman" && $# == 2 ]]; then
             id=$($CONTAINER_RUNTIME run -d -v "$tmp_dir:/goss:z" "${@:2}" sleep infinity)
         else
             id=$($CONTAINER_RUNTIME run -d -v "$tmp_dir:/goss:z" "${@:2}")
@@ -113,7 +113,7 @@ case "$1" in
         fi
         [[ $GOSS_SLEEP ]] && { info "Sleeping for $GOSS_SLEEP"; sleep "$GOSS_SLEEP"; }
         info "Container health"
-        if [ "true" != "$($CONTAINER_RUNTIME inspect -f '{{.State.Running}}' "$id")" ]; then
+        if [[ "true" != "$($CONTAINER_RUNTIME inspect -f '{{.State.Running}}' "$id")" ]]; then
             $CONTAINER_RUNTIME logs "$id" >&2
             error "the container failed to start"
         fi
