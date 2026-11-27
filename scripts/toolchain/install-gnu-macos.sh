@@ -32,6 +32,9 @@ FORMULAE=(bash coreutils diffutils findutils gawk gnu-sed grep)
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+
 function main() {
 
   if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -39,7 +42,7 @@ function main() {
     exit 0
   fi
 
-  command -v brew > /dev/null 2>&1 || { echo "Homebrew is not installed, see https://brew.sh/" >&2; exit 1; }
+  command -v brew > /dev/null 2>&1 || { print-diagnostic error "Homebrew is not installed, see https://brew.sh/"; exit 1; }
 
   brew install "${FORMULAE[@]}"
 
@@ -171,12 +174,12 @@ function offer-append() {
   esac
 
   if [[ -n "${rc_file}" ]] && [[ -f "${rc_file}" ]] && grep -Fq '# Added by scripts/toolchain/install-gnu-macos.sh' "${rc_file}"; then
-    echo "${rc_file} already has a block added by this script, skipping. Update the existing block manually with the line above." >&2
+    print-diagnostic notice "${rc_file} already has a block added by this script, skipping. Update the existing block manually with the line above."
     return 0
   fi
 
   if [[ -z "${rc_file}" ]] || [[ ! -t 0 ]]; then
-    echo "Add the line above to your shell profile manually." >&2
+    print-diagnostic notice "Add the line above to your shell profile manually."
     return 0
   fi
 

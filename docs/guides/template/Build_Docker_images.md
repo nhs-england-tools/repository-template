@@ -39,8 +39,8 @@ There are three ways to read it:
 - To look something up, go to [Conventions](#conventions-). It is the reference
   for files, variables and defaults.
 
-The [Docker Make targets](../../../scripts/docker/docker.mk) build, lint, run
-and push images from a project Dockerfile. The functions in
+The [Docker Make targets](../../../scripts/docker/docker.lib.mk) build, lint,
+run and push images from a project Dockerfile. The functions in
 [docker.lib.sh](../../../scripts/docker/docker.lib.sh) bake a
 `Dockerfile.effective`, apply metadata and tag images using an optional
 `VERSION` file.
@@ -177,8 +177,9 @@ while `latest` moves with every build.
 - Scripts
   - [`docker.lib.sh`](../../../scripts/docker/docker.lib.sh): Library of Docker
     functions loaded by the Make targets and CLI scripts
-  - [`docker.mk`](../../../scripts/docker/docker.mk): Customisable Docker Make
-    targets and variables, loaded by `scripts/init.mk`
+  - [`docker.lib.mk`](../../../scripts/docker/docker.lib.mk): Shared Docker Make
+    targets and variables, loaded by `scripts/init.mk`. Extend them from a
+    project module rather than editing them
   - [`dockerfile-linter.sh`](../../../scripts/docker/dockerfile-linter.sh):
     `Dockerfile` linter
 - Configuration
@@ -261,8 +262,8 @@ somewhere else, see
    ```shell
    $ DOCKER_IMAGE=my-shiny-app make docker-lint
    /workdir/./infrastructure/images/my-shiny-app/Dockerfile.effective:1 DL3006 warning: Always tag the version of an image explicitly
-   make[1]: *** [scripts/docker/docker.mk:67: _docker] Error 1
-   make: *** [scripts/docker/docker.mk:48: docker-lint] Error 2
+   make[1]: *** [scripts/docker/docker.lib.mk:71: _docker] Error 1
+   make: *** [scripts/docker/docker.lib.mk:52: docker-lint] Error 2
    ```
 
    Notice two things in the output. First, Hadolint reports against
@@ -356,18 +357,35 @@ somewhere else, see
 ### Use a different image directory
 
 Supply `docker_dir=<path>`, or `dir=<path>`, to use a Dockerfile outside
-`infrastructure/images/`. The path is relative to the repository root. For a
-service-oriented repository, you can keep the `Dockerfile` alongside the service
-code, for example in `services/api/`:
+`infrastructure/images/`. The path is relative to the directory where Make runs.
+For a service-oriented repository, you can keep the `Dockerfile` alongside the
+service code, for example in `services/api/`:
 
 ```shell
 DOCKER_IMAGE=api make docker-build docker_dir=services/api
 ```
 
-The build context remains the repository root, so `COPY` paths are relative to
-that root, not to the Dockerfile directory. Keep the optional `VERSION` file
-alongside the Dockerfile. Pass the same image name and directory to the other
-image targets, such as `make docker-run` and `make docker-push`.
+The build context is always the directory Make runs in. Here that is the
+repository root, so `COPY` paths are relative to the root, not to the Dockerfile
+directory. Keep the optional `VERSION` file alongside the Dockerfile. Pass the
+same image name and directory to the other image targets, such as
+`make docker-run` and `make docker-push`.
+
+If `services/api/Makefile` includes `scripts/init.mk`, you can instead run
+`DOCKER_IMAGE=api make -C services/api docker-build`. The image directory
+default depends on the directory Make runs in:
+
+| Make runs in        | `DOCKER_IMAGE` | Default image directory                                 |
+| ------------------- | -------------- | ------------------------------------------------------- |
+| The repository root | Set            | `infrastructure/images/$DOCKER_IMAGE`, which must exist |
+| The repository root | Not set        | The repository root                                     |
+| Any other directory | Either         | That directory                                          |
+
+An image directory that does not exist fails the target with
+`Docker image directory not found`, whether you supplied it or it is the
+default. To use the repository root as the image directory while `DOCKER_IMAGE`
+is set, pass `dir=.`. `make -f services/api/Makefile` does not change directory,
+so use `-C` when the service directory should be the build context.
 
 ### Build with a pinned base image
 
@@ -670,38 +688,85 @@ your implementation.
 
 The image targets read these variables:
 
-| Variable                                         | Purpose                                                                                  | Default                               |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------- |
-| `DOCKER_IMAGE`, `docker_image`, `IMAGE`, `image` | Image name                                                                               | None                                  |
-| `DOCKER_TITLE`, `docker_title`, `TITLE`, `title` | Value of the `org.opencontainers.image.title` and `description` labels                   | Empty                                 |
-| `docker_dir`, `dir`                              | Image directory with the `Dockerfile` and `VERSION`, relative to the repository root     | `infrastructure/images/$DOCKER_IMAGE` |
-| `cmd`                                            | Command that `make docker-run` passes to the container, instead of the image's default   | The image's default command           |
-| `args`                                           | Extra `docker run` options for `make docker-run`                                         | None                                  |
-| `DOCKER_PLATFORM`                                | Platform for builds, pulls and runs. See [Platform architecture](#platform-architecture) | `linux/amd64`                         |
-| `BUILD_DATETIME`                                 | Build time for the `VERSION` placeholders, in the `%Y-%m-%dT%H:%M:%S%z` format           | The current time                      |
-| `CONTAINER_INFO_TIMEOUT`                         | Seconds that `make docker-pull-pinned-images` waits for `<runtime> info`                 | `10`                                  |
+| Variable                                         | Purpose                                                                                  | Default                                                                 |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `DOCKER_IMAGE`, `docker_image`, `IMAGE`, `image` | Image name                                                                               | None                                                                    |
+| `DOCKER_TITLE`, `docker_title`, `TITLE`, `title` | Value of the `org.opencontainers.image.title` and `description` labels                   | Empty                                                                   |
+| `docker_dir`, `dir`                              | Image directory relative to Make's working directory                                     | See [Use a different image directory](#use-a-different-image-directory) |
+| `cmd`                                            | Command that `make docker-run` passes to the container, instead of the image's default   | The image's default command                                             |
+| `args`                                           | Extra `docker run` options for `make docker-run`                                         | None                                                                    |
+| `DOCKER_PLATFORM`                                | Platform for builds, pulls and runs. See [Platform architecture](#platform-architecture) | `linux/amd64`                                                           |
+| `BUILD_DATETIME`                                 | Build time for the `VERSION` placeholders, in the `%Y-%m-%dT%H:%M:%S%z` format           | The current time                                                        |
+| `CONTAINER_INFO_TIMEOUT`                         | Seconds that `make docker-pull-pinned-images` waits for `<runtime> info`                 | `10`                                                                    |
 
 If you maintain a custom Make target that calls `$(MAKE) _docker cmd=...`,
 change the selector to `docker_fn=...`. `cmd` now remains the container command.
 
 ### Platform architecture
 
-The `DOCKER_PLATFORM` variable in [docker.mk](../../../scripts/docker/docker.mk)
-sets the platform for application builds, image pulls and container runs,
-including the quality-check wrappers. It also supplies the default platform to
-the Docker Compose commands. Its default is `linux/amd64`. This reflects our
-organisation: most issued laptops and most live deployment environments use
-`amd64`. Building for the deployment architecture lets teams test the same
-architecture locally and in CI before release. Using one platform for the tools
-also provides consistent behaviour, and avoids relying on an `arm64` image being
-available for every tool.
+The `DOCKER_PLATFORM` variable in
+[docker.lib.mk](../../../scripts/docker/docker.lib.mk) sets the platform for
+application builds, image pulls and container runs, including the quality-check
+wrappers. It also supplies the default platform to the Docker Compose commands.
+Its default is `linux/amd64`. This reflects our organisation: most issued
+laptops and most live deployment environments use `amd64`. Building for the
+deployment architecture lets teams test the same architecture locally and in CI
+before release. Using one platform for the tools also provides consistent
+behaviour, and avoids relying on an `arm64` image being available for every
+tool.
 
-Teams can change the default in `docker.mk` or override it for one Make command
-or standalone script. For example:
+To build for another platform once, pass it on the Make command line:
 
 ```shell
-DOCKER_PLATFORM=linux/arm64 make docker-build DOCKER_IMAGE=my-shiny-app
+make docker-build DOCKER_IMAGE=my-shiny-app DOCKER_PLATFORM=linux/arm64
 ```
+
+A module can set the platform for its own targets. Scope the value to the
+module's target prefix, and call the Docker targets through `$(MAKE)`:
+
+```makefile
+# scripts/orders/orders.mk
+
+orders-%: DOCKER_PLATFORM := linux/arm64
+
+orders-image: # Build the Orders image @Build
+  $(MAKE) -C "$(CURDIR)" -f "$(MAKE_ENTRY_POINT)" docker-build DOCKER_IMAGE=orders docker_dir="$(REPOSITORY_ROOT_DIR)/services/orders"
+```
+
+The value applies to every target whose name starts with `orders-`, and to the
+Docker targets that those targets call through `$(MAKE)`. The targets of other
+modules keep their own platform or the default, also when one `make` command
+builds several modules' images. A Docker target run directly, such as
+`make docker-build DOCKER_IMAGE=orders`, uses the default, so build the image
+through the module's target. A service Makefile applies the module's platform
+only if it names the module.
+
+The platform comes from the first of these that is set:
+
+| Source                | Example                                         | Applies to                             |
+| --------------------- | ----------------------------------------------- | -------------------------------------- |
+| The Make command line | `make orders-image DOCKER_PLATFORM=linux/s390x` | Every target, including module targets |
+| The module            | `orders-%: DOCKER_PLATFORM := linux/arm64`      | That module's targets                  |
+| The environment       | `DOCKER_PLATFORM=linux/s390x make docker-build` | Targets without a module platform      |
+| `docker.lib.mk`       | `DOCKER_PLATFORM ?= linux/amd64`                | Every other target                     |
+
+An environment variable does not change a module's platform. Use the command
+line for a one-off build of a module's image on another platform.
+
+Follow these rules so each module keeps its own platform:
+
+- Set the platform only with the module's target pattern, such as `orders-%:`. A
+  plain `DOCKER_PLATFORM := linux/arm64` in a module sets the platform of every
+  target without its own module platform. It also replaces the platform of other
+  modules inside their recursive Docker calls, and it ignores the environment.
+- Call `docker-build`, `docker-run` and the other Docker targets through
+  `$(MAKE)`, as in the example, rather than as prerequisites. Make runs a
+  prerequisite at most once per `make` command, with the platform and image of
+  the first target that needs it.
+
+A script run directly, such as `./scripts/quality/check-shell-lint.sh`, ignores
+module platforms. It uses `DOCKER_PLATFORM` from the environment, or reads the
+default from `docker.lib.mk`.
 
 Use the same platform when building and running an image. If a Compose file sets
 a service `platform`, keep it consistent with `DOCKER_PLATFORM`. A mismatch can

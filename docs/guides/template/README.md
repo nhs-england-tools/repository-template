@@ -12,7 +12,7 @@ provides and where each feature starts. The task index links to how-to guides.
    review and trust `mise.toml`, verify GNU prerequisites with
    `make toolchain-verify-gnu`, then run `make config`.
 2. Read [Use Bash and Make](Use_Bash_and_Make.md) for command conventions and
-   extension points. Run `make help` to see the available targets.
+   Make modules and libraries. Run `make help` to see the available targets.
 3. Use [Run and configure quality checks](Run_and_configure_quality_checks.md)
    to validate changes. Read
    [Run Git hooks on commit](Run_Git_hooks_on_commit.md) to understand the
@@ -32,7 +32,7 @@ capability. The guides explain how to use or configure it.
 The `format`, `lint` and `test` Make targets serve the whole project. They start
 with the template's formatting, checks and Bash tests. Extend them with the
 project's formatters, checks and fast tests without removing the existing work.
-Follow [Use Bash and Make] for extension patterns.
+Follow [Use Bash and Make] for module and library patterns.
 
 Project environment setup, dependency installation, type checking, artefact
 builds, publishing and deployment remain placeholders. CI/CD already calls
@@ -45,7 +45,7 @@ technology approval.
 
 | Capability                                    | Tool                               | Run it                                                                                                 | Entry point                                                                         | Guide                                                                          |
 | --------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Project lifecycle and extensions              | GNU Make and project tools         | `make help`, `make format`, `make lint`, `make test`, `make check`                                     | [Makefile](../../../Makefile)                                                       | [Use Bash and Make]                                                            |
+| Project lifecycle and Make modules            | GNU Make and project tools         | `make help`, `make format`, `make lint`, `make test`, `make check`                                     | [Makefile](../../../Makefile)                                                       | [Use Bash and Make]                                                            |
 | Toolchain pinning and upgrades                | mise                               | `make config`, `make toolchain-upgrade`                                                                | [mise.toml](../../../mise.toml)                                                     | [Update Dependencies]                                                          |
 | GNU prerequisites                             | Bash and Homebrew                  | `make toolchain-verify-gnu`, `make toolchain-install-gnu-macos`                                        | [verify-gnu.sh](../../../scripts/toolchain/verify-gnu.sh)                           | [Quick start](../../../README.md#quick-start-)                                 |
 | Git hooks                                     | pre-commit                         | On commit after `make config`, or `make githooks-run`                                                  | [pre-commit.yaml](../../../scripts/config/pre-commit.yaml)                          | [Run Git hooks on commit](Run_Git_hooks_on_commit.md)                          |
@@ -60,9 +60,9 @@ technology approval.
 | Check scopes and PR base detection            | Git and Bash                       | `check=all`, `check=staged-changes`, `check=working-tree-changes`, `check=branch` on file checks       | [git-base.lib.sh](../../../scripts/quality/git-base.lib.sh)                         | [Quality checks]                                                               |
 | Agent quality gate                            | GitHub Copilot hooks               | When a local agent stops, or `make quality-gate`                                                       | [quality-gates.yaml](../../../scripts/config/quality-gates.yaml)                    | [Run the quality gate when the agent stops](Run_quality_gate_on_agent_stop.md) |
 | Bash test harness                             | Bash                               | Included in `make test`                                                                                | [run-test-suites.sh](../../../scripts/tests/run-test-suites.sh)                     | [Write and run Bash tests](Write_and_run_Bash_tests.md)                        |
-| Docker image lifecycle and metadata           | Docker or Podman                   | `make docker-build`, `make docker-run`, `make docker-push` for a project image                         | [docker.mk](../../../scripts/docker/docker.mk)                                      | [Build Docker images]                                                          |
+| Docker image lifecycle and metadata           | Docker or Podman                   | `make docker-build`, `make docker-run`, `make docker-push` for a project image                         | [docker.lib.mk](../../../scripts/docker/docker.lib.mk)                              | [Build Docker images]                                                          |
 | Dockerfile lint                               | Hadolint                           | `make docker-lint`, also required by `make docker-build`                                               | [dockerfile-linter.sh](../../../scripts/docker/dockerfile-linter.sh)                | [Build Docker images]                                                          |
-| Compose services                              | Docker Compose                     | `make docker-compose-up`, `make docker-compose-status`, `make docker-compose-logs` for a project stack | [docker.mk](../../../scripts/docker/docker.mk)                                      | [Run services with Docker Compose](Run_Docker_Compose_services.md)             |
+| Compose services                              | Docker Compose                     | `make docker-compose-up`, `make docker-compose-status`, `make docker-compose-logs` for a project stack | [docker.lib.mk](../../../scripts/docker/docker.lib.mk)                              | [Run services with Docker Compose](Run_Docker_Compose_services.md)             |
 | Effective version files                       | Bash                               | `make version-create-effective-file`                                                                   | [docker.lib.sh](../../../scripts/docker/docker.lib.sh)                              | [Versioning](Build_Docker_images.md#versioning)                                |
 | CI/CD stage structure and release workflow    | GitHub Actions                     | Pushes and pull requests, publication on merge to `main`, deployment by tag on manual dispatch         | [workflows](../../../.github/workflows/)                                            | [Workflow controls](Harden_repository_security.md#github-actions-)             |
 | Static analysis                               | SonarQube Cloud                    | CI test stage when the token and project variables are set                                             | [stage-2-test.yaml](../../../.github/workflows/stage-2-test.yaml)                   | [Configure SonarQube Cloud](Configure_SonarQube_Cloud.md)                      |

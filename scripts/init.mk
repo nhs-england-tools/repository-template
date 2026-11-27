@@ -1,4 +1,33 @@
-include scripts/docker/docker.mk
+# Shared Make initialisation. Include it first from the root Makefile or from a
+# service Makefile anywhere in the repository. It finds every file it loads
+# relative to its own location, so it works from any directory. See
+# docs/guides/template/Use_Bash_and_Make.md#make-modules
+
+# Include guard: a second include is a silent no-op instead of redefining every
+# target. Only the value this file sets counts, and 'unexport' keeps it out of
+# recursive Make calls, which must initialise again. Make still scans skipped
+# lines for conditionals, so no recipe line in this file may start with
+# 'ifdef', 'ifeq', 'else' or 'endif'.
+ifneq ($(origin INIT_MK_INCLUDED),file)
+INIT_MK_INCLUDED := true
+unexport INIT_MK_INCLUDED
+
+# This directory, relative to the directory Make runs in, for 'include' and
+# module discovery. Read MAKEFILE_LIST before any include changes it.
+INIT_MK_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
+# Absolute paths for recipes, so they hold after a recipe changes directory
+REPOSITORY_SCRIPTS_DIR := $(abspath $(INIT_MK_DIR))
+REPOSITORY_ROOT_DIR := $(abspath $(INIT_MK_DIR)/..)
+# The Makefile that 'make' started with, as named to Make from $(CURDIR)
+MAKE_ENTRY_POINT := $(firstword $(MAKEFILE_LIST))
+unexport INIT_MK_DIR REPOSITORY_SCRIPTS_DIR REPOSITORY_ROOT_DIR MAKE_ENTRY_POINT
+
+# Include a file by its path under scripts/, at most once per Make run
+include-once = $(if $(filter $1,$(INCLUDED_ONCE)),,$(eval INCLUDED_ONCE += $1)$(eval include $(INIT_MK_DIR)/$1))
+unexport INCLUDED_ONCE
+
+# Template libraries load first, before any module
+$(call include-once,docker/docker.lib.mk)
 
 # Shims give every recipe the pinned tools without requiring `mise activate` in
 # the shell
@@ -11,74 +40,91 @@ endif
 
 format-markdown: check ?= all
 format-markdown: # Format Markdown files (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/format-markdown.sh
 
 scan-secrets: check ?= whole-history
 scan-secrets: # Scan for secrets (set check=all|staged-changes|working-tree-changes|branch|whole-history|last-commit) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/scan-secrets.sh
 
 lint-file-format: check ?= all
 lint-file-format: # Check file formats (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/check-file-format.sh && echo "file format: ok"
 
 lint-markdown-format: check ?= all
 lint-markdown-format: # Check markdown formatting (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/check-markdown-format.sh && echo "markdown format: ok"
 
 lint-markdown-links: check ?= all
 lint-markdown-links: # Check markdown links (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	output=$$(check=$(check) ./scripts/quality/check-markdown-links.sh 2>&1) && echo "markdown links: ok" || { echo "$$output"; exit 1; }
 
 lint-shell: check ?= all
 lint-shell: # Lint shell scripts and check shell and Make comment line length (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/check-shell-lint.sh && echo "shell lint: ok"
 
 lint-pipeline-contract: check ?= all
 lint-pipeline-contract: # Check GitHub Actions workflows keep the pipeline contract (set check=all|staged-changes|working-tree-changes|branch) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/check-pipeline-contract.sh && echo "pipeline contract checks: ok"
 
 lint-security-readiness: check ?= all
 lint-security-readiness: # Check security readiness (scoped workflows and actions, always the repository baseline) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	check=$(check) ./scripts/quality/check-security-readiness.sh && echo "security readiness: ok"
 
 quality-gate: scope ?= changed
 quality-gate: # Run the gates in scripts/config/quality-gates.yaml, as the agent Stop hook does (set scope=changed|all) @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	scope=$(scope) ./scripts/quality/quality-gate.sh run
 
 quality-gate-list: # List the quality gates @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	./scripts/quality/quality-gate.sh list
 
 quality-gate-pause: hours ?= 1
 quality-gate-pause: # Pause the agent Stop hook gates - optional: hours=[1 to 8, default is 1] @Operations
+	cd "$(REPOSITORY_ROOT_DIR)"
 	hours=$(hours) ./scripts/quality/quality-gate.sh pause
 
 quality-gate-resume: # Resume the agent Stop hook gates after a pause @Operations
+	cd "$(REPOSITORY_ROOT_DIR)"
 	./scripts/quality/quality-gate.sh resume
 
 version-create-effective-file: # Create effective version file - optional: dir=[path to the VERSION file to use, default is '.'], BUILD_DATETIME=[build date and time in the '%Y-%m-%dT%H:%M:%S%z' format generated by the CI/CD pipeline, default is current date and time] @Build
-	source scripts/docker/docker.lib.sh
+	source "$(REPOSITORY_SCRIPTS_DIR)/docker/docker.lib.sh"
 	version-create-effective-file
 
 githooks-config: # Trigger Git hooks on commit that are defined in this repository @Configuration
-	$(MAKE) _toolchain-install-one name="pre-commit"
+	$(MAKE) -C "$(CURDIR)" -f "$(MAKE_ENTRY_POINT)" _toolchain-install-one name="pre-commit"
+	cd "$(REPOSITORY_ROOT_DIR)"
 	pre-commit install \
 		--config scripts/config/pre-commit.yaml \
 		--install-hooks
 
 githooks-run: # Run git hooks configured in this repository @Quality
+	cd "$(REPOSITORY_ROOT_DIR)"
 	pre-commit run \
 		--config scripts/config/pre-commit.yaml \
 		--all-files
 
 _toolchain-install-one: _toolchain-check # Install one toolchain tool via mise - mandatory: name=[listed in the 'mise.toml' file]; optional: version=[if not listed]
-	[[ -n "${name}" ]] || { echo "name is required, for example: make _toolchain-install-one name=jq" >&2; exit 1; }
+	cd "$(REPOSITORY_ROOT_DIR)"
+	source scripts/cicd/github-actions.lib.sh
+	[[ -n "${name}" ]] || { print-diagnostic error "name is required, for example: make _toolchain-install-one name=jq"; exit 1; }
 	echo ${name}
 	mise install $(if ${version},${name}@${version},${name})
 
 _toolchain-install: _toolchain-check # Install every toolchain tool listed in mise.toml via mise, from mise.lock
+	cd "$(REPOSITORY_ROOT_DIR)"
 	source scripts/docker/docker.lib.sh
 	tools="$$( _toml-table-entries tools mise.toml | awk '{ print $$1 "@" $$2 }' )"
-	[[ -n "$${tools}" ]] || { echo "No [tools] entries found in mise.toml" >&2; exit 1; }
+	[[ -n "$${tools}" ]] || { print-diagnostic error "No [tools] entries found in mise.toml"; exit 1; }
 	# Name the tools so global config tools are neither installed nor required in
 	# mise.lock
 	mise install --locked $$(sed 's/@[^@]*$$//' <<< "$${tools}")
@@ -90,16 +136,21 @@ _toolchain-install: _toolchain-check # Install every toolchain tool listed in mi
 	done <<< "$${tools}"
 
 _toolchain-check: # Fail with an actionable message when mise is missing or mise.toml is not trusted
-	command -v mise > /dev/null 2>&1 || { echo "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)" >&2; exit 1; }
-	if mise trust --show | grep -q ': untrusted'; then
-		echo "mise.toml is not trusted. Review it, then run: mise trust mise.toml" >&2
+	cd "$(REPOSITORY_ROOT_DIR)"
+	source scripts/cicd/github-actions.lib.sh
+	command -v mise > /dev/null 2>&1 || { print-diagnostic error "mise is not installed, see https://mise.jdx.dev/ (install with: curl https://mise.run | sh)"; exit 1; }
+	# Without '-q', grep reads all input, so 'pipefail' cannot see SIGPIPE
+	if mise trust --show | grep ': untrusted' > /dev/null; then
+		print-diagnostic error "mise.toml is not trusted. Review it, then run: mise trust mise.toml"
 		exit 1
 	fi
 
 toolchain-outdated: _toolchain-check # List newer upstream versions of the toolchain's native tools pinned in mise.toml (Docker image pins are not checked) @Configuration
+	cd "$(REPOSITORY_ROOT_DIR)"
 	mise outdated --bump
 
 toolchain-upgrade: _toolchain-check # Bump native tools pinned in mise.toml to the newest releases and refresh mise.lock (Docker image pins are not updated) - optional: exclude=[space-separated tools to skip], dry_run=[true to preview only] @Configuration
+	cd "$(REPOSITORY_ROOT_DIR)"
 	# A separate assignment so a failed lookup stops the recipe instead of reading
 	# as 'up to date'
 	outdated="$$(mise outdated --bump --json)"
@@ -112,30 +163,28 @@ toolchain-upgrade: _toolchain-check # Bump native tools pinned in mise.toml to t
 	mise lock $${specs} && mise install --locked $$(sed 's/@[^@]*$$//' <<< "$${specs}") && mise lock
 
 toolchain-install-gnu-macos: # Install this repository's required GNU userland tools via Homebrew (macOS only, no-op on Linux) @Configuration
+	cd "$(REPOSITORY_ROOT_DIR)"
 	./scripts/toolchain/install-gnu-macos.sh
 
 toolchain-verify-gnu: # Verify GNU tools, GNU Make 3.82+ and Bash 5.2+ on PATH; report Docker/Podman versions (any OS) @Configuration
+	cd "$(REPOSITORY_ROOT_DIR)"
 	./scripts/toolchain/verify-gnu.sh
 
 config:: # Configure development environment (common) @Configuration
-	$(MAKE) \
+	$(MAKE) -C "$(CURDIR)" -f "$(MAKE_ENTRY_POINT)" \
 		_toolchain-install \
 		githooks-config \
 		docker-pull-pinned-images \
 
 clean:: # Remove files ignored by Git and the empty directories left behind (common) - optional: CONFIRM=[true to delete, default is a preview only], UNTRACKED=[true to also remove untracked files, staged files are kept], UNSTAGED=[true to also discard unstaged changes to tracked files, staged changes are kept] @Operations
+	cd "$(REPOSITORY_ROOT_DIR)"
+	echo "Git cleanup covers the whole repository at $$(pwd -P)"
 	mode=-X
 	if [[ "$(UNTRACKED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
 		mode=-x
 	fi
-	if [[ "$(CONFIRM)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
-		git clean -f -d $$mode
-		if [[ "$(UNSTAGED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
-			git diff --name-only | sed 's|^|Discarding unstaged changes in |'
-			git restore -- .
-		fi
-		find . -mindepth 1 -type d -empty -not -path '*/.git/*' -print -delete | sed 's|^\./|Removing empty directory |'
-	else
+	# An early exit, not an 'else' line, which the include guard would misread
+	if [[ ! "$(CONFIRM)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
 		git clean -n -d $$mode
 		if [[ "$(UNSTAGED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
 			git diff --name-only | sed 's|^|Would discard unstaged changes in |'
@@ -143,18 +192,25 @@ clean:: # Remove files ignored by Git and the empty directories left behind (com
 		find . -mindepth 1 -type d -empty -not -path '*/.git/*' | sed 's|^\./|Would remove empty directory |'
 		echo "Preview only, run 'make clean CONFIRM=true' to delete"
 		echo "Add UNTRACKED=true to also remove untracked files and UNSTAGED=true to also discard unstaged changes"
+		exit 0
 	fi
+	git clean -f -d $$mode
+	if [[ "$(UNSTAGED)" =~ ^(true|yes|y|on|1|TRUE|YES|Y|ON)$$ ]]; then
+		git diff --name-only | sed 's|^|Discarding unstaged changes in |'
+		git restore -- .
+	fi
+	find . -mindepth 1 -type d -empty -not -path '*/.git/*' -print -delete | sed 's|^\./|Removing empty directory |'
 
 help: # Print help @Others
 	printf "\nUsage: \033[3m\033[93m[arg1=val1] [arg2=val2] \033[0m\033[0m\033[32mmake\033[0m\033[34m <command>\033[0m\n\n"
 	perl -e '$(HELP_SCRIPT)' $(MAKEFILE_LIST)
 
-list-variables: # List all the variables available to make @Others
+list-variables: # List unexpanded variables available to make @Others
 	$(foreach v, $(sort $(.VARIABLES)),
 		$(if $(filter-out default automatic, $(origin $v)),
 			$(if $(and $(patsubst %_PASSWORD,,$v), $(patsubst %_PASS,,$v), $(patsubst %_KEY,,$v), $(patsubst %_SECRET,,$v)),
-				$(info $v=$($v) ($(value $v)) [$(flavor $v),$(origin $v)]),
-				$(info $v=****** (******) [$(flavor $v),$(origin $v)])
+				$(info $v=$(value $v) [$(flavor $v),$(origin $v)]),
+				$(info $v=****** [$(flavor $v),$(origin $v)])
 			)
 		)
 	)
@@ -190,6 +246,7 @@ HELP_SCRIPT = \
 			my $$command = $$1; \
 			my $$description = $$2; \
 			$$description =~ s/@\w+//; \
+			next if $$seen{"$$command $$description"}++; \
 			my $$category_key = $$4 // 'Others'; \
 			(my $$category_name = $$category_key) =~ s/(?<=[a-z])([A-Z])/\ $$1/g; \
 			$$category_name = lc($$category_name); \
@@ -225,10 +282,14 @@ HELP_SCRIPT = \
 	}
 
 # ==============================================================================
-# Extensions: load every '*.ext.mk' file under scripts/ in a stable order, see
-# docs/guides/template/Use_Bash_and_Make.md
+# Modules: a Makefile in the repository root loads every other '*.mk' file under
+# this directory, sorted by full path. A service Makefile loads only the modules
+# it names with 'include-once'. Libraries ('*.lib.mk') load only where a file
+# names them. See docs/guides/template/Use_Bash_and_Make.md#make-modules
 
-include $(sort $(shell find scripts \( -type f -o -type l \) -name '*.ext.mk'))
+ifeq ($(abspath $(dir $(MAKE_ENTRY_POINT))),$(REPOSITORY_ROOT_DIR))
+$(foreach module,$(patsubst $(INIT_MK_DIR)/%,%,$(sort $(shell find "$(INIT_MK_DIR)" \( -type f -o -type l \) -name '*.mk' ! -name '*.lib.mk' ! -path "$(INIT_MK_DIR)/init.mk"))),$(call include-once,$(module)))
+endif
 
 # ==============================================================================
 
@@ -259,3 +320,5 @@ ${VERBOSE}.SILENT: \
 	toolchain-upgrade \
 	toolchain-verify-gnu \
 	version-create-effective-file \
+
+endif # INIT_MK_INCLUDED guard

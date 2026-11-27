@@ -276,7 +276,7 @@ function test-quality-resolve-base-ignores-closed-and-merged-pull-requests() {
   test-capture quality-test-resolve-base
   # Assert
   assert-equal "origin/main $base_commit" "$merged_output" "base with a merged pull request"
-  assert-contains "$merged_stderr" "GitHub CLI found no open pull request for this branch"
+  assert-contains "$merged_stderr" "NOTICE: GitHub CLI found no open pull request for this branch"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "base with a closed pull request"
 
   return 0
@@ -295,7 +295,7 @@ function test-quality-resolve-base-falls-back-when-gh-prints-nothing() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "default base"
-  assert-contains "$TEST_STDERR" "GitHub CLI found no open pull request for this branch"
+  assert-contains "$TEST_STDERR" "NOTICE: GitHub CLI found no open pull request for this branch"
 
   return 0
 }
@@ -313,7 +313,7 @@ function test-quality-resolve-base-falls-back-when-gh-fails() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "default base"
-  assert-contains "$TEST_STDERR" "GitHub CLI found no open pull request for this branch"
+  assert-contains "$TEST_STDERR" "NOTICE: GitHub CLI found no open pull request for this branch"
   assert-not-contains "$TEST_STDERR" "no pull requests found"
 
   return 0
@@ -331,7 +331,7 @@ function test-quality-resolve-base-falls-back-when-gh-is-unavailable() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "default base"
-  assert-contains "$TEST_STDERR" "GitHub CLI is unavailable, so the default branch is used."
+  assert-contains "$TEST_STDERR" "NOTICE: GitHub CLI is unavailable, so the default branch is used."
 
   return 0
 }
@@ -353,7 +353,7 @@ function test-quality-resolve-base-stops-waiting-for-a-slow-gh() {
   assert-equal 0 "$((elapsed_us >= 5000000))" "waited less than the slow GitHub CLI call"
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-equal "origin/main $base_commit" "$TEST_STDOUT" "default base"
-  assert-contains "$TEST_STDERR" "GitHub CLI did not answer within 1s, so the default branch is used."
+  assert-contains "$TEST_STDERR" "NOTICE: GitHub CLI did not answer within 1s, so the default branch is used."
 
   return 0
 }

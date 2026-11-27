@@ -995,10 +995,10 @@ function test-isolate-path-fails-for-an-invalid-tool-name() {
   local name
   for name in '' 'bad/name' 'two words'; do
     # Act
-    test-capture test-isolate-path "$name"
+    GITHUB_ACTIONS=true test-capture test-isolate-path "$name"
     # Assert
     assert-equal 1 "$TEST_STATUS" "invalid tool name '$name'"
-    assert-contains "$TEST_STDERR" "ERROR:"
+    assert-contains "$TEST_STDERR" "::error::test-isolate-path was given an invalid tool name"
     assert-not-contains "$TEST_STDERR" "$PREREQUISITE_PREFIX"
   done
 
@@ -1202,7 +1202,7 @@ function term-blocked-mini-suite() {
   if [[ -f "$TEST_TMP/pids" && -f "$TEST_TMP/parent-ready" ]]; then
     kill -TERM "$suite_pid" 2> /dev/null || true
   else
-    echo "ERROR: blocked mini suite did not publish child PIDs and parent readiness" >&2
+    print-diagnostic error "blocked mini suite did not publish child PIDs and parent readiness"
     readiness_status=1
     kill -KILL "$suite_pid" 2> /dev/null || true
   fi

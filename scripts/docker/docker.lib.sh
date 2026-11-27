@@ -22,10 +22,10 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
 
 if [[ -z "${DOCKER_PLATFORM:-}" ]]; then
-  DOCKER_PLATFORM="$(awk '$1 == "DOCKER_PLATFORM" && $2 == "?=" { print $3; exit }' "$(dirname "${BASH_SOURCE[0]}")/docker.mk")"
+  DOCKER_PLATFORM="$(awk '$1 == "DOCKER_PLATFORM" && $2 == "?=" { print $3; exit }' "$(dirname "${BASH_SOURCE[0]}")/docker.lib.mk")"
 fi
 if [[ -z "$DOCKER_PLATFORM" ]]; then
-  print-diagnostic error "DOCKER_PLATFORM is not set in scripts/docker/docker.mk"
+  print-diagnostic error "DOCKER_PLATFORM is not set in scripts/docker/docker.lib.mk"
   return 1
 fi
 export DOCKER_PLATFORM
@@ -105,7 +105,8 @@ function docker-bake-dockerfile() {
 #  dir=[image directory with the Dockerfile.effective, default is '.']
 function docker-lint() {
   local dir=${dir:-$PWD}
-  file=${dir}/Dockerfile.effective ./scripts/docker/dockerfile-linter.sh || return "$?"
+  dir="$(cd "$dir" && pwd -P)" || return "$?"
+  file=${dir}/Dockerfile.effective "$(dirname "${BASH_SOURCE[0]}")/dockerfile-linter.sh" || return "$?"
 
   return 0
 }

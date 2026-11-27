@@ -124,7 +124,8 @@ Make these changes on a branch for the initial setup pull request:
    `check` running the project's format, lint, type and quick-feedback test
    targets. Follow
    [Use Bash and Make](Use_Bash_and_Make.md#compose-with-root-lifecycle-targets)
-   for extension patterns. Run `make help` to inspect the available targets.
+   for target composition patterns. Run `make help` to inspect the available
+   targets.
 8. Review dependency sources, the
    [Dependabot configuration](../../../.github/dependabot.yaml), the update
    cooldown and who owns updates. Check pinned tools and images in

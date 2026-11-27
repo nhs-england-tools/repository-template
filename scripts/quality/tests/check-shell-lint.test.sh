@@ -1262,9 +1262,9 @@ function check-shell-lint-create-make-fixture-repo() {
   quality-create-fixture-repo scripts/x.sh
   printf 'include scripts/init.mk\n' > "$TEST_TMP/repo/Makefile"
   cp "$TEST_REPO_ROOT/scripts/init.mk" "$TEST_TMP/repo/scripts/init.mk"
-  cp "$TEST_REPO_ROOT/scripts/docker/docker.mk" "$TEST_TMP/repo/scripts/docker/docker.mk"
+  cp "$TEST_REPO_ROOT/scripts/docker/docker.lib.mk" "$TEST_TMP/repo/scripts/docker/docker.lib.mk"
   git -C "$TEST_TMP/repo" add Makefile scripts/init.mk
-  git -C "$TEST_TMP/repo" add -f scripts/docker/docker.mk
+  git -C "$TEST_TMP/repo" add -f scripts/docker/docker.lib.mk
   git -C "$TEST_TMP/repo" commit -q -m 'add make lint fixtures'
 
   return 0

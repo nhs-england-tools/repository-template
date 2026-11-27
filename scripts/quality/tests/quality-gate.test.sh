@@ -945,7 +945,7 @@ function test-quality-gate-rejects-an-unknown-command() {
   test-capture "$SCRIPT" bogus
   # Assert
   assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Unrecognised command: 'bogus'. Use one of: hook, run, list, pause, resume"
+  assert-contains "$TEST_STDERR" "ERROR: Unrecognised command: 'bogus'. Use one of: hook, run, list, pause, resume"
 
   return 0
 }
@@ -1830,7 +1830,7 @@ function test-quality-gate-reports-cli-change-scan-errors() {
   test-capture "$SCRIPT" run
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "change selection is unknown"
+  assert-contains "$TEST_STDERR" "ERROR: Quality gate: change selection is unknown"
   assert-contains "$TEST_STDERR" "not run"
   assert-contains "$TEST_STDERR" "git status --short"
   assert-contains "$TEST_STDERR" "make quality-gate"
@@ -1849,8 +1849,8 @@ function test-quality-gate-reports-state-and-log-errors() {
   # Act
   test-capture gate-send "$(gate-stop-json)"
   # Assert
-  assert-contains "$TEST_STDERR" "Result history is unavailable"
-  assert-contains "$TEST_STDERR" "event audit is incomplete"
+  assert-matches "$TEST_STDERR" "WARNING: Quality gate: cannot write [^ ]*/last-run.json. Result history is unavailable"
+  assert-matches "$TEST_STDERR" "WARNING: Quality gate: cannot write [^ ]*/last-hook.json. The event audit is incomplete"
   assert-contains "$TEST_STDERR" "make quality-gate"
   # Arrange
   rm -f ".git/quality-gate/logs/$SESSION/$LINT_LOG_FILENAME"
@@ -2943,7 +2943,7 @@ function test-quality-gate-run-rejects-an-unknown-scope() {
   test-capture env scope=everything "$SCRIPT" run
   # Assert
   assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$TEST_STDERR" "Unrecognised scope: 'everything'. Use one of: changed, all"
+  assert-contains "$TEST_STDERR" "ERROR: Unrecognised scope: 'everything'. Use one of: changed, all"
   assert-stub-not-called make
 
   return 0

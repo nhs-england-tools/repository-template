@@ -465,7 +465,7 @@ function expected-gitleaks-call() {
     whole-history) args=(detect --source "$r" --verbose --redact) ;;
     last-commit) args=(detect --source "$r" --verbose --redact --log-opts -1) ;;
     *)
-      echo "expected-gitleaks-call: unknown check mode '$mode'" >&2
+      print-diagnostic error "expected-gitleaks-call: unknown check mode '$mode'"
       return 1
       ;;
   esac

@@ -293,10 +293,10 @@ checkout. Use `VERBOSE=true` on a failing target to see its commands.
 The included checks cover the template's own files. Your project will need its
 own, for example a type checker, an architecture rule or a licence check.
 
-Add a check target in a `scripts/*.ext.mk` file and make it a prerequisite of
-`lint` or another lifecycle target. A new check must handle its own `check=...`
-file scope. See [Make extensions](Use_Bash_and_Make.md#make-extensions) for an
-example.
+Add a check target in a module, a `*.mk` file under `scripts/`, and make it a
+prerequisite of `lint` or another lifecycle target. A new check must handle its
+own `check=...` file scope. See
+[Make modules](Use_Bash_and_Make.md#make-modules) for an example.
 
 Design a new check so it works as well for an agent as for a person:
 

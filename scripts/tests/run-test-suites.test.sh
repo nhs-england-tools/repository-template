@@ -38,6 +38,7 @@ function main() {
     test-runner-rejects-relative-result-path \
     test-runner-all-unavailable-remains-nonzero-without-result-file \
     test-runner-final-publication-failure-is-genuine \
+    test-runner-annotates-a-relative-result-file-in-github-actions \
     test-docker-suite-reports-missing-cli-as-prerequisite \
     test-docker-suite-reports-unreachable-daemon-as-prerequisite \
     test-docker-suite-keeps-image-build-failure-genuine \
@@ -205,6 +206,20 @@ $UNAVAILABLE_SUITE_BODY"
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "ERROR: cannot publish"
   assert-contains "$TEST_STDERR" "$QUALITY_GATE_RESULT_FILE"
+
+  return 0
+}
+
+function test-runner-annotates-a-relative-result-file-in-github-actions() {
+
+  # Arrange
+  write-fixture a.test.sh "$PASSING_SUITE_BODY"
+  # Act
+  test-capture env GITHUB_ACTIONS=true QUALITY_GATE_RESULT_FILE=result dir="$TEST_TMP/tree" \
+    "$TEST_REPO_ROOT/scripts/tests/run-test-suites.sh"
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "::error::QUALITY_GATE_RESULT_FILE must be an absolute path, got 'result'"
 
   return 0
 }
