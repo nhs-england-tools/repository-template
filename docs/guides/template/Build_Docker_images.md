@@ -449,7 +449,7 @@ after the setup described in [Overview](#overview-).
    the illustrative values:
 
    ```dockerfile
-   ARG NODE_VERSION=26.13.0-slim@sha256:<digest>
+   ARG NODE_VERSION=26.13.1-slim@sha256:<digest>
    FROM node:${NODE_VERSION}
    CMD ["node", "--version"]
    ```

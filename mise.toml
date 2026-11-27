@@ -1,5 +1,5 @@
 # Minimum mise CLI version for developers; CI/CD pins the exact same version, SEE: .github/workflows/cicd-1-pull-request.yaml
-min_version = "2026.11.1"
+min_version = "2026.11.10"
 
 [settings]
 lockfile = true
@@ -16,13 +16,13 @@ gitleaks = "8.30.1"
 hadolint = "2.15.1"
 jq = "1.8.2"
 lychee = "0.24.2"
-node = "26.13.0"
+node = "26.13.1"
 "npm:markdownlint-cli" = "0.50.0"
-"npm:prettier" = "3.9.10"
+"npm:prettier" = "3.10.1"
 pre-commit = "4.7.0"
 python = "3.15.2"
 shellcheck = "0.11.0"
-yq = "4.54.1"
+yq = "4.54.3"
 
 # ==============================================================================
 # The table below is reserved for Docker image versions and is never parsed by
@@ -42,6 +42,6 @@ yq = "4.54.1"
 # editorconfig-checker, SEE: https://hub.docker.com/r/mstruebing/editorconfig-checker/tags keep in sync with the editorconfig-checker version above
 "mstruebing/editorconfig-checker" = "4.0.2@sha256:2ba6232bfa0058f72f5f7d7816711590aa764afab1542af30b3ecb4553587918"
 # node, SEE: https://hub.docker.com/_/node/tags keep in sync with the node version above
-"node" = "26.13.0-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072"
+"node" = "26.13.1-slim@sha256:abe7e5a82b61a8ef67b315b85497c9e65173387ccf2f4a029248184b8e020be5"
 # python, SEE: https://hub.docker.com/_/python/tags keep in sync with the python version above
 "python" = "3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928"
