@@ -1716,7 +1716,8 @@ function compose-run-in() {
 #   $1=[directory]
 function find-compose-dir-in() {
 
-  cd "$1" || return "$?"
+  local dir="$1"
+  cd "$dir" || return "$?"
   _find-compose-dir || return "$?"
 
   return 0
