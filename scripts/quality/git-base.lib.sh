@@ -32,6 +32,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+
 # Resolve the base ref and its fork point with HEAD, and print both with their
 # source on stderr.
 # Arguments:
@@ -49,7 +52,7 @@ function quality-resolve-base() {
   elif [[ -n "${BRANCH_NAME:-}" ]]; then
     base_source='BRANCH_NAME'
     if ! quality-verify-ref "$base_ref_name" "$BRANCH_NAME"; then
-      echo "Branch to compare with not found: $BRANCH_NAME. Set BRANCH_NAME to an existing branch or commit." >&2
+      print-diagnostic error "Branch to compare with not found: $BRANCH_NAME. Set BRANCH_NAME to an existing branch or commit."
       return 1
     fi
   else
@@ -67,7 +70,7 @@ function quality-resolve-base() {
   fi
 
   if ! merge_base_commit="$(git merge-base "$resolved_base_ref" HEAD)"; then
-    echo "No merge base found for '$resolved_base_ref' and HEAD. Fetch the base branch history or run 'git fetch --unshallow'." >&2
+    print-diagnostic error "No merge base found for '$resolved_base_ref' and HEAD. Fetch the base branch history or run 'git fetch --unshallow'."
     return 1
   fi
   commit_count="$(git rev-list --count "$merge_base_commit..HEAD")" || return "$?"
@@ -147,7 +150,7 @@ function quality-find-branch() {
     || quality-verify-ref "$base_ref_name" "$branch"; then
     return 0
   fi
-  echo "Branch to compare with not found: $branch. Fetch it with 'git fetch origin $branch'." >&2
+  print-diagnostic error "Branch to compare with not found: $branch. Fetch it with 'git fetch origin $branch'."
 
   return 1
 }
@@ -172,7 +175,7 @@ function quality-find-default-base() {
     resolved_source='origin/main fallback'
     return 0
   fi
-  echo "Branch to compare with not found: origin/main. Fetch it with 'git fetch origin main', or set BRANCH_NAME." >&2
+  print-diagnostic error "Branch to compare with not found: origin/main. Fetch it with 'git fetch origin main', or set BRANCH_NAME."
 
   return 1
 }

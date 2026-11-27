@@ -16,19 +16,22 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/quality-test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 
 # Set up the suite fixtures and run every test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-links.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/lychee.toml)
+
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-markdown-links.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh scripts/docker/docker.lib.sh scripts/config/lychee.toml)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check files BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check files BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER GITHUB_ACTIONS
+  export FORCE_USE_DOCKER=false
 
   LYCHEE_IMAGE=lycheeverse/lychee:5.0.0@sha256:5555555555555555555555555555555555555555555555555555555555555555
   DOCKER_OPTIONS="--config /workdir/scripts/config/lychee.toml --no-progress --quiet"
@@ -76,7 +79,7 @@ function test-check-markdown-links-rejects-unknown-mode() {
   for mode in "${modes[@]}"; do
     test-capture env "check=$mode" ./scripts/quality/check-markdown-links.sh
     assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
-    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+    assert-equal "ERROR: Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
   done
   # Assert
   assert-stub-not-called lychee
@@ -128,18 +131,20 @@ function test-check-markdown-links-preserves-newline-and-glob-paths() {
 
   # Arrange
   local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md' non_ascii_file='docs/café.md'
+  local docker_status native_status
   quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md' "$non_ascii_file"
   test-isolate-path
   test-stub lychee
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=all ./scripts/quality/check-markdown-links.sh
-  local native_status="$TEST_STATUS"
-  test-capture env check=all FORCE_USE_DOCKER=true ./scripts/quality/check-markdown-links.sh
+  test-capture env -u FORCE_USE_DOCKER check=all ./scripts/quality/check-markdown-links.sh
+  docker_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=false check=all ./scripts/quality/check-markdown-links.sh
+  native_status="$TEST_STATUS"
   # Assert
+  assert-equal 0 "$docker_status" "default Docker exit status"
   assert-equal 0 "$native_status" "native exit status"
-  assert-equal 0 "$TEST_STATUS" "Docker exit status"
   assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$newline_file")"
   assert-contains "$(test-stub-calls lychee)" 'docs/a\[\[\]1\[\]\]\[\*\].md'
   assert-contains "$(test-stub-calls lychee)" "$(printf '%q' "$non_ascii_file")"

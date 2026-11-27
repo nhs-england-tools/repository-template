@@ -3,7 +3,8 @@
 set -euo pipefail
 
 # Format Markdown files with Prettier, including table alignment. It runs
-# Prettier natively when installed, otherwise in a Docker container.
+# in Docker by default, or natively when FORCE_USE_DOCKER=false and Prettier is
+# installed. The Docker run needs network access and a writable checkout.
 #
 # Usage:
 #   $ [options] ./scripts/quality/format-markdown.sh
@@ -14,8 +15,8 @@ set -euo pipefail
 #   BRANCH_NAME=base-branch
 #       Local base for the branch mode, chosen automatically when unset, as
 #       './scripts/quality/git-base.lib.sh' describes
-#   FORCE_USE_DOCKER=true
-#       Run in a Docker container, default is 'false'
+#   FORCE_USE_DOCKER=false
+#       Opt out of Docker when Prettier is installed
 #   VERBOSE=true
 #       Show all the executed commands, default is 'false'
 #
@@ -40,13 +41,18 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-files.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../docker/docker.lib.sh"
+
 # Format Markdown files in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  # shellcheck disable=SC1091
-  source ./scripts/quality/git-files.lib.sh
   local check_mode=${check:-working-tree-changes}
   local -a files=()
   quality-collect-git-files files "$check_mode" '*.md' || return "$?"
@@ -57,7 +63,7 @@ function main() {
     return 0
   fi
 
-  if command -v prettier > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  if command -v prettier > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
     run-prettier-natively "${files[@]}" || return "$?"
   else
     run-prettier-in-docker "${files[@]}" || return "$?"
@@ -88,13 +94,10 @@ function run-prettier-natively() {
 #   $@=[Markdown file paths to format, relative to the repository root]
 function run-prettier-in-docker() {
 
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
-
   local config_file="${MISE_TOML:-$PWD/mise.toml}" version
   if ! version="$(_toml-table-entry tools npm:prettier "$config_file")" \
     || [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "ERROR: no exact 'npm:prettier' version in the [tools] table of $config_file" >&2
+    print-diagnostic error "no exact 'npm:prettier' version in the [tools] table of $config_file"
     return 1
   fi
   local image
@@ -103,7 +106,7 @@ function run-prettier-in-docker() {
   local rc=0
   # No '--network none' or read-only mount: npx downloads Prettier at run time,
   # which then rewrites files. 'main' already applied the ignore file.
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --volume "$PWD":/workdir \
     --workdir /workdir \
     "$image" \

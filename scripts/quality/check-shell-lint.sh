@@ -2,10 +2,11 @@
 
 set -euo pipefail
 
-# Lint repository shell scripts with ShellCheck. It runs ShellCheck natively
-# when installed, otherwise in a Docker container. It also fails any full-line
-# comment longer than 80 characters in a shell script or a '*.mk' file, except
-# a line with a URL and the shebang.
+# Lint repository shell scripts with ShellCheck, configured by
+# './scripts/config/shellcheckrc'. It runs in Docker by default, or natively
+# when FORCE_USE_DOCKER=false and ShellCheck is installed. It also fails
+# full-line comments longer than 80 characters in shell scripts and '*.mk'
+# files, except lines with a URL and the shebang.
 #
 # Usage:
 #   $ [options] ./scripts/quality/check-shell-lint.sh
@@ -16,8 +17,8 @@ set -euo pipefail
 #   BRANCH_NAME=base-branch
 #       Local base for branch mode, chosen automatically when unset, as
 #       './scripts/quality/git-base.lib.sh' describes
-#   FORCE_USE_DOCKER=true
-#       Run in a Docker container, default is 'false'
+#   FORCE_USE_DOCKER=false
+#       Opt out of Docker when ShellCheck is installed
 #   VERBOSE=true
 #       Show all the executed commands, default is 'false'
 #
@@ -61,15 +62,20 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-files.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../docker/docker.lib.sh"
+
+# Relative to the repository root, the working directory in both run modes
+readonly SHELLCHECK_RCFILE=scripts/config/shellcheckrc
+
 # Lint the selected shell scripts natively or in Docker.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
   local check_mode=${check:-all}
-
-  # shellcheck disable=SC1091
-  source ./scripts/quality/git-files.lib.sh
   local rc=0
   local -a files=() graph_files=() make_files=() changed=() deleted=()
   local -a comment_paths=()
@@ -102,7 +108,7 @@ function main() {
   fi
 
   if [[ ${#files[@]} -gt 0 ]]; then
-    if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+    if command -v shellcheck > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
       run-shellcheck-natively-all graph_files dependencies "${files[@]}" || rc=$?
     else
       run-shellcheck-in-docker-all graph_files dependencies "${files[@]}" || rc=$?
@@ -333,7 +339,7 @@ function run-shellcheck-all() {
   shift 3
   run-shellcheck-groups-in-parallel "$runner" "$graph_paths_name" "$dependency_graph_name" "$@" && return 0
   local rc=0
-  "$runner" -- "$@" || rc=$?
+  "$runner" --rcfile="$SHELLCHECK_RCFILE" -- "$@" || rc=$?
 
   return "$rc"
 }
@@ -365,7 +371,7 @@ function run-shellcheck-groups-in-parallel() {
       wait "${pids[0]}" || rc=1
       pids=("${pids[@]:1}")
     fi
-    "$runner" -f quiet -- "${inputs[@]}" > /dev/null 2>&1 &
+    "$runner" --rcfile="$SHELLCHECK_RCFILE" -f quiet -- "${inputs[@]}" > /dev/null 2>&1 &
     pids+=("$!")
   done < <(print-shell-script-groups "$graph_paths_name" "$dependency_graph_name" "${files[@]}")
   for pid in "${pids[@]}"; do
@@ -433,8 +439,6 @@ function run-shellcheck-in-docker-all() {
 
   local graph_paths_name="$1" dependency_graph_name="$2" image rc=0
   shift 2
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
   image="$(name=koalaman/shellcheck docker-get-image-version-and-pull)" || return "$?"
   run-shellcheck-all run-shellcheck-container "$graph_paths_name" "$dependency_graph_name" "$@" || rc=$?
 
@@ -461,7 +465,7 @@ function run-shellcheck-container() {
     args+=("/workdir/$file")
   done
   local rc=0
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --network none \
     --volume "$PWD:/workdir:ro" \
     --workdir /workdir \

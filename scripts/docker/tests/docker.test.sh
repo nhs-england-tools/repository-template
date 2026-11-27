@@ -25,15 +25,16 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../docker.lib.sh"
+
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/docker/docker.lib.sh
   cd ./scripts/docker/tests
 
   # The caller's options must not reach the functions under test
-  unset -v args cmd dir docker_dir
+  unset -v args cmd dir docker_dir GITHUB_ACTIONS
   export DOCKER_TITLE="Repository Template Docker Test"
   export BUILD_DATETIME="2023-09-04T15:46:34+0000"
   export MISE_TOML="$PWD/mise.toml.test"
@@ -80,7 +81,7 @@ function test-suite-setup() {
   set -e
   if [[ $rc -ne 0 ]]; then
     cat "$SUITE_TMP/build.log" >&2
-    echo "ERROR: docker-build failed in the suite setup (exit $rc). Tests did not run. Review the build output above, then rerun: bash scripts/docker/tests/docker.test.sh" >&2
+    print-diagnostic error "docker-build failed in the suite setup (exit $rc). Tests did not run. Review the build output above, then rerun: bash scripts/docker/tests/docker.test.sh"
     return 1
   fi
 
@@ -99,7 +100,7 @@ function test-suite-teardown() {
 # Remove every local tag of this run's test images and report cleanup failures.
 function remove-test-images() {
 
-  local images tag
+  local images tag removal_command
   local -a tags=()
   images="$(docker images --format '{{.Repository}}:{{.Tag}}')" || {
     printf 'ERROR: cannot enumerate test images for %s and %s. Cleanup is incomplete and test images may remain. Diagnose with: docker images --format %q\n' "$DOCKER_IMAGE" "$CLEAN_IMAGE" '{{.Repository}}:{{.Tag}}' >&2
@@ -112,9 +113,8 @@ function remove-test-images() {
   done <<< "$images"
   if [[ ${#tags[@]} -gt 0 ]]; then
     docker rmi "${tags[@]}" > /dev/null || {
-      printf 'ERROR: cannot remove test images. Cleanup is incomplete and test images may remain. Diagnose with: docker rmi' >&2
-      printf ' %q' "${tags[@]}" >&2
-      printf '\n' >&2
+      printf -v removal_command ' %q' "${tags[@]}"
+      print-diagnostic error "cannot remove test images. Cleanup is incomplete and test images may remain. Diagnose with: docker rmi$removal_command"
       return 1
     }
   fi

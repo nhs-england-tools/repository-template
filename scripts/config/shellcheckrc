@@ -1,0 +1,2 @@
+# Follow libraries loaded with "$(dirname "${BASH_SOURCE[0]}")/..."
+source-path=SCRIPTDIR

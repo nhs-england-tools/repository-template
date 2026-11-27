@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # Check that files follow the EditorConfig rules defined in '.editorconfig'. It
-# runs editorconfig-checker natively when installed, otherwise in a Docker
-# container.
+# runs in Docker by default, or natively when FORCE_USE_DOCKER=false and
+# editorconfig-checker is installed.
 #
 # Usage:
 #   $ [options] ./scripts/quality/check-file-format.sh
@@ -17,8 +17,8 @@ set -euo pipefail
 #   BRANCH_NAME=base-branch
 #       Local base for the branch mode, chosen automatically when unset, as
 #       './scripts/quality/git-base.lib.sh' describes
-#   FORCE_USE_DOCKER=true
-#       Run in a Docker container, default is 'false'
+#   FORCE_USE_DOCKER=false
+#       Opt out of Docker when editorconfig-checker is installed
 #   VERBOSE=true
 #       Show all the executed commands, default is 'false'
 #
@@ -44,13 +44,16 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-files.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../docker/docker.lib.sh"
+
 # Check file format in native or Docker mode.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  # shellcheck disable=SC1091
-  source ./scripts/quality/git-files.lib.sh
   local -a files=() dry_run_opt=()
   quality-collect-git-files files "${check:-working-tree-changes}" || return "$?"
   if [[ ${#files[@]} -eq 0 ]]; then
@@ -61,7 +64,7 @@ function main() {
     dry_run_opt=(--dry-run)
   fi
 
-  if command -v editorconfig-checker > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  if command -v editorconfig-checker > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
     run-editorconfig-natively "${dry_run_opt[@]}" -- "${files[@]}" || return "$?"
   else
     run-editorconfig-in-docker "${dry_run_opt[@]}" -- "${files[@]}" || return "$?"
@@ -87,13 +90,10 @@ function run-editorconfig-natively() {
 #   $@=[checker options, then '--' and the paths to check]
 function run-editorconfig-in-docker() {
 
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
-
   local image
   image=$(name=mstruebing/editorconfig-checker docker-get-image-version-and-pull) || return "$?"
   # Forward the variables that select the output format and colour natively
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --network none \
     --env GITHUB_ACTIONS \
     --env NO_COLOR \

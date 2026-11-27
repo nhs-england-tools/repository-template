@@ -14,6 +14,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 readonly NONZERO_STATUS='^[1-9][0-9]*$'
 
@@ -21,10 +23,9 @@ readonly NONZERO_STATUS='^[1-9][0-9]*$'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
 
   # The caller's options must not reach the code under test
-  unset -v GITHUB_BASE_REF BRANCH_NAME QUALITY_PR_BASE QUALITY_GH_TIMEOUT
+  unset -v GITHUB_BASE_REF BRANCH_NAME QUALITY_PR_BASE QUALITY_GH_TIMEOUT GITHUB_ACTIONS
 
   test-run-suite \
     test-quality-resolve-base-prefers-github-base-ref \
@@ -32,6 +33,7 @@ function main() {
     test-quality-resolve-base-fails-when-the-github-base-is-missing \
     test-quality-resolve-base-uses-branch-name-as-given \
     test-quality-resolve-base-fails-when-branch-name-is-missing \
+    test-quality-resolve-base-annotates-a-missing-branch-in-github-actions \
     test-quality-resolve-base-uses-the-open-pull-request-base \
     test-quality-resolve-base-fails-when-the-pull-request-base-is-not-fetched \
     test-quality-resolve-base-ignores-closed-and-merged-pull-requests \
@@ -201,6 +203,22 @@ function test-quality-resolve-base-fails-when-branch-name-is-missing() {
   assert-equal '' "$TEST_STDOUT" "no fallback base"
   assert-contains "$TEST_STDERR" "Branch to compare with not found: missing. Set BRANCH_NAME to an existing branch or commit."
   assert-stub-not-called gh
+
+  return 0
+}
+
+function test-quality-resolve-base-annotates-a-missing-branch-in-github-actions() {
+
+  # Arrange
+  quality-test-create-repo > /dev/null
+  test-isolate-path
+  cd "$TEST_TMP/repo"
+  # Act
+  GITHUB_ACTIONS=true BRANCH_NAME=missing test-capture quality-test-resolve-base
+  # Assert
+  assert-matches "$TEST_STATUS" "$NONZERO_STATUS" "$EXIT_STATUS_LABEL"
+  assert-equal '' "$TEST_STDOUT" "no fallback base"
+  assert-equal "::error::Branch to compare with not found: missing. Set BRANCH_NAME to an existing branch or commit." "$TEST_STDERR" "annotation"
 
   return 0
 }

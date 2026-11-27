@@ -15,6 +15,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/quality-test.lib.sh"
+
 readonly A_TXT_ARGUMENT=' a.txt '
 readonly EXIT_STATUS_LABEL='exit status'
 readonly EC=editorconfig-checker
@@ -23,19 +26,18 @@ readonly EC=editorconfig-checker
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/editorconfig-checker.json)
+
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-file-format.sh scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh scripts/docker/docker.lib.sh scripts/config/editorconfig-checker.json)
   QUALITY_FIXTURE_FORMAT='%s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check dry_run BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check dry_run BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER GITHUB_ACTIONS
+  export FORCE_USE_DOCKER=false
 
   EC_IMAGE=mstruebing/editorconfig-checker:6.0.0@sha256:6666666666666666666666666666666666666666666666666666666666666666
   test-run-suite \
     test-check-file-format-rejects-unknown-mode \
     test-check-file-format-all-checks-every-tracked-file \
-    test-check-file-format-all-does-not-need-the-base-resolver \
     test-check-file-format-preserves-unusual-paths-in-native-and-docker \
     test-check-file-format-working-tree-changes-checks-modified-files-only \
     test-check-file-format-staged-changes-checks-staged-files-only \
@@ -78,7 +80,7 @@ function test-check-file-format-rejects-unknown-mode() {
   for mode in "${modes[@]}"; do
     test-capture env "check=$mode" ./scripts/quality/check-file-format.sh
     assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
-    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
+    assert-equal "ERROR: Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch" "$TEST_STDERR" "stderr for '$mode'"
   done
   # Assert
   assert-stub-not-called "$EC"
@@ -108,27 +110,10 @@ function test-check-file-format-all-checks-every-tracked-file() {
   return 0
 }
 
-function test-check-file-format-all-does-not-need-the-base-resolver() {
-
-  # Arrange
-  quality-create-fixture-repo a.txt
-  test-isolate-path
-  test-stub "$EC"
-  rm "$TEST_TMP/repo/scripts/quality/git-base.lib.sh"
-  cd "$TEST_TMP/repo"
-  # Act
-  test-capture env check=all ./scripts/quality/check-file-format.sh
-  # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-contains "$(test-stub-calls "$EC") " "$A_TXT_ARGUMENT"
-
-  return 0
-}
-
 function test-check-file-format-preserves-unusual-paths-in-native-and-docker() {
 
   # Arrange
-  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md'
+  local newline_file=$'docs/line\nbreak.md' glob_file='docs/a[1]*.md' docker_status
   local space_file='docs/space name.md' non_ascii_file='docs/café.md' dash_file='-leading.md'
   quality-create-fixture-repo "$newline_file" "$glob_file" 'docs/a1-other.md' \
     "$space_file" "$non_ascii_file" "$dash_file"
@@ -137,12 +122,13 @@ function test-check-file-format-preserves-unusual-paths-in-native-and-docker() {
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env check=all ./scripts/quality/check-file-format.sh
+  test-capture env -u FORCE_USE_DOCKER check=all ./scripts/quality/check-file-format.sh
+  docker_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=false check=all ./scripts/quality/check-file-format.sh
   local native_status="$TEST_STATUS"
-  test-capture env check=all FORCE_USE_DOCKER=true ./scripts/quality/check-file-format.sh
   # Assert
+  assert-equal 0 "$docker_status" "default Docker exit status"
   assert-equal 0 "$native_status" "native exit status"
-  assert-equal 0 "$TEST_STATUS" "Docker exit status"
   local stub file
   for stub in "$EC" docker; do
     for file in "$newline_file" "$glob_file" "$space_file" "$non_ascii_file" "./$dash_file"; do
@@ -439,7 +425,7 @@ function test-check-file-format-stops-when-the-image-pull-fails() {
 # file.
 function expected-docker-run() {
 
-  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro --workdir /check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json -- a.txt mise.toml scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh"
+  echo "run --rm --platform linux/amd64 --network none --env GITHUB_ACTIONS --env NO_COLOR --volume $TEST_TMP/repo:/check:ro --workdir /check $EC_IMAGE $EC -config /check/scripts/config/editorconfig-checker.json -- a.txt mise.toml scripts/cicd/github-actions.lib.sh scripts/config/editorconfig-checker.json scripts/docker/docker.lib.sh scripts/quality/check-file-format.sh scripts/quality/git-base.lib.sh scripts/quality/git-files.lib.sh"
 
   return 0
 }

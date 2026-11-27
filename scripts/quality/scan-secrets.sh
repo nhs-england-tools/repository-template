@@ -2,8 +2,9 @@
 
 set -euo pipefail
 
-# Scan the codebase and its Git history for hard-coded secrets. It runs
-# gitleaks natively when installed, otherwise in a Docker container.
+# Scan the codebase and its Git history for hard-coded secrets. It runs in
+# Docker by default, or natively when FORCE_USE_DOCKER=false and Gitleaks
+# is installed.
 #
 # Usage:
 #   $ [options] ./scripts/quality/scan-secrets.sh
@@ -16,8 +17,8 @@ set -euo pipefail
 #                                       # chosen automatically when unset, as
 #                                       # './scripts/quality/git-base.lib.sh'
 #                                       # describes
-#   FORCE_USE_DOCKER=true               # Run in a Docker container, default is
-#                                       # 'false'
+#   FORCE_USE_DOCKER=false              # Opt out of Docker when Gitleaks is
+#                                       # installed
 #   VERBOSE=true                        # Show all the executed commands,
 #                                       # default is 'false'
 #
@@ -36,6 +37,13 @@ set -euo pipefail
 #   last-commit           # The most recent commit only
 
 # ==============================================================================
+
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/git-base.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../docker/docker.lib.sh"
 
 # Run secret scanning in the requested check mode(s).
 function main() {
@@ -60,7 +68,7 @@ function main() {
       run-check "$check"
       ;;
     *)
-      echo "Unrecognised check mode: '$check'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" >&2
+      print-diagnostic error "Unrecognised check mode: '$check'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit"
       return 126
       ;;
   esac
@@ -75,7 +83,7 @@ function run-check() {
 
   local check="$1"
   local -a args=()
-  if command -v gitleaks > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-false}"; then
+  if command -v gitleaks > /dev/null 2>&1 && ! is-arg-true "${FORCE_USE_DOCKER:-true}"; then
     get-gitleaks-args args "$check" "$PWD" || return "$?"
     run-gitleaks-natively "${args[@]}" || return "$?"
   else
@@ -112,8 +120,6 @@ function get-gitleaks-args() {
       # HEAD but not from the base branch. This keeps the scan scoped to the
       # work in progress and does not fail on secrets that live only on
       # unrelated branches another developer may have pushed.
-      # shellcheck disable=SC1091
-      source ./scripts/quality/git-base.lib.sh
       # shellcheck disable=SC2034
       local base_ref fork_point
       quality-resolve-base base_ref fork_point || return "$?"
@@ -128,7 +134,7 @@ function get-gitleaks-args() {
       result=(detect --source "$dir" --verbose --redact --log-opts -1)
       ;;
     *)
-      echo "Unrecognised check mode: '$check'. Use check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" >&2
+      print-diagnostic error "Unrecognised check mode: '$check'. Use check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit"
       return 126
       ;;
   esac
@@ -168,12 +174,10 @@ function run-gitleaks-in-docker() {
 
   local dir="$1"
   shift
-  # shellcheck disable=SC1091
-  source ./scripts/docker/docker.lib.sh
 
   local image
   image=$(name=ghcr.io/gitleaks/gitleaks docker-get-image-version-and-pull) || return "$?"
-  docker run --rm --platform linux/amd64 \
+  docker run --rm --platform "$DOCKER_PLATFORM" \
     --network none \
     --volume "$PWD:$dir:ro" \
     --workdir "$dir" \

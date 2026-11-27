@@ -40,7 +40,7 @@ function main() {
   cd "$(git rev-parse --show-toplevel)"
   source ./scripts/tests/test.lib.sh
   source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/check-workflow-security.sh scripts/quality/check-workflow-security.jq scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh)
+  QUALITY_FIXTURE_PATHS=(scripts/quality/check-workflow-security.sh scripts/quality/check-workflow-security.jq scripts/quality/git-files.lib.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh)
   QUALITY_FIXTURE_FORMAT='# %s\n'
 
   # The caller's options must not reach the script under test

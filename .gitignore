@@ -1,4 +1,6 @@
 .version
+Dockerfile.effective
+Dockerfile.effective.dockerignore
 *.code-workspace
 
 .env

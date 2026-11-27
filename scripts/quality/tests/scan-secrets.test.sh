@@ -15,6 +15,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/quality-test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 # A space, a glob character and a non-ASCII character in one path
 readonly AWKWARD_REPO='dir with space [x] café/repo'
@@ -23,13 +26,13 @@ readonly AWKWARD_REPO='dir with space [x] café/repo'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
-  source ./scripts/quality/tests/quality-test.lib.sh
-  QUALITY_FIXTURE_PATHS=(scripts/quality/scan-secrets.sh scripts/quality/git-base.lib.sh scripts/docker/docker.lib.sh scripts/config/gitleaks.toml scripts/config/.gitleaksignore)
+
+  QUALITY_FIXTURE_PATHS=(scripts/quality/scan-secrets.sh scripts/quality/git-base.lib.sh scripts/cicd/github-actions.lib.sh scripts/docker/docker.lib.sh scripts/config/gitleaks.toml scripts/config/.gitleaksignore)
   QUALITY_FIXTURE_FORMAT='%s\n'
 
   # The caller's options must not reach the script under test
-  unset -v MISE_TOML match_version check BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER
+  unset -v MISE_TOML match_version check BRANCH_NAME GITHUB_BASE_REF QUALITY_PR_BASE FORCE_USE_DOCKER GITHUB_ACTIONS
+  export FORCE_USE_DOCKER=false
 
   GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v1.0.0@sha256:1111111111111111111111111111111111111111111111111111111111111111
   # The gitleaks stub also records the git config it runs with
@@ -49,7 +52,7 @@ function main() {
     test-scan-secrets-empty-mode-defaults-to-whole-history \
     test-scan-secrets-propagates-leaks \
     test-scan-secrets-isolates-git-config-natively \
-    test-scan-secrets-uses-docker-when-forced \
+    test-scan-secrets-defaults-to-docker-and-supports-native-opt-out \
     test-scan-secrets-uses-docker-at-an-awkward-path \
     test-scan-secrets-uses-docker-with-a-baseline-file \
     test-scan-secrets-stops-when-the-image-pull-fails
@@ -252,8 +255,11 @@ function test-scan-secrets-rejects-unknown-mode() {
   for mode in "${modes[@]}"; do
     test-capture env "check=$mode" ./scripts/quality/scan-secrets.sh
     assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL for '$mode'"
-    assert-equal "Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" "$TEST_STDERR" "stderr for '$mode'"
+    assert-equal "ERROR: Unrecognised check mode: '$mode'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" "$TEST_STDERR" "stderr for '$mode'"
   done
+  test-capture env check=bogus GITHUB_ACTIONS=true ./scripts/quality/scan-secrets.sh
+  assert-equal 126 "$TEST_STATUS" "$EXIT_STATUS_LABEL in GitHub Actions"
+  assert-equal "::error::Unrecognised check mode: 'bogus'. Use check=all, check=staged-changes, check=working-tree-changes, check=branch, check=whole-history, check=last-commit" "$TEST_STDERR" "annotation"
   # Assert
   assert-stub-not-called gitleaks
   assert-stub-not-called docker
@@ -312,7 +318,7 @@ function test-scan-secrets-isolates-git-config-natively() {
   return 0
 }
 
-function test-scan-secrets-uses-docker-when-forced() {
+function test-scan-secrets-defaults-to-docker-and-supports-native-opt-out() {
 
   # Arrange
   local options="detect --source /workdir --verbose --redact --config /workdir/scripts/config/gitleaks.toml --gitleaks-ignore-path /workdir/scripts/config/.gitleaksignore"
@@ -322,13 +328,17 @@ function test-scan-secrets-uses-docker-when-forced() {
   test-stub docker
   cd "$TEST_TMP/repo"
   # Act
-  test-capture env FORCE_USE_DOCKER=true ./scripts/quality/scan-secrets.sh
+  test-capture env -u FORCE_USE_DOCKER ./scripts/quality/scan-secrets.sh
+  local docker_status="$TEST_STATUS"
+  test-capture env FORCE_USE_DOCKER=false ./scripts/quality/scan-secrets.sh
+  local native_status="$TEST_STATUS"
   # Assert
-  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
-  assert-stub-not-called gitleaks
+  assert-equal 0 "$docker_status" "default Docker $EXIT_STATUS_LABEL"
+  assert-equal 0 "$native_status" "native $EXIT_STATUS_LABEL"
   assert-stub-called docker \
     "run --rm --platform linux/amd64 --network none --volume $TEST_TMP/repo:/workdir:ro --workdir /workdir $GITLEAKS_IMAGE $options"
   quality-assert-one-docker-run
+  assert-contains "$(test-stub-calls gitleaks)" "detect" "native Gitleaks run"
 
   return 0
 }
