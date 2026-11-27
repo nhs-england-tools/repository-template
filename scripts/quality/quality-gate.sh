@@ -323,9 +323,10 @@ function write-baseline() {
 #   $1=[state directory]
 function remove-old-state() {
 
+  local state_dir="$1"
   # '-delete' visits a directory after its files, so '-empty' sees them gone
-  if ! find "$1" -mindepth 1 \( -type f -mtime +7 -delete \) -o \( -type d -empty -mtime +7 -delete \); then
-    print-diagnostic warning "Quality gate: cannot remove old state files from $1. Retention is incomplete. Inspect that directory and 'make quality-gate' output. $RECOVERY_SCOPE"
+  if ! find "$state_dir" -mindepth 1 \( -type f -mtime +7 -delete \) -o \( -type d -empty -mtime +7 -delete \); then
+    print-diagnostic warning "Quality gate: cannot remove old state files from $state_dir. Retention is incomplete. Inspect that directory and 'make quality-gate' output. $RECOVERY_SCOPE"
   fi
 
   return 0
@@ -720,7 +721,8 @@ function prune-history() {
 #   $1=[affected path] $2=[impact]
 function audit-error() {
 
-  print-diagnostic warning "Quality gate: $2 at $1. The audit is incomplete, not evidence of a pass. Inspect that path, its permissions and free space, and verify with 'make quality-gate'. $RECOVERY_SCOPE"
+  local path="$1" impact="$2"
+  print-diagnostic warning "Quality gate: $impact at $path. The audit is incomplete, not evidence of a pass. Inspect that path, its permissions and free space, and verify with 'make quality-gate'. $RECOVERY_SCOPE"
 
   return 0
 }

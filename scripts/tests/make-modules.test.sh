@@ -18,6 +18,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/test.lib.sh"
 
 readonly EXIT_STATUS_LABEL='exit status'
+readonly TEAM_MODULE_OUTPUT='team-module-ran'
+readonly FAILURE_STATUS_PATTERN='^[1-9][0-9]*$'
 
 function main() {
 
@@ -196,7 +198,7 @@ function test-make-loads-a-library-included-by-a-module() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
   assert-contains "$TEST_STDOUT" "library-target-ran"
-  assert-contains "$TEST_STDOUT" "team-module-ran"
+  assert-contains "$TEST_STDOUT" "$TEAM_MODULE_OUTPUT"
 
   return 0
 }
@@ -389,13 +391,13 @@ function test-make-works-in-a-path-with-spaces() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
   assert-contains "$TEST_STDOUT" "docker-build"
-  assert-contains "$TEST_STDOUT" "team-module-ran"
+  assert-contains "$TEST_STDOUT" "$TEAM_MODULE_OUTPUT"
   assert-contains "$TEST_STDOUT" "Git cleanup covers the whole repository at $(cd "$tree" && pwd -P)"
   # Act
   test-capture make --no-print-directory -C "$tree/services/api" team-module
   # Assert
   assert-equal 0 "$TEST_STATUS" "service $EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "team-module-ran"
+  assert-contains "$TEST_STDOUT" "$TEAM_MODULE_OUTPUT"
 
   return 0
 }
@@ -412,7 +414,7 @@ function test-make-runs-from-a-service-directory() {
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "docker-build"
   assert-contains "$TEST_STDOUT" "where=$(cd "$TEST_TMP/tree/services/api" && pwd -P)"
-  assert-contains "$TEST_STDOUT" "team-module-ran"
+  assert-contains "$TEST_STDOUT" "$TEAM_MODULE_OUTPUT"
   assert-not-contains "$TEST_STDERR" "overriding recipe"
 
   return 0
@@ -429,7 +431,7 @@ function test-make-runs-a-service-makefile-selected-with-f() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
   assert-contains "$TEST_STDOUT" "service-only-ran"
-  assert-contains "$TEST_STDOUT" "team-module-ran"
+  assert-contains "$TEST_STDOUT" "$TEAM_MODULE_OUTPUT"
 
   return 0
 }
@@ -471,7 +473,7 @@ function test-make-loads-a-module-once-when-the-root-names-it() {
   run-make team-module
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "team-module-ran"
+  assert-contains "$TEST_STDOUT" "$TEAM_MODULE_OUTPUT"
   assert-not-contains "$TEST_STDERR" "warning"
 
   return 0
@@ -610,7 +612,7 @@ function test-make-rejects-a-missing-docker-directory() {
   test-capture env DOCKER_IMAGE=service docker_dir=missing \
     make --no-print-directory -C "$TEST_TMP/tree/services/api" docker-bake-dockerfile
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-matches "$TEST_STATUS" "$FAILURE_STATUS_PATTERN" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "ERROR: Docker image directory not found: missing"
   assert-file-not-exists "$TEST_TMP/tree/services/api/Dockerfile.effective"
 
@@ -625,7 +627,7 @@ function test-make-rejects-a-missing-root-image-directory() {
   # Act
   test-capture env DOCKER_IMAGE=typo make --no-print-directory -C "$TEST_TMP/tree" docker-bake-dockerfile
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-matches "$TEST_STATUS" "$FAILURE_STATUS_PATTERN" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "ERROR: Docker image directory not found: infrastructure/images/typo"
   assert-contains "$TEST_STDERR" "dir=."
   assert-file-not-exists "$TEST_TMP/tree/Dockerfile.effective"
@@ -657,7 +659,7 @@ function test-make-reports-missing-mise-as-a-diagnostic() {
   # Act
   GITHUB_ACTIONS=true run-make _toolchain-check
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-matches "$TEST_STATUS" "$FAILURE_STATUS_PATTERN" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "::error::mise is not installed"
 
   return 0
@@ -673,7 +675,7 @@ function test-make-reports-untrusted-mise-config-as-a-diagnostic() {
   # Act
   GITHUB_ACTIONS=true run-make _toolchain-check
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-matches "$TEST_STATUS" "$FAILURE_STATUS_PATTERN" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "::error::mise.toml is not trusted"
 
   return 0
@@ -689,7 +691,7 @@ function test-make-reports-a-missing-tool-name-as-a-diagnostic() {
   # Act
   GITHUB_ACTIONS=true run-make _toolchain-install-one name=
   # Assert
-  assert-matches "$TEST_STATUS" '^[1-9][0-9]*$' "$EXIT_STATUS_LABEL"
+  assert-matches "$TEST_STATUS" "$FAILURE_STATUS_PATTERN" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDERR" "::error::name is required"
 
   return 0
@@ -803,7 +805,8 @@ function prepare-platform-modules() {
 #   $1=[image name]
 function built-platform() {
 
-  test-stub-calls docker | sed -n "/^build .*--tag $1:/s/.*--platform \([^ ]*\).*/\1/p"
+  local image="$1"
+  test-stub-calls docker | sed -n "/^build .*--tag $image:/s/.*--platform \([^ ]*\).*/\1/p"
 
   return 0
 }
