@@ -17,6 +17,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
 
 readonly EXIT_STATUS_LABEL='exit status'
+readonly STDERR_LABEL='stderr'
+readonly STDOUT_LABEL='stdout'
 
 # Set up the suite and run every test.
 function main() {
@@ -49,8 +51,8 @@ function test-diagnostic-writes-a-github-error-to-stderr() {
   diagnostic-run true error 'Build failed'
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal '::error::Build failed' "$TEST_STDERR" "stderr"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal '::error::Build failed' "$TEST_STDERR" "$STDERR_LABEL"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -61,8 +63,8 @@ function test-diagnostic-writes-a-github-warning-to-stderr() {
   diagnostic-run true warning 'Review due'
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal '::warning::Review due' "$TEST_STDERR" "stderr"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal '::warning::Review due' "$TEST_STDERR" "$STDERR_LABEL"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -73,8 +75,8 @@ function test-diagnostic-writes-a-github-notice-to-stderr() {
   diagnostic-run true notice 'Start Docker'
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal '::notice::Start Docker' "$TEST_STDERR" "stderr"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal '::notice::Start Docker' "$TEST_STDERR" "$STDERR_LABEL"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
@@ -161,7 +163,7 @@ function test-diagnostic-escapes-the-message() {
   diagnostic-run true error $'50% & 100%25\rdone\nnext'
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal '::error::50%25 & 100%2525%0Ddone%0Anext' "$TEST_STDERR" "stderr"
+  assert-equal '::error::50%25 & 100%2525%0Ddone%0Anext' "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -172,7 +174,7 @@ function test-diagnostic-cannot-inject-another-command() {
   diagnostic-run true warning $'x\n::error::y'
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal '::warning::x%0A::error::y' "$TEST_STDERR" "stderr"
+  assert-equal '::warning::x%0A::error::y' "$TEST_STDERR" "$STDERR_LABEL"
   assert-not-contains "$TEST_STDERR" $'\n' "second line"
 
   return 0
@@ -185,7 +187,7 @@ function test-diagnostic-rejects-an-unknown-level() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL in GitHub Actions"
   assert-equal "::error::Diagnostic level 'debug' is not 'error', 'warning' or 'notice'" "$TEST_STDERR" "annotation"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
   # Act
   diagnostic-run '' debug 'Hello'
   # Assert
@@ -207,7 +209,7 @@ function test-diagnostic-rejects-a-wrong-argument-count() {
   # Assert
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL with three arguments"
   assert-equal 'ERROR: print-diagnostic needs a level and a message' "$TEST_STDERR" "local text with three arguments"
-  assert-equal "" "$TEST_STDOUT" "stdout"
+  assert-equal "" "$TEST_STDOUT" "$STDOUT_LABEL"
 
   return 0
 }
