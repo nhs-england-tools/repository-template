@@ -4,7 +4,7 @@
 // parent. It uses Node built-ins only and never runs a shell.
 
 import { execFileSync } from "node:child_process";
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 
 const RUNBOOK = "docs/guides/template/Publish_releases.md";
@@ -12,6 +12,8 @@ const DEFAULT_GRAPHQL_URL = "https://api.github.com/graphql";
 const TIMEOUT_MS = 30_000;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DETAIL_LENGTH = 200;
+const GIT_PATHS = ["/usr/bin/git", "/bin/git"];
+const TRAILING_SPACE = new Set([" ", "\t", "\v", "\f", "\r"]);
 const OID = /^[0-9a-f]{40}$/;
 const REPOSITORY = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/;
 const BRANCH = /^[A-Za-z0-9._/-]+$/;
@@ -96,62 +98,74 @@ export async function prepare(pluginConfig, context) {
 
 function readSettings(pluginConfig, context) {
   const env = context.env ?? {};
-  const problems = [];
   const token = env.GITHUB_TOKEN || env.GH_TOKEN || "";
-  if (token === "") problems.push("GITHUB_TOKEN (or GH_TOKEN) is not set.");
-
   const repository = env.GITHUB_REPOSITORY ?? "";
-  if (!REPOSITORY.test(repository)) {
-    problems.push(
-      `GITHUB_REPOSITORY must be 'owner/name' but is ${repository === "" ? "not set" : "malformed"}.`,
-    );
-  }
-
   const endpoint = env.GITHUB_GRAPHQL_URL || DEFAULT_GRAPHQL_URL;
-  if (!isAllowedEndpoint(endpoint)) {
-    problems.push(
-      "GITHUB_GRAPHQL_URL must be an https URL without credentials. Plain http is allowed only for 127.0.0.1.",
-    );
-  }
-
-  const branch = context.branch?.name;
-  if (
-    typeof branch !== "string" ||
-    !BRANCH.test(branch) ||
-    branch.includes("..")
-  ) {
-    problems.push("The release branch name is not a plain branch name.");
-  }
-
   const { assets, message } = pluginConfig ?? {};
-  if (!Array.isArray(assets) || assets.length === 0) {
-    problems.push("'assets' must be a non-empty list of file paths.");
-  } else {
-    for (const asset of assets) {
-      const problem = assetProblem(context.cwd, asset);
-      if (problem) problems.push(`Asset ${JSON.stringify(asset)} ${problem}.`);
-    }
-  }
+  const problems = [
+    ...tokenProblems(token),
+    ...repositoryProblems(repository),
+    ...endpointProblems(endpoint),
+    ...branchProblems(context.branch?.name),
+    ...assetsProblems(context.cwd, assets),
+    ...messageProblems(message),
+  ];
 
+  return { problems, token, repository, endpoint, assets, message };
+}
+
+function tokenProblems(token) {
+  return token === "" ? ["GITHUB_TOKEN (or GH_TOKEN) is not set."] : [];
+}
+
+function repositoryProblems(repository) {
+  if (REPOSITORY.test(repository)) return [];
+  const state = repository === "" ? "not set" : "malformed";
+  return [`GITHUB_REPOSITORY must be 'owner/name' but is ${state}.`];
+}
+
+function endpointProblems(endpoint) {
+  if (isAllowedEndpoint(endpoint)) return [];
+  return [
+    "GITHUB_GRAPHQL_URL must be an https URL without credentials. Plain http is allowed only for 127.0.0.1.",
+  ];
+}
+
+function branchProblems(branch) {
+  if (typeof branch === "string" && BRANCH.test(branch) && !branch.includes(".."))
+    return [];
+  return ["The release branch name is not a plain branch name."];
+}
+
+function assetsProblems(cwd, assets) {
+  if (!Array.isArray(assets) || assets.length === 0) {
+    return ["'assets' must be a non-empty list of file paths."];
+  }
+  return assets.flatMap((asset) => {
+    const problem = assetProblem(cwd, asset);
+    return problem ? [`Asset ${JSON.stringify(asset)} ${problem}.`] : [];
+  });
+}
+
+function messageProblems(message) {
   if (typeof message !== "string" || message.trim() === "") {
-    problems.push("'message' must be a non-empty string.");
-  } else {
-    for (const [placeholder, name] of message.matchAll(PLACEHOLDER)) {
-      if (name !== VERSION_PLACEHOLDER && name !== NOTES_PLACEHOLDER) {
-        problems.push(
-          `'message' has the unknown placeholder ${placeholder}. Only \${${VERSION_PLACEHOLDER}} and \${${NOTES_PLACEHOLDER}} are supported.`,
-        );
-      }
-    }
-    const { headline } = splitMessage(cleanUp(message));
-    if (headline.includes("\n") || headline.includes(NOTES_PLACEHOLDER)) {
+    return ["'message' must be a non-empty string."];
+  }
+  const problems = [];
+  for (const [placeholder, name] of message.matchAll(PLACEHOLDER)) {
+    if (name !== VERSION_PLACEHOLDER && name !== NOTES_PLACEHOLDER) {
       problems.push(
-        "'message' must start with a one-line headline without the release notes.",
+        `'message' has the unknown placeholder ${placeholder}. Only \${${VERSION_PLACEHOLDER}} and \${${NOTES_PLACEHOLDER}} are supported.`,
       );
     }
   }
-
-  return { problems, token, repository, endpoint, assets, message };
+  const { headline } = splitMessage(cleanUp(message));
+  if (headline.includes("\n") || headline.includes(NOTES_PLACEHOLDER)) {
+    problems.push(
+      "'message' must start with a one-line headline without the release notes.",
+    );
+  }
+  return problems;
 }
 
 function isAllowedEndpoint(value) {
@@ -208,17 +222,26 @@ function isInside(cwd, path) {
 }
 
 function settingsError(problems) {
+  const list = problems.map((problem) => "- " + problem).join("\n");
   return new Error(
-    `The release commit settings are incomplete, so nothing was released:\n${problems.map((problem) => `- ${problem}`).join("\n")}\nFix the release settings, then use Re-run failed jobs. See ${RUNBOOK}#release-settings-are-missing`,
+    `The release commit settings are incomplete, so nothing was released:\n${list}\nFix the release settings, then use Re-run failed jobs. See ${RUNBOOK}#release-settings-are-missing`,
   );
 }
 
 // ==============================================================================
 // Release commit content
 
+// Run git from a fixed, root-owned directory, so a writable PATH entry cannot
+// put another git in its place.
 function gitRunner(cwd, env) {
+  const git = GIT_PATHS.find((path) => existsSync(path));
+  if (!git) {
+    throw new Error(
+      `git was not found at ${GIT_PATHS.join(" or ")}, so the release commit cannot be created and nothing was released. Install git on the runner. See ${RUNBOOK}#release-step-failed`,
+    );
+  }
   return (args) =>
-    execFileSync("git", args, {
+    execFileSync(git, args, {
       cwd,
       env: { ...env, GIT_TERMINAL_PROMPT: "0" },
       encoding: "utf8",
@@ -279,7 +302,7 @@ function cleanUp(text) {
   const lines = [];
   let blank = false;
   for (const line of text.split("\n")) {
-    const trimmed = line.replace(/[ \t\v\f\r]+$/, "");
+    const trimmed = trimTrailingSpace(line);
     if (trimmed === "") {
       blank = lines.length > 0;
       continue;
@@ -289,6 +312,13 @@ function cleanUp(text) {
     lines.push(trimmed);
   }
   return lines.join("\n");
+}
+
+// Drop the whitespace 'git commit -m' drops at a line end, in linear time.
+function trimTrailingSpace(line) {
+  let end = line.length;
+  while (end > 0 && TRAILING_SPACE.has(line[end - 1])) end--;
+  return line.slice(0, end);
 }
 
 function splitMessage(message) {

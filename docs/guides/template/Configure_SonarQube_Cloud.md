@@ -155,4 +155,7 @@ Automatic Analysis is enabled, ask the admins to turn it off as described above.
 
 Project teams maintain any project-specific coverage report paths and source
 exclusions in the scan arguments in
-[stage-2-test.yaml](../../../.github/workflows/stage-2-test.yaml).
+[stage-2-test.yaml](../../../.github/workflows/stage-2-test.yaml). The template
+excludes its own Node.js scripts, `scripts/**/*.mjs`, from coverage, because the
+Bash suites test them in a way SonarQube Cloud cannot measure. Keep that
+exclusion when you add your own.

@@ -7,12 +7,20 @@
 //   $ STUB_MODE=ok node graphql-stub.mjs <bare-repo> <port-file> <request-log>
 
 import { execFileSync } from "node:child_process";
-import { appendFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:http";
 
 const [bareRepo, portFile, requestLog] = process.argv.slice(2);
 const mode = process.env.STUB_MODE ?? "ok";
 const indexFile = `${requestLog}.index`;
+// Run git from a fixed, root-owned directory, like the plugin does
+const gitPath = ["/usr/bin/git", "/bin/git"].find((path) => existsSync(path));
 const bot = {
   GIT_AUTHOR_NAME: "release-app[bot]",
   GIT_AUTHOR_EMAIL: "release-app@example.invalid",
@@ -21,7 +29,7 @@ const bot = {
 };
 
 function git(args, options = {}) {
-  return execFileSync("git", ["--git-dir", bareRepo, ...args], {
+  return execFileSync(gitPath, ["--git-dir", bareRepo, ...args], {
     encoding: "utf8",
     ...options,
     env: { ...process.env, ...options.env },
