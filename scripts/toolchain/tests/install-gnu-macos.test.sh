@@ -16,12 +16,13 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+
 readonly EXIT_STATUS_LABEL='exit status'
 
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
 
   MARKER="# Added by scripts/toolchain/install-gnu-macos.sh"
 

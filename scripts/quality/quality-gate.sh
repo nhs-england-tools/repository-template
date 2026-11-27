@@ -58,6 +58,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
+
 if [[ ${BASH_VERSINFO[0]} -lt 5 ]]; then
   newer=""
   while IFS= read -r candidate; do
@@ -72,7 +75,7 @@ if [[ ${BASH_VERSINFO[0]} -lt 5 ]]; then
   if [[ -n $newer ]]; then
     exec "$newer" "$0" "$@"
   fi
-  echo "ERROR: quality-gate.sh needs Bash 5.2 or later. Gates were not run. Inspect 'command -v bash' and 'bash --version', then report the toolchain issue. Environment changes need user authorisation." >&2
+  print-diagnostic error "quality-gate.sh needs Bash 5.2 or later. Gates were not run. Inspect 'command -v bash' and 'bash --version', then report the toolchain issue. Environment changes need user authorisation."
   exit 1
 fi
 
@@ -169,12 +172,12 @@ function prepare-tools() {
   for tool in jq yq; do
     resolved="$(command -v "$tool")" || resolved='not found on PATH'
     if ! version="$("$tool" --version 2>&1)"; then
-      echo "ERROR: the quality gate cannot run $tool ($resolved). Gates were not run. Inspect 'command -v $tool' and '$tool --version' in $PWD. Tool output: ${version:0:$NOTE_CHARACTERS}. Report the setup issue before any environment change, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "the quality gate cannot run $tool ($resolved). Gates were not run. Inspect 'command -v $tool' and '$tool --version' in $PWD. Tool output: ${version:0:$NOTE_CHARACTERS}. Report the setup issue before any environment change, then verify with 'make quality-gate'. $RECOVERY_SCOPE"
       return 1
     fi
   done
   if [[ $version != *mikefarah/yq*'version v4.'* ]]; then
-    echo "ERROR: the quality gate needs mikefarah yq version 4. Found $resolved: ${version:0:$NOTE_CHARACTERS}. Gates were not run. Inspect 'command -v yq' and 'yq --version', report the mismatch, then verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "the quality gate needs mikefarah yq version 4. Found $resolved: ${version:0:$NOTE_CHARACTERS}. Gates were not run. Inspect 'command -v yq' and 'yq --version', report the mismatch, then verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   fi
 
@@ -739,7 +742,7 @@ function run-command() {
       ;;
   esac
   if [[ -n ${QUALITY_GATE_ACTIVE:-} ]]; then
-    echo "ERROR: quality-gate is running inside a gate. Nested gates were not run. Inspect $CONFIG_FILE and $CONFIG_DIR for recursive targets, report the configuration issue, then verify with 'make quality-gate' outside the gate. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "quality-gate is running inside a gate. Nested gates were not run. Inspect $CONFIG_FILE and $CONFIG_DIR for recursive targets, report the configuration issue, then verify with 'make quality-gate' outside the gate. $RECOVERY_SCOPE"
     return 1
   fi
   scratch="$(make-temp -d)" || return "$?"
@@ -805,7 +808,7 @@ function pause-command() {
 
   local hours="$1" state="$STATE_DIR" expiry
   if [[ ! $hours =~ ^[1-8]$ ]]; then
-    echo "ERROR: hours must be a whole number from 1 to 8, for example: make quality-gate-pause hours=2. Pause unchanged. Inspect 'make quality-gate-list' and verify with 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "hours must be a whole number from 1 to 8, for example: make quality-gate-pause hours=2. Pause unchanged. Inspect 'make quality-gate-list' and verify with 'make quality-gate'. $RECOVERY_SCOPE"
     return 1
   fi
   create-state-dir || return "$?"
@@ -879,16 +882,16 @@ function read-config() {
   local from="$1" names="$2/names" rules="$CONFIG_RULES" file doc out rc=0
   local -a docs=() files=("$CONFIG_FILE")
   if [[ $from == working-tree && ! -f $CONFIG_FILE ]]; then
-    echo "ERROR: $CONFIG_FILE is missing. Gates were not run. Compare it with the repository template and report the missing configuration, then verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "$CONFIG_FILE is missing. Gates were not run. Compare it with the repository template and report the missing configuration, then verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"
     return 2
   fi
   if ! list-drop-ins "$from" > "$names"; then
-    echo "ERROR: cannot list the files in $CONFIG_DIR. Gates were not run. Inspect that path and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "cannot list the files in $CONFIG_DIR. Gates were not run. Inspect that path and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"
     return 2
   fi
   while IFS= read -r -d '' file; do
     if ! is-drop-in-name "${file##*/}"; then
-      echo "ERROR: $file: drop-in file names may use only ASCII letters, digits, '.', '_' and '-', and end in .yaml or .yml. Gates were not run. Report the configuration issue and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
+      print-diagnostic error "$file: drop-in file names may use only ASCII letters, digits, '.', '_' and '-', and end in .yaml or .yml. Gates were not run. Report the configuration issue and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"
       return 2
     fi
     files+=("$file")
@@ -902,16 +905,16 @@ function read-config() {
   fi
   for file in "${files[@]}"; do
     if [[ $from == working-tree ]]; then
-      doc="$(yq -o=json 'explode(.)' "$file")" || { echo "ERROR: $file could not be read as valid YAML. Gates were not run. Inspect the parser output and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2; return 2; }
+      doc="$(yq -o=json 'explode(.)' "$file")" || { print-diagnostic error "$file could not be read as valid YAML. Gates were not run. Inspect the parser output and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"; return 2; }
     else
-      doc="$(git show "$from:$file" | yq -o=json 'explode(.)' -)" || { echo "ERROR: $file at commit ${from:0:7} could not be read as valid YAML. Gates were not run. Inspect 'git show $from:$file' and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2; return 2; }
+      doc="$(git show "$from:$file" | yq -o=json 'explode(.)' -)" || { print-diagnostic error "$file at commit ${from:0:7} could not be read as valid YAML. Gates were not run. Inspect 'git show $from:$file' and verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"; return 2; }
     fi
     docs+=("$doc")
   done
   out="$(printf '%s\n' "${docs[@]}" | jq -c -s -f "$rules" 2> "$2/errors")" || rc=$?
   if [[ $rc -ne 0 ]]; then
     out="$(< "$2/errors")"
-    echo "ERROR: gate configuration: ${out#jq: error (at *): }. Gates were not run. Inspect $CONFIG_FILE, $CONFIG_DIR and $rules, then verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE" >&2
+    print-diagnostic error "gate configuration: ${out#jq: error (at *): }. Gates were not run. Inspect $CONFIG_FILE, $CONFIG_DIR and $rules, then verify with 'make quality-gate-list' and 'make quality-gate'. $RECOVERY_SCOPE"
     return 2
   fi
   printf '%s\n' "$out"

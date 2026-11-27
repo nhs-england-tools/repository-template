@@ -11,8 +11,8 @@
 ## Overview 🧭
 
 The [test workflow](../../../.github/workflows/stage-2-test.yaml) runs a
-SonarQube Cloud scan when the token and both project variables are available.
-The `🔬 Perform static analysis` job reports success when the scan is not
+SonarQube Cloud scan when the token and both variables are available. The
+`🔬 Perform static analysis` job reports success when the scan is not
 configured. When configured, it waits for the quality gate and fails if the gate
 fails.
 
@@ -21,7 +21,7 @@ fails.
 > [!IMPORTANT]
 >
 > Request SonarQube Cloud setup and integration for this repository from the NHS
-> Engineering Admins. Below, they are referred to as the admins.
+> Engineering Admins.
 
 In GitHub, open the repository's **Settings > Secrets and variables > Actions**.
 Set the project variables at repository level, or use organisation-level
@@ -33,8 +33,25 @@ SonarQube Cloud, for example
 | Name                     | GitHub setting                | Value                                                      |
 | ------------------------ | ----------------------------- | ---------------------------------------------------------- |
 | `SONAR_TOKEN`            | Actions and Dependabot secret | Scoped organisation token, issued and stored by the admins |
-| `SONAR_ORGANISATION_KEY` | Variable                      | The SonarQube Cloud organisation key                       |
 | `SONAR_PROJECT_KEY`      | Variable                      | The SonarQube Cloud project key                            |
+| `SONAR_ORGANISATION_KEY` | Variable                      | The SonarQube Cloud organisation key                       |
+
+`SONAR_ORGANISATION_KEY` is shared by all repositories in a GitHub
+organisation, so admins will most likely provide it as an organisation-level
+Actions variable. If it is available to this repository, there is no need to
+set a duplicate repository-level variable.
+
+`SONAR_PROJECT_KEY` must follow SonarQube Cloud's default project-key pattern
+for GitHub repositories: `<GitHub organisation name>_<GitHub repository
+name>`. The first part is the GitHub organisation name from the repository URL.
+Both parts must match their GitHub names exactly, including case. For example,
+this repository's key is `nhs-england-tools_repository-template`.
+
+> [!WARNING]
+>
+> If the repository is renamed in GitHub, rename the corresponding SonarQube
+> Cloud project key to use the new repository name and update
+> `SONAR_PROJECT_KEY` to match.
 
 The workflow skips the scan if any of these values is missing. Pull requests
 from forks do not receive repository secrets, so their scan is skipped as well.
@@ -47,10 +64,10 @@ up. As part of the request, the admins check that the organisation's GitHub
 integration includes this repository. The GitHub App may already be installed
 and configured to include all repositories in the organisation.
 
-The admins import or bind the SonarQube Cloud project to this GitHub repository.
-This connection enables pull request decoration. They also give the team access
-to the project in SonarQube Cloud and provide the organisation and project keys
-for the workflow variables.
+The admins import or bind the SonarQube Cloud project to this GitHub repository
+to enable pull request decoration. They also give the team access to the project
+and set the organisation and project keys as GitHub Actions variables at the
+appropriate repository or organisation level.
 
 The `SONAR_TOKEN` secret holds a scoped organisation token. It has only the
 **Execute analysis** permission on the projects it is issued for. The admins

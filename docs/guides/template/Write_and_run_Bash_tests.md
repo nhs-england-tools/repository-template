@@ -65,9 +65,12 @@ Create `scripts/example/tests/greeting.test.sh`:
 
 set -euo pipefail
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../greeting.lib.sh"
+
 cd "$(git rev-parse --show-toplevel)"
-source ./scripts/tests/test.lib.sh
-source ./scripts/example/greeting.lib.sh
 
 function test-greeting-with-name() {
   test-capture greeting "Ada Lovelace"

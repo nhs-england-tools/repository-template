@@ -53,6 +53,8 @@ set -euo pipefail
 TEST_REPO_ROOT="${BASH_SOURCE[0]%/*}"
 [[ "$TEST_REPO_ROOT" != "${BASH_SOURCE[0]}" ]] || TEST_REPO_ROOT=.
 TEST_REPO_ROOT="$(cd "$TEST_REPO_ROOT/../.." && pwd -P)"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/../cicd/github-actions.lib.sh"
 TEST_INDENT_PATTERN='s/^/    /'
 TEST_BASE_TOOLS=(awk basename bash cat chmod cmp cp cut date dirname env find git grep head ln mkdir mktemp mv rm sed sleep sort tail tee touch tr uniq wc xargs)
 # A tool is a missing prerequisite only when it is missing from this PATH
@@ -72,11 +74,11 @@ function test-run-suite() {
   local -a tests=("$@")
 
   if [[ $# -eq 0 ]]; then
-    echo "ERROR: no tests to run. Verification did not run. Inspect this suite's test-run-suite arguments, then rerun it with VERBOSE=true." >&2
+    print-diagnostic error "no tests to run. Verification did not run. Inspect this suite's test-run-suite arguments, then rerun it with VERBOSE=true."
     return 1
   fi
   if ! _test-mktemp-dir _TEST_SUITE_TMP; then
-    echo "ERROR: cannot create the suite scratch directory under '${TMPDIR:-/tmp}'. Verification did not run. Check TMPDIR permissions and space with: ls -ld '${TMPDIR:-/tmp}' && mktemp -d" >&2
+    print-diagnostic error "cannot create the suite scratch directory under '${TMPDIR:-/tmp}'. Verification did not run. Check TMPDIR permissions and space with: ls -ld '${TMPDIR:-/tmp}' && mktemp -d"
     return 1
   fi
   SUITE_TMP="$_TEST_SUITE_TMP"
@@ -101,7 +103,7 @@ function test-run-suite() {
   # Each test writes its index to this pipe when it ends, so a slow test does
   # not hold up the next ones
   if ! mkfifo "$SUITE_TMP/.ended"; then
-    echo "ERROR: cannot create the pipe '$SUITE_TMP/.ended' that reports ended tests. Verification did not run. Diagnose with: command -v mkfifo && ls -ld '$SUITE_TMP'" >&2
+    print-diagnostic error "cannot create the pipe '$SUITE_TMP/.ended' that reports ended tests. Verification did not run. Diagnose with: command -v mkfifo && ls -ld '$SUITE_TMP'"
     return 1
   fi
   exec 3<> "$SUITE_TMP/.ended"
@@ -285,7 +287,7 @@ function _test-run-isolated() {
   "$test"
   _TEST_RETURNED=true
   if [[ $- != *e* ]]; then
-    echo "ERROR: test '$test' left errexit off. Its assertions cannot be trusted. Inspect this test's shell options, then rerun the suite with VERBOSE=true." >&2
+    print-diagnostic error "test '$test' left errexit off. Its assertions cannot be trusted. Inspect this test's shell options, then rerun the suite with VERBOSE=true."
     return 1
   fi
 
@@ -298,7 +300,7 @@ function _test-isolated-exit() {
 
   local rc=$?
   if [[ $rc -eq 0 && -z "${_TEST_RETURNED:-}" ]]; then
-    echo "ERROR: test '${_TEST_NAME:-}' exited before returning. Verification is incomplete. Inspect exit calls and shell errors, then rerun the suite with VERBOSE=true." >&2
+    print-diagnostic error "test '${_TEST_NAME:-}' exited before returning. Verification is incomplete. Inspect exit calls and shell errors, then rerun the suite with VERBOSE=true."
     rc=1
   fi
   _test-remove-dir "${TEST_TMP:-}" || rc=1
@@ -352,7 +354,7 @@ function _test-suite-exit() {
     )
     teardown_rc=$?
     if [[ $teardown_rc -ne 0 ]]; then
-      echo "ERROR: test-suite-teardown failed. Cleanup is incomplete. Inspect test-suite-teardown and rerun this suite with VERBOSE=true." >&2
+      print-diagnostic error "test-suite-teardown failed. Cleanup is incomplete. Inspect test-suite-teardown and rerun this suite with VERBOSE=true."
       rc=1
     fi
   fi
@@ -361,7 +363,7 @@ function _test-suite-exit() {
     if [[ $rc -eq 77 && "${_TEST_SUITE_SETUP:-false}" == true ]]; then
       echo "PREREQUISITE: test-suite-setup could not complete. Tests did not run and verification remains unknown. Review setup diagnostics and rerun this suite with VERBOSE=true." >&2
     else
-      echo "ERROR: the test suite aborted before running all its tests. Verification is incomplete. Review the output above, then rerun this suite with VERBOSE=true." >&2
+      print-diagnostic error "the test suite aborted before running all its tests. Verification is incomplete. Review the output above, then rerun this suite with VERBOSE=true."
       [[ $rc -ne 0 && $rc -ne 77 ]] || rc=1
     fi
   fi

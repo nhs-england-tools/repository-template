@@ -55,6 +55,9 @@ set -euo pipefail
 
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/github-actions.lib.sh"
+
 # A failed job can show as cancelled when it runs out of time
 readonly NOTIFY_FAILED_JOB_CONCLUSIONS='["failure","cancelled","timed_out","startup_failure"]'
 readonly NOTIFY_BROKEN_RUN_CONCLUSIONS='["failure","timed_out","startup_failure"]'
@@ -72,16 +75,16 @@ function main() {
     GITHUB_REF_NAME GITHUB_EVENT_NAME GITHUB_WORKFLOW GITHUB_WORKFLOW_REF GITHUB_ACTOR \
     GITHUB_SERVER_URL GITHUB_OUTPUT GITHUB_STEP_SUMMARY; do
     [[ -n "${!name:-}" ]] || {
-      echo "ERROR: $name is not set, run this script in GitHub Actions" >&2
+      print-diagnostic error "$name is not set, run this script in GitHub Actions"
       return 1
     }
   done
   [[ "$GITHUB_RUN_NUMBER" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]] || {
-    echo "ERROR: GITHUB_RUN_NUMBER and GITHUB_RUN_ATTEMPT must be numbers" >&2
+    print-diagnostic error "GITHUB_RUN_NUMBER and GITHUB_RUN_ATTEMPT must be numbers"
     return 1
   }
   jq -e 'type == "object"' <<< "$needs" > /dev/null 2>&1 || {
-    echo "ERROR: NEEDS must be the JSON object of 'toJSON(needs)'" >&2
+    print-diagnostic error "NEEDS must be the JSON object of 'toJSON(needs)'"
     return 1
   }
   if [[ -n "$commit_ref" ]] && ! [[ "$commit_ref" =~ ^[A-Za-z0-9][A-Za-z0-9._/+@-]*$ && "$commit_ref" != *..* ]]; then

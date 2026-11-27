@@ -16,6 +16,8 @@ set -euo pipefail
 
 # ==============================================================================
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
+
 readonly PODMAN_VERSION_OUTPUT='podman version 5.2.0'
 readonly EXIT_STATUS_LABEL='exit status'
 readonly SINGLE_TOOL_RESOLUTION_SUMMARY='1 tool(s) are not resolving'
@@ -23,7 +25,6 @@ readonly SINGLE_TOOL_RESOLUTION_SUMMARY='1 tool(s) are not resolving'
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
-  source ./scripts/tests/test.lib.sh
 
   test-run-suite \
     test-version-ge-examples \
@@ -33,6 +34,7 @@ function main() {
     test-verify-gnu-rejects-date-without-gnu-style-behaviour \
     test-verify-gnu-rejects-bsd-grep-that-claims-gnu-compatibility \
     test-verify-gnu-reports-missing-tool \
+    test-verify-gnu-annotates-the-summary-in-github-actions \
     test-verify-gnu-rejects-old-or-non-gnu-make \
     test-verify-gnu-rejects-old-or-non-gnu-bash \
     test-verify-gnu-reports-missing-bash \
@@ -269,6 +271,23 @@ function test-verify-gnu-reports-missing-tool() {
   assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
   assert-contains "$TEST_STDOUT" "MISSING  sed: not found on PATH"
   assert-contains "$TEST_STDOUT" "$SINGLE_TOOL_RESOLUTION_SUMMARY"
+  assert-equal "" "$TEST_STDERR" "no annotation outside GitHub Actions"
+
+  return 0
+}
+
+function test-verify-gnu-annotates-the-summary-in-github-actions() {
+
+  # Arrange
+  create-minbin
+  create-gnu-fakes sed
+  # Act
+  run-verify-gnu GITHUB_ACTIONS=true
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDOUT" "$SINGLE_TOOL_RESOLUTION_SUMMARY"
+  assert-equal "::error::1 tool(s) are not resolving to their required GNU-compatible implementation or version." \
+    "$TEST_STDERR" "annotation"
 
   return 0
 }
@@ -554,37 +573,40 @@ function create-gnu-fakes() {
   return 0
 }
 
-# Create "$TEST_TMP/minbin" with links to the real head and uname, the only real
-# tools the script under test gets unconditionally. The verifier is launched
-# with a captured real Bash, while fake bash remains on PATH for its checks.
+# Create "$TEST_TMP/minbin" with links to the real dirname, head and uname, the
+# only real tools the script under test gets unconditionally. The verifier is
+# launched with a captured real Bash, while fake bash remains on PATH for its
+# checks.
 function create-minbin() {
 
   mkdir "$TEST_TMP/minbin"
-  ln -s "$(type -P head)" "$(type -P uname)" "$TEST_TMP/minbin/"
+  ln -s "$(type -P dirname)" "$(type -P head)" "$(type -P uname)" "$TEST_TMP/minbin/"
 
   return 0
 }
 
 # Run the script under test with only the fakes and the minimal real tools on
 # PATH and nothing else from the caller's environment.
+# Arguments:
+#   $@=[optional environment assignments]
 function run-verify-gnu() {
 
   local real_bash
   real_bash="$(type -P bash)"
-  test-capture env -i PATH="$TEST_TMP/fakes:$TEST_TMP/minbin" "$real_bash" \
+  test-capture env -i PATH="$TEST_TMP/fakes:$TEST_TMP/minbin" "$@" "$real_bash" \
     "$TEST_REPO_ROOT/scripts/toolchain/verify-gnu.sh"
 
   return 0
 }
 
-# Source the script under test to reach its functions, with only rm on PATH, for
-# the harness clean-up, so that main fails the test if the source guard ever
-# stops working.
+# Source the script under test to reach its functions, with only dirname and rm
+# on PATH, for loading the diagnostic helper and the harness clean-up, so that
+# main fails the test if the source guard ever stops working.
 function source-verify-gnu() {
 
   local saved_path="$PATH" bin="$TEST_TMP/rm-only"
   mkdir "$bin"
-  ln -s "$(type -P rm)" "$bin/rm"
+  ln -s "$(type -P dirname)" "$(type -P rm)" "$bin/"
   PATH="$bin"
   source "$TEST_REPO_ROOT/scripts/toolchain/verify-gnu.sh"
   PATH="$saved_path"

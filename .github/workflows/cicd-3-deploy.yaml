@@ -7,6 +7,12 @@ on:
         description: "This is the tag that is going to be deployed"
         required: true
 
+# Only one deployment runs at a time, and a running deployment is never
+# cancelled. When another starts, GitHub cancels the one that is waiting.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions: {}
 
 jobs:
@@ -32,8 +38,8 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
         run: |
-          git check-ref-format "refs/tags/$TAG" || { printf 'Invalid tag: %q\n' "$TAG" >&2; exit 1; }
-          [[ "$TAG" != "latest" ]] || { echo "The 'latest' tag cannot be deployed, use a release tag" >&2; exit 1; }
+          git check-ref-format "refs/tags/$TAG" || { printf '::error::Invalid tag: %q\n' "${TAG//'%'/%25}"; exit 1; }
+          [[ "$TAG" != "latest" ]] || { echo "::error::The 'latest' tag cannot be deployed, use a release tag"; exit 1; }
           printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
       - name: "📥 Checkout code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
