@@ -22,6 +22,7 @@ readonly NOTIFY_IF="\${{ !cancelled() && github.ref == 'refs/heads/main' }}"
 readonly SILENT_WORKFLOW=$'name: test\non: push\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest'
 readonly EXIT_STATUS_LABEL='exit status'
 readonly DIAGNOSTIC_LABEL='diagnostic'
+readonly STDERR_LABEL='stderr'
 readonly NOTIFY_ERROR='workflow must call ./.github/workflows/notify-pipeline-status.yaml'
 readonly NOTIFY_IF_ERROR='job notify must start its if: condition with !cancelled(), so it reports failures and stays cancellable'
 
@@ -109,7 +110,7 @@ function test-pipeline-contract-accepts-cicd-workflow-that-notifies() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -239,7 +240,7 @@ function test-pipeline-contract-accepts-inherited-notification-secrets() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -257,7 +258,7 @@ function test-pipeline-contract-accepts-notification-secrets-in-any-case() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -271,7 +272,7 @@ function test-pipeline-contract-accepts-notification-that-needs-one-job() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -300,7 +301,7 @@ function test-pipeline-contract-ignores-other-workflows() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
