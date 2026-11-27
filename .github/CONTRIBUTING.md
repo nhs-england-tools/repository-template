@@ -120,9 +120,8 @@ contributions. Maintainers should:
 
 - Replace the `nhs-england-tools/repository-template` URLs with the adopted
   repository's URLs. GitHub requires absolute URLs in the Code of Conduct links
-  of the [issue forms](ISSUE_TEMPLATE/), the security link in
-  [ISSUE_TEMPLATE/config.yml](ISSUE_TEMPLATE/config.yml), and the support link
-  in the [README](../README.md). Also review the remaining support contacts.
+  of the [issue forms](ISSUE_TEMPLATE/) and the support link in the
+  [README](../README.md). Also review the remaining support contacts.
 - Set a monitored private contact for conduct concerns in the
   [Code of Conduct](CODE_OF_CONDUCT.md), and confirm the security-reporting
   route in [SECURITY.md](SECURITY.md).
