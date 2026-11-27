@@ -51,6 +51,11 @@ format and link to its record in Notes. This ADR does not replace that process.
 
 ## Decision ✅
 
+State in one or two sentences the question this ADR decides, for example
+"Should the service be built as a modular monolith or as separate
+microservices?" Keep the background in Context and the chosen option in
+Outcome.
+
 ### Assumptions 🧩
 
 Summarise the underlying assumptions in the environment in which you are making
