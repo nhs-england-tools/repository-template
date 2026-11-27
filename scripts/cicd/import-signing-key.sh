@@ -95,11 +95,11 @@ function main() {
 #   $4=[bot email]
 function check-inputs() {
 
-  local missing=''
-  [[ -n "$1" ]] || missing+="${missing:+, }$KEY_NAMES"
-  [[ -n "$2" ]] || missing+="${missing:+, }$PASSPHRASE_NAMES"
-  [[ -n "$3" ]] || missing+="${missing:+, }$NAME_NAMES"
-  [[ -n "$4" ]] || missing+="${missing:+, }$EMAIL_NAMES"
+  local key="$1" passphrase="$2" name="$3" email="$4" missing=''
+  [[ -n "$key" ]] || missing+="${missing:+, }$KEY_NAMES"
+  [[ -n "$passphrase" ]] || missing+="${missing:+, }$PASSPHRASE_NAMES"
+  [[ -n "$name" ]] || missing+="${missing:+, }$NAME_NAMES"
+  [[ -n "$email" ]] || missing+="${missing:+, }$EMAIL_NAMES"
   if [[ -n "$missing" ]]; then
     fail "These release settings are empty: $missing. Without them the release commit cannot be signed, so nothing was released. Set them as repository or organisation secrets and variables, then use 'Re-run failed jobs'."
     return 1
@@ -146,7 +146,8 @@ function select-key() {
 #   $1=[message]
 function fail() {
 
-  print-diagnostic error "$1 See $GUIDE_LINK"
+  local message="$1"
+  print-diagnostic error "$message See $GUIDE_LINK"
 
   return 0
 }

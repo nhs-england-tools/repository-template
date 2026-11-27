@@ -16,6 +16,8 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
 
+readonly REMOVE_WHITESPACE='s/[[:space:]]//g'
+
 # Run every lifecycle workflow test.
 function main() {
 
@@ -245,11 +247,11 @@ function test-publish-credentials-include-fallbacks() {
   while read -r input context setting; do
     # Act
     if [[ "$input" == app-id || "$input" == private-key ]]; then
-      plan="$(JOB=plan INPUT="$input" yq -r "$token_query" "$workflow" | sed 's/[[:space:]]//g')"
-      release="$(JOB=release INPUT="$input" yq -r "$token_query" "$workflow" | sed 's/[[:space:]]//g')"
+      plan="$(JOB=plan INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
+      release="$(JOB=release INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
       assert-equal "$release" "$plan" "plan and release use the same $input"
     else
-      release="$(INPUT="$input" yq -r "$signing_query" "$workflow" | sed 's/[[:space:]]//g')"
+      release="$(INPUT="$input" yq -r "$signing_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
     fi
     # Assert
     assert-equal "\${{$context.$setting||$context.NHS_$setting}}" "$release" "$input uses an NHS fallback"
@@ -263,9 +265,9 @@ BOT_EMAIL vars GIT_SIGNING_BOT_EMAIL
 INPUTS
   # Act
   signing="$(yq -r '.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .env
-    | [.BOT_NAME, .BOT_NAME, .BOT_EMAIL, .BOT_EMAIL] | .[]' "$workflow" | sed 's/[[:space:]]//g')"
+    | [.BOT_NAME, .BOT_NAME, .BOT_EMAIL, .BOT_EMAIL] | .[]' "$workflow" | sed "$REMOVE_WHITESPACE")"
   identity="$(yq -r '.jobs.release.steps[] | select(.id == "semantic-release") | .env
-    | [.GIT_AUTHOR_NAME, .GIT_COMMITTER_NAME, .GIT_AUTHOR_EMAIL, .GIT_COMMITTER_EMAIL] | .[]' "$workflow" | sed 's/[[:space:]]//g')"
+    | [.GIT_AUTHOR_NAME, .GIT_COMMITTER_NAME, .GIT_AUTHOR_EMAIL, .GIT_COMMITTER_EMAIL] | .[]' "$workflow" | sed "$REMOVE_WHITESPACE")"
   # Assert
   assert-equal "$signing" "$identity" 'release uses the signing bot identity'
   assert-equal '${{ steps.app-token.outputs.token }}' \

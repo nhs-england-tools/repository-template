@@ -322,7 +322,8 @@ function import-listing() {
 #   $1=[key]
 function import-git-config() {
 
-  git config --file "$IMPORT_HOME/.gitconfig" --get "$1" || true
+  local key="$1"
+  git config --file "$IMPORT_HOME/.gitconfig" --get "$key" || true
 
   return 0
 }
