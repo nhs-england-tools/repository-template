@@ -8,7 +8,7 @@ new projects.
 New projects need a consistent structure, tooling and documentation before
 delivery work can begin. This template brings them together through a project
 layout, Make-based quality checks and developer guides. Engineers can spend less
-time on initial setup and tailor the starting point to their project.
+time on initial setup and extend the shared baseline for their project.
 
 ## Quick start 🚀
 
@@ -60,11 +60,12 @@ installed and configured:
 
 ### Set up
 
-On GitHub, choose **New repository** and select
+On GitHub, choose **New repository**. If this repository template is not the
+default template in your organisation, select
 `nhs-england-tools/repository-template` from **Choose a template**. Choose the
-owner, name and visibility, then create the repository. Follow the
-[repository setup guide](docs/guides/template/Set_up_a_new_repository.md) to
-tailor it.
+owner, name and visibility, then create the repository from the template. Follow
+the [repository setup guide](docs/guides/template/Set_up_a_new_repository.md) to
+configure it for your project.
 
 Clone your new repository using its **Code** URL, replacing `OWNER` and
 `REPOSITORY` with its details:
@@ -108,13 +109,16 @@ security readiness: ok
 
 **Key features**
 
-- Provides a baseline repository structure with documentation and scripts.
-- Includes Makefile targets for configuration, linting, and testing.
-- Supplies quality check scripts for file format, markdown format, markdown
-  links, shell linting, secrets scanning, and GitHub Actions workflow security.
-- Offers developer and user guidance in the docs directory.
-- Includes workflow definitions under the .github directory for CI/CD
-  configuration.
+- Pins shared development tools and provides Make targets for setup and checks.
+- Checks file quality, secrets, pipeline contracts and security readiness
+  locally and in CI, with Git hooks and an agent quality gate.
+- Provides a tested Bash harness, Docker helpers and CI/CD stage definitions
+  with configurable static analysis and Teams notifications.
+- Supplies task-based guides, community policies and decision-record guidance.
+
+See the
+[full list of template capabilities](docs/guides/template/README.md#template-capabilities-)
+for commands, main entry points and guides.
 
 **Out of scope / non-goals**
 
@@ -131,10 +135,9 @@ security readiness: ok
 
 1. The template provides common tooling, quality checks and guidance that teams
    would otherwise set up for each new repository.
-2. Teams tailor the [Makefile](Makefile) and
-   [guides](docs/guides/template/README.md) to their project and use the time
-   saved on setup to deliver product features that meet user needs and create
-   business value.
+2. Teams extend the [Makefile](Makefile) and add
+   [project guides](docs/guides/README.md) outside the template-owned guides.
+   They use the time saved on setup to deliver product features.
 
 ## How to use 📖
 
@@ -225,11 +228,17 @@ At a high level:
 
 ## Repository layout 🗂️
 
-- [.github/workflows](.github/workflows): CI workflows.
+- [.github/workflows](.github/workflows): CI/CD stages and notifications.
+- [.github/actions](.github/actions): reusable quality-check actions.
+- [.github/hooks](.github/hooks): Copilot agent quality gate.
+- [.vscode](.vscode): editor settings and extension recommendations.
+- [docs/guides](docs/guides): team guides and template-owned tooling guides.
 - [docs/guides/template](docs/guides/template): task-specific setup, testing and
   tooling guides.
-- [docs/adr](docs/adr): Architecture Decision Record template.
-- [scripts](scripts): configuration, quality checks, Docker helpers and tests.
+- [docs/adr](docs/adr): ADR template and technology recommendations.
+- [scripts](scripts): configuration, quality checks, toolchain, CI/CD and Docker
+  helpers, and tests.
+- [mise.toml](mise.toml): pinned native tools and container images.
 - [Makefile](Makefile): entry point for setup, checks and tests.
 
 ## Licence 📜
