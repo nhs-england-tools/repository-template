@@ -17,6 +17,7 @@
 #   Bad:  jobs.notify.if: "success()", which skips the job when the pipeline fails
 #   Bad:  jobs.notify.if: "always()", which also reports a run that a person cancelled
 #   Bad:  jobs.notify.needs leaves out a job, whose failure is then not reported
+#   Bad:  jobs.notify.secrets omits or misroutes a Teams webhook secret
 def rule_cicd_workflows_notify_pipeline_status:
   if ($path | test("^cicd-") | not) then empty
   else
@@ -33,6 +34,15 @@ def rule_cicd_workflows_notify_pipeline_status:
           | [$jobs | keys_unsorted[] | select(. != $id and (. as $job | $needs | index($job) | not))]
           | if . == [] then empty
             else "job \($id) must need every other job, missing: \(join(", "))"
+            end),
+          ((.value.secrets // {}) as $secrets
+          | if $secrets == "inherit" then empty
+            else
+              (if ($secrets | type) == "object" then $secrets else {} end) as $mapping
+              | ["TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL", "TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL"][] as $secret
+              | if ($mapping[$secret] // "" | tostring | test("^\\s*\\$\\{\\{\\s*secrets\\." + $secret + "\\s*\\}\\}\\s*$"; "i")) then empty
+                else "job \($id) must pass \($secret) from the matching secret"
+                end
             end)
       end
   end;

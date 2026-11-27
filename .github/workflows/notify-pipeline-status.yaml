@@ -4,8 +4,7 @@ name: "📣 Notify pipeline status"
 # guards the trunk is green again and, when asked, when a run passes. Call it
 # from a job whose 'if:' starts with '!cancelled()' and that needs every other
 # job, which the pipeline contract check enforces for the cicd-* workflows.
-# Without the TEAMS_NOTIFICATION_WEBHOOK_URL secret it only warns and writes
-# the step summary.
+# Without either webhook secret it only warns and writes the step summary.
 
 on:
   workflow_call:
@@ -45,8 +44,11 @@ on:
         type: string
         default: ""
     secrets:
-      TEAMS_NOTIFICATION_WEBHOOK_URL:
-        description: "Microsoft Teams webhook URL, the message is not sent when it is not set"
+      TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL:
+        description: "Microsoft Teams webhook URL for failures and recoveries"
+        required: false
+      TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL:
+        description: "Microsoft Teams webhook URL for successful publish and deploy updates"
         required: false
 
 permissions: {}
@@ -75,7 +77,8 @@ jobs:
           SUCCESS_TITLE: ${{ inputs.success_title }}
           SUCCESS_TEXT: ${{ inputs.success_text }}
           SUCCESS_LINK: ${{ inputs.success_link }}
-          WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
+          ALERTS_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL != '' }}
+          UPDATES_WEBHOOK_CONFIGURED: ${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL != '' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/cicd/notify-pipeline-status.sh
       # A failed post must not change the run's result, which the next run reads
@@ -85,7 +88,7 @@ jobs:
         uses: nhs-england-tools/notify-msteams-action@2935524455ac5a5aed857c3e019d3da1156bc0c8 # v1.2.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
+          teams-webhook-url: ${{ steps.status.outputs.destination == 'alerts' && secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL || secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}
           message-title: ${{ steps.status.outputs.title }}
           message-text: ${{ steps.status.outputs.text }}
           message-colour: ${{ steps.status.outputs.colour }}

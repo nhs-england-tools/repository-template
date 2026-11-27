@@ -22,6 +22,7 @@ readonly NOTIFY_IF="\${{ !cancelled() && github.ref == 'refs/heads/main' }}"
 readonly SILENT_WORKFLOW=$'name: test\non: push\npermissions: {}\njobs:\n  check:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest'
 readonly EXIT_STATUS_LABEL='exit status'
 readonly DIAGNOSTIC_LABEL='diagnostic'
+readonly STDERR_LABEL='stderr'
 readonly NOTIFY_ERROR='workflow must call ./.github/workflows/notify-pipeline-status.yaml'
 readonly NOTIFY_IF_ERROR='job notify must start its if: condition with !cancelled(), so it reports failures and stays cancellable'
 
@@ -46,6 +47,10 @@ function main() {
     test-pipeline-contract-rejects-notification-skipped-on-failure \
     test-pipeline-contract-rejects-notification-that-cannot-be-cancelled \
     test-pipeline-contract-rejects-notification-that-misses-a-job \
+    test-pipeline-contract-rejects-missing-notification-secret-mappings \
+    test-pipeline-contract-rejects-a-misrouted-notification-secret \
+    test-pipeline-contract-accepts-inherited-notification-secrets \
+    test-pipeline-contract-accepts-notification-secrets-in-any-case \
     test-pipeline-contract-accepts-notification-that-needs-one-job \
     test-pipeline-contract-rejects-notification-from-another-workflow \
     test-pipeline-contract-ignores-other-workflows \
@@ -105,7 +110,7 @@ function test-pipeline-contract-accepts-cicd-workflow-that-notifies() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -187,6 +192,77 @@ function test-pipeline-contract-rejects-notification-that-misses-a-job() {
   return 0
 }
 
+function test-pipeline-contract-rejects-missing-notification-secret-mappings() {
+
+  # Arrange
+  local secret file="$TEST_TMP/workflows/cicd-1-test.yaml"
+  for secret in TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL; do
+    pipeline-contract-write-fixture cicd-1-test.yaml "$NOTIFYING_WORKFLOW"
+    yq -i "del(.jobs.notify.secrets.$secret)" "$file"
+    pipeline-contract-create-repo
+    # Act
+    pipeline-contract-run-check
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL for $secret"
+    assert-contains "$TEST_STDERR" "job notify must pass $secret" "$DIAGNOSTIC_LABEL"
+    cd "$TEST_TMP"
+    rm -rf "$TEST_TMP/repo"
+  done
+
+  return 0
+}
+
+function test-pipeline-contract-rejects-a-misrouted-notification-secret() {
+
+  # Arrange
+  pipeline-contract-write-fixture cicd-1-test.yaml "$NOTIFYING_WORKFLOW"
+  # GitHub expressions must remain literal in the fixture
+  # shellcheck disable=SC2016
+  yq -i '.jobs.notify.secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL = "${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}"' \
+    "$TEST_TMP/workflows/cicd-1-test.yaml"
+  pipeline-contract-create-repo
+  # Act
+  pipeline-contract-run-check
+  # Assert
+  assert-equal 1 "$TEST_STATUS" "$EXIT_STATUS_LABEL"
+  assert-contains "$TEST_STDERR" "job notify must pass TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL" "$DIAGNOSTIC_LABEL"
+
+  return 0
+}
+
+function test-pipeline-contract-accepts-inherited-notification-secrets() {
+
+  # Arrange
+  pipeline-contract-write-fixture cicd-1-test.yaml "$NOTIFYING_WORKFLOW"
+  yq -i '.jobs.notify.secrets = "inherit"' "$TEST_TMP/workflows/cicd-1-test.yaml"
+  pipeline-contract-create-repo
+  # Act
+  pipeline-contract-run-check
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
+
+  return 0
+}
+
+function test-pipeline-contract-accepts-notification-secrets-in-any-case() {
+
+  # Arrange
+  pipeline-contract-write-fixture cicd-1-test.yaml "$NOTIFYING_WORKFLOW"
+  # GitHub secret names are case-insensitive, the expression must stay literal
+  # shellcheck disable=SC2016
+  yq -i '.jobs.notify.secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL = "${{ secrets.teams_notification_alerts_webhook_url }}"' \
+    "$TEST_TMP/workflows/cicd-1-test.yaml"
+  pipeline-contract-create-repo
+  # Act
+  pipeline-contract-run-check
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
+
+  return 0
+}
+
 function test-pipeline-contract-accepts-notification-that-needs-one-job() {
 
   # Arrange
@@ -196,7 +272,7 @@ function test-pipeline-contract-accepts-notification-that-needs-one-job() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -225,7 +301,7 @@ function test-pipeline-contract-ignores-other-workflows() {
   pipeline-contract-run-check
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-equal "" "$TEST_STDERR" "stderr"
+  assert-equal "" "$TEST_STDERR" "$STDERR_LABEL"
 
   return 0
 }
@@ -321,6 +397,12 @@ function pipeline-contract-notifying-workflow() {
   done
   printf '  notify:\n    permissions:\n      contents: read\n    needs: %s\n    if: %s\n    uses: ./.github/workflows/notify-pipeline-status.yaml\n' \
     "$needs" "$condition"
+  # GitHub expressions must remain literal in the fixture
+  # shellcheck disable=SC2016
+  printf '%s\n' \
+    '    secrets:' \
+    '      TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL }}' \
+    '      TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}'
 
   return 0
 }

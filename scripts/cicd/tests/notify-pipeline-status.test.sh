@@ -76,6 +76,10 @@ function main() {
     test-notify-reports-a-success-when-asked \
     test-notify-ignores-an-unsafe-success-link \
     test-notify-reports-a-failure-instead-of-a-success \
+    test-notify-routes-failure-and-recovery-to-alerts \
+    test-notify-routes-success-to-updates \
+    test-notify-routes-everything-to-the-only-webhook \
+    test-notify-does-not-warn-for-a-silent-run \
     test-notify-warns-when-the-webhook-is-not-configured \
     test-notify-writes-the-step-summary \
     test-notify-rejects-needs-that-are-not-json \
@@ -162,7 +166,7 @@ function test-notify-falls-back-to-job-ids-when-the-jobs-are-not-found() {
   notify-run
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "::warning title=Failed jobs not found::" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "WARNING: Failed jobs not found: " "$WARNING_LABEL"
   assert-file-has-line "$GITHUB_OUTPUT" "- [test-stage]($RUN_URL/100)"
   assert-file-has-line "$GITHUB_OUTPUT" "- [acceptance-stage]($RUN_URL/100)"
 
@@ -178,7 +182,7 @@ function test-notify-falls-back-to-the-ref-when-the-commit-is-not-found() {
   notify-run
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "::warning title=Commit not found::" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "WARNING: Commit not found: " "$WARNING_LABEL"
   assert-file-has-line "$GITHUB_OUTPUT" "**Commit:** [abcdef1]($REPO_URL/commit/$COMMIT_SHA)"
   assert-file-has-line "$GITHUB_OUTPUT" "commit=$COMMIT_SHA"
 
@@ -234,7 +238,7 @@ function test-notify-warns-when-the-previous-attempt-is-not-found() {
   notify-run GITHUB_RUN_ATTEMPT=2
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "::warning title=Previous attempt not found::" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "WARNING: Previous attempt not found: " "$WARNING_LABEL"
   assert-equal "$STATUS_NONE_OUTPUT" "$(cat "$GITHUB_OUTPUT")" "$OUTPUTS_LABEL"
 
   return 0
@@ -278,7 +282,7 @@ function test-notify-reports-nothing-when-the-previous-runs-are-not-found() {
   notify-run
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "::warning title=Previous runs not found::" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "WARNING: Previous runs not found: " "$WARNING_LABEL"
   assert-equal "$STATUS_NONE_OUTPUT" "$(cat "$GITHUB_OUTPUT")" "$OUTPUTS_LABEL"
 
   return 0
@@ -293,7 +297,7 @@ function test-notify-reports-a-broken-trunk-when-the-previous-runs-are-not-found
   notify-run
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
-  assert-contains "$TEST_STDOUT" "::warning title=Previous runs not found::" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "WARNING: Previous runs not found: " "$WARNING_LABEL"
   assert-file-has-line "$GITHUB_OUTPUT" "$STATUS_FAILURE_OUTPUT"
 
   return 0
@@ -434,7 +438,7 @@ function test-notify-accepts-a-tag-with-build-metadata() {
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
   assert-stub-called gh "api repos/nhs-england-tools/example/commits/v1.2.3+build.1"
-  assert-not-contains "$TEST_STDOUT" "::warning" "$WARNING_LABEL"
+  assert-not-contains "$TEST_STDERR" "WARNING" "$WARNING_LABEL"
 
   return 0
 }
@@ -449,7 +453,7 @@ function test-notify-falls-back-to-the-run-commit-when-the-ref-is-unsafe() {
     notify-run COMMIT_REF="$ref"
     # Assert
     assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL for $ref: $TEST_STDERR"
-    assert-contains "$TEST_STDOUT" "::warning title=Unsafe commit ref::" "warning for $ref"
+    assert-contains "$TEST_STDERR" "WARNING: Unsafe commit ref: " "warning for $ref"
     assert-file-has-line "$GITHUB_OUTPUT" "$STATUS_FAILURE_OUTPUT"
     assert-stub-called gh "api repos/nhs-england-tools/example/commits/$COMMIT_SHA"
     assert-not-contains "$(test-stub-calls gh)" "$ref" "lookup of $ref"
@@ -507,16 +511,108 @@ function test-notify-reports-a-failure-instead-of-a-success() {
   return 0
 }
 
+function test-notify-routes-failure-and-recovery-to-alerts() {
+
+  # Arrange
+  notify-set-up "$FAILED_NEEDS"
+  # Act
+  notify-run ALERTS_WEBHOOK_CONFIGURED=true UPDATES_WEBHOOK_CONFIGURED=true
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-file-has-line "$GITHUB_OUTPUT" "destination=alerts"
+  assert-file-has-line "$GITHUB_OUTPUT" "webhook_configured=true"
+
+  # Arrange
+  notify-set-up "$PASSED_NEEDS"
+  printf '%s\n' "$BROKEN_RUNS_RESPONSE" > "$TEST_TMP/runs.json"
+  # Act
+  notify-run ALERTS_WEBHOOK_CONFIGURED=true UPDATES_WEBHOOK_CONFIGURED=true
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-file-has-line "$GITHUB_OUTPUT" "status=recovered"
+  assert-file-has-line "$GITHUB_OUTPUT" "destination=alerts"
+
+  return 0
+}
+
+function test-notify-routes-success-to-updates() {
+
+  # Arrange
+  notify-set-up "$PASSED_NEEDS"
+  # Act
+  notify-run STOP_THE_LINE=false SUCCESS_TITLE=Published \
+    ALERTS_WEBHOOK_CONFIGURED=true UPDATES_WEBHOOK_CONFIGURED=true
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-file-has-line "$GITHUB_OUTPUT" "status=success"
+  assert-file-has-line "$GITHUB_OUTPUT" "destination=updates"
+
+  return 0
+}
+
+function test-notify-routes-everything-to-the-only-webhook() {
+
+  # Arrange
+  local alerts updates destination status
+  for alerts in true false; do
+    if [[ "$alerts" == true ]]; then
+      updates=false
+      destination=alerts
+    else
+      updates=true
+      destination=updates
+    fi
+    for status in failure success; do
+      if [[ "$status" == failure ]]; then
+        notify-set-up "$FAILED_NEEDS"
+      else
+        notify-set-up "$PASSED_NEEDS"
+      fi
+      # Act
+      notify-run STOP_THE_LINE=false SUCCESS_TITLE=Published \
+        ALERTS_WEBHOOK_CONFIGURED="$alerts" UPDATES_WEBHOOK_CONFIGURED="$updates"
+      # Assert
+      assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+      assert-file-has-line "$GITHUB_OUTPUT" "status=$status"
+      assert-file-has-line "$GITHUB_OUTPUT" "destination=$destination"
+      assert-file-has-line "$GITHUB_OUTPUT" "webhook_configured=true"
+      if [[ "$alerts" == false ]]; then
+        assert-contains "$TEST_STDERR" "alerts may reach a muted channel" "$WARNING_LABEL"
+      else
+        assert-equal "" "$TEST_STDERR" "stderr"
+      fi
+    done
+  done
+
+  return 0
+}
+
+function test-notify-does-not-warn-for-a-silent-run() {
+
+  # Arrange
+  notify-set-up "$PASSED_NEEDS"
+  # Act
+  notify-run STOP_THE_LINE=false ALERTS_WEBHOOK_CONFIGURED=false UPDATES_WEBHOOK_CONFIGURED=true
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
+  assert-equal "$STATUS_NONE_OUTPUT" "$(cat "$GITHUB_OUTPUT")" "$OUTPUTS_LABEL"
+  assert-equal "" "$TEST_STDERR" "stderr"
+
+  return 0
+}
+
 function test-notify-warns-when-the-webhook-is-not-configured() {
 
   # Arrange
   notify-set-up "$FAILED_NEEDS"
   # Act
-  notify-run WEBHOOK_CONFIGURED=false
+  notify-run ALERTS_WEBHOOK_CONFIGURED=false UPDATES_WEBHOOK_CONFIGURED=false
   # Assert
   assert-equal 0 "$TEST_STATUS" "$EXIT_STATUS_LABEL: $TEST_STDERR"
   assert-file-has-line "$GITHUB_OUTPUT" "webhook_configured=false"
-  assert-contains "$TEST_STDOUT" "::warning title=Team not notified::Set the TEAMS_NOTIFICATION_WEBHOOK_URL secret" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "Team not notified" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL" "$WARNING_LABEL"
+  assert-contains "$TEST_STDERR" "TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL" "$WARNING_LABEL"
 
   return 0
 }
@@ -604,7 +700,8 @@ esac'
   NOTIFY_ENV=(
     NEEDS="$needs"
     STOP_THE_LINE=true
-    WEBHOOK_CONFIGURED=true
+    ALERTS_WEBHOOK_CONFIGURED=true
+    UPDATES_WEBHOOK_CONFIGURED=false
     GITHUB_REPOSITORY=nhs-england-tools/example
     GITHUB_RUN_ID=100
     GITHUB_RUN_NUMBER=10

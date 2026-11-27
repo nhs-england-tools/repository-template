@@ -134,12 +134,15 @@ Make these changes on a branch for the initial setup pull request:
    Engineering Admins. Set `SONAR_TOKEN` as an Actions and Dependabot secret and
    `SONAR_ORGANISATION_KEY` and `SONAR_PROJECT_KEY` as variables.
 10. [Configure pipeline notifications](Configure_pipeline_notifications.md) for
-    the team's Microsoft Teams channel, so the team is told when `main` breaks,
-    when it is green again, and when a release is published or deployed. Follow
-    the guide's Power Automate setup, card mapping, co-owner and delivery
-    verification steps. Set the flow's webhook URL as the
-    `TEAMS_NOTIFICATION_WEBHOOK_URL` Actions secret. Without it, a reportable
-    run writes its summary and warns that the team was not notified.
+    the team's Microsoft Teams channels, so the team is told when `main`
+    breaks, when it is green again, and when a release is published or
+    deployed. Follow the guide's Power Automate setup, card mapping, co-owner
+    and delivery verification steps. As the guide recommends, set
+    `TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL` for failures and recoveries and
+    `TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL` for routine release updates, each
+    pointing to its own channel. For a single channel, set only the alerts
+    secret. Without either secret, a reportable run writes its summary and warns
+    that the team was not notified.
 
 You are ready to verify when the setup branch contains the project's updated
 documentation, policies, Make targets and dependency decisions, and the required

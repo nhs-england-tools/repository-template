@@ -8,17 +8,31 @@
     - [Create the trigger](#create-the-trigger)
     - [Add the channel action](#add-the-channel-action)
   - [Test the webhook 🧪](#test-the-webhook-)
-  - [Configure the GitHub secret 🔐](#configure-the-github-secret-)
+  - [Configure the GitHub secrets 🔐](#configure-the-github-secrets-)
   - [Verify pipeline delivery ✅](#verify-pipeline-delivery-)
   - [Maintain the integration 🔄](#maintain-the-integration-)
   - [Troubleshooting 🔍](#troubleshooting-)
 
 ## Overview 🧭
 
-The CI/CD workflows send status notifications to a Microsoft Teams channel.
+The CI/CD workflows send status notifications to Microsoft Teams.
 They help the team spot a broken trunk and see when a release is published or
 deployed. This guide is for engineers who configure the repository and the
 channel connection.
+
+Configure one channel for all messages or separate alerts and updates:
+
+| Secrets configured | Failures and recoveries | Publish and deploy successes |
+| ------------------ | ----------------------- | ---------------------------- |
+| Alerts only        | Alerts channel          | Alerts channel               |
+| Updates only       | Updates channel         | Updates channel              |
+| Both               | Alerts channel          | Updates channel              |
+| Neither            | Not sent                | Not sent                     |
+
+Use the alerts channel for failures and recoveries so the team can see when an
+alert is resolved. Team members can mute the updates channel if they do not
+want routine release messages. If only the updates secret is set, all messages
+go there and the pipeline warns that alerts may reach a muted channel.
 
 The template's notification jobs report these events:
 
@@ -53,10 +67,10 @@ to send an Adaptive Card to a Power Automate webhook. The flow forwards the card
 to the chosen Teams channel. GitHub API access uses the workflow's `GITHUB_TOKEN`
 with `actions: read` and `contents: read`. No personal access token is needed.
 
-Without the `TEAMS_NOTIFICATION_WEBHOOK_URL` secret, a reportable run writes its
-summary and warns that the team was not notified. A failed Teams delivery step
-does not change the pipeline result. A green pipeline is therefore not proof
-that a notification arrived.
+Without either webhook secret, a reportable run writes its summary and warns
+that the team was not notified. A failed Teams delivery step does not change
+the pipeline result. A green pipeline is therefore not proof that a notification
+arrived.
 
 ## Before you start 📋
 
@@ -71,10 +85,10 @@ You need:
   repository administrator.
 - Bash or zsh and `curl` for the optional direct webhook test.
 
-Agree which channel should receive pipeline messages and who will maintain the
-flow. Select your own team if the repository belongs elsewhere. Ask the platform
-administrators for help if the environment, connector or destination is
-unavailable.
+Agree which channel or channels should receive pipeline messages and who will
+maintain each flow. Select your own team if the repository belongs elsewhere.
+Ask the platform administrators for help if the environment, connector or
+destination is unavailable.
 
 > [!IMPORTANT]
 >
@@ -185,21 +199,38 @@ inner `content` is the Adaptive Card. See the
 [Adaptive Card samples](https://adaptivecards.io/samples/) for other card layouts.
 You do not need to customise a card to enable the repository notifications.
 
-## Configure the GitHub secret 🔐
+## Configure the GitHub secrets 🔐
+
+> [!TIP]
+>
+> **Recommended:** Set up both GitHub Actions secrets with separate Teams
+> channels:
+>
+> - `TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL`: failures and recoveries.
+> - `TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL`: successful publishes and deployments.
+>
+> This lets team members mute routine updates without missing alerts. If you
+> prefer one channel, set only `TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL`. Setting
+> only the updates secret also works, but every reportable run then warns that
+> alerts may reach a muted channel.
 
 1. Open the repository on GitHub and go to **Settings > Secrets and variables >
    Actions**.
 2. Under **Repository secrets**, select **New repository secret**.
-3. Enter `TEAMS_NOTIFICATION_WEBHOOK_URL` as the name.
+3. Enter `TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL` as the name.
 4. Paste the complete **HTTP POST URL** from the saved trigger as the value,
    without quotes or extra whitespace. Select **Add secret**.
 
+For the recommended two-channel setup, create and test a second flow using the
+same steps, with the updates channel as its destination. Add its URL as
+`TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL`.
+
 An organisation-level Actions secret is also suitable if its repository access
 policy includes this repository. Use a secret, not an Actions variable or a
-Codespaces secret. The existing callers already pass this secret to the reusable
-workflow. No workflow edit is needed to enable delivery. Fork pull requests do
-not receive repository secrets, and the trunk notification job does not run on
-pull request events.
+Codespaces secret. The existing callers already pass both secrets to the
+reusable workflow. No workflow edit is needed to enable delivery. Fork pull
+requests do not receive repository secrets, and the trunk notification job does
+not run on pull request events.
 
 ## Verify pipeline delivery ✅
 
@@ -213,10 +244,11 @@ message in the step summary, then confirm that the **Notify Microsoft Teams**
 step ran rather than being skipped. Check Power Automate **Run history** and
 confirm that the corresponding card reached the intended channel. Follow the
 card's link to confirm that it points to the expected run or release.
+For a split setup, verify both channels using the next applicable outcomes.
 
 ## Maintain the integration 🔄
 
-Add another appropriate maintainer as a co-owner through the flow's sharing
+Add another appropriate maintainer as a co-owner through each flow's sharing
 settings. Record its name, environment, destination channel and owners in your
 team's operational records, without recording the webhook URL there. Check the
 Teams connection when an owner leaves or their account changes. Co-ownership
@@ -230,9 +262,9 @@ replacement webhook with the flow owner, update the GitHub secret, test delivery
 and retire the old endpoint. Merely changing the GitHub secret does not revoke
 the old URL.
 
-To disable delivery for one repository, remove its access to the Actions secret.
-Reportable runs will still write a summary and warn. Turn off or delete the flow
-only when no other repository relies on it.
+To disable delivery for one repository, remove its access to both Actions
+secrets. Reportable runs will still write a summary and warn. Turn off or delete
+each flow only when no other repository relies on it.
 
 ## Troubleshooting 🔍
 
@@ -246,7 +278,10 @@ only when no other repository relies on it.
   history. Check the Teams connection, destination, posting action and card
   mapping. Forward the attachment's `content`, not the whole request body.
 - **The pipeline says “Team not notified”:** check the exact Actions secret name
-  and its repository access policy. This is expected when it has not been set.
+  and its repository access policy. This is expected when neither is set.
+- **Alerts go to the updates channel:** check that
+  `TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL` is set and accessible to the
+  repository. With only the updates secret, all messages go to that channel.
 - **The delivery step is skipped:** check whether a notification was needed.
   Routine trunk success, cancelled workflows and older superseded trunk runs do
   not notify. Publish and deploy have their own calling-job conditions.

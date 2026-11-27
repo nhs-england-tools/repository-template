@@ -153,4 +153,5 @@ jobs:
       stop_the_line: true
       details: "Version: ${{ needs.metadata.outputs.version }}"
     secrets:
-      TEAMS_NOTIFICATION_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
+      TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL }}
+      TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL: ${{ secrets.TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL }}

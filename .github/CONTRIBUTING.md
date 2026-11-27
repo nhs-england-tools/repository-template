@@ -90,10 +90,10 @@ template.
 ## When main is broken 🚨
 
 The CI/CD pipeline runs every stage on each push to `main`. When that run fails,
-it posts a message to the team's Microsoft Teams channel, and it posts again
-when `main` is green. Only the newest finished run reports, so a slow run of an
-older commit does not undo the news of a newer one. A run that a person cancels
-is not reported.
+it posts a message to the team's Microsoft Teams alerts channel, and it posts
+again when `main` is green. Only the newest finished run reports, so a slow run
+of an older commit does not undo the news of a newer one. A run that a person
+cancels is not reported.
 
 - Stop merging to `main` until it is green again. Only the fix or the revert may
   merge.

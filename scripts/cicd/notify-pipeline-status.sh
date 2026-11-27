@@ -28,8 +28,10 @@ set -euo pipefail
 #       Text of the message of a passing run, default is none
 #   SUCCESS_LINK=https://...
 #       Link of the message of a passing run, default is the run
-#   WEBHOOK_CONFIGURED=true
-#       Whether the Teams webhook secret is set, default is 'false'
+#   ALERTS_WEBHOOK_CONFIGURED=true
+#       Whether the alerts webhook secret is set, default is 'false'
+#   UPDATES_WEBHOOK_CONFIGURED=true
+#       Whether the updates webhook secret is set, default is 'false'
 #   VERBOSE=true
 #       Show all the executed commands, default is 'false'
 #
@@ -41,9 +43,10 @@ set -euo pipefail
 #   1) It reads the default GitHub Actions variables, such as
 #      GITHUB_REPOSITORY, GITHUB_RUN_ID and GITHUB_WORKFLOW_REF. It writes the
 #      'status', 'title', 'colour', 'text', 'facts', 'link', 'link_title',
-#      'commit' and 'webhook_configured' outputs to GITHUB_OUTPUT and the
-#      message to GITHUB_STEP_SUMMARY. 'status' is 'none', 'failure',
-#      'recovered' or 'success'.
+#      'commit', 'destination' and 'webhook_configured' outputs to GITHUB_OUTPUT
+#      and the message to GITHUB_STEP_SUMMARY. 'status' is 'none', 'failure',
+#      'recovered' or 'success'. 'destination' is 'alerts' or 'updates' when a
+#      webhook is configured, otherwise it is empty.
 #   2) With STOP_THE_LINE=true, only the newest finished run reports the state
 #      of the branch, and a cancelled run is neither broken nor green.
 #   3) The GitHub CLI needs GH_TOKEN with 'actions: read' and 'contents: read'.
@@ -67,7 +70,7 @@ function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
-  local needs="${NEEDS:-}" commit_ref="${COMMIT_REF:-}"
+  local needs="${NEEDS:-}" commit_ref="${COMMIT_REF:-}" unsafe_ref
   local stop_the_line=false status=none name runs=null newer
   local failed_jobs='[]' broken_since=null commit message
 
@@ -88,7 +91,8 @@ function main() {
     return 1
   }
   if [[ -n "$commit_ref" ]] && ! [[ "$commit_ref" =~ ^[A-Za-z0-9][A-Za-z0-9._/+@-]*$ && "$commit_ref" != *..* ]]; then
-    printf '::warning title=Unsafe commit ref::COMMIT_REF %q is not a safe commit or tag name, so the message shows the commit of the run\n' "$commit_ref"
+    printf -v unsafe_ref '%q' "$commit_ref"
+    print-diagnostic warning "Unsafe commit ref: COMMIT_REF $unsafe_ref is not a safe commit or tag name, so the message shows the commit of the run" || return "$?"
     commit_ref=''
   fi
   commit_ref="${commit_ref:-$GITHUB_SHA}"
@@ -176,7 +180,7 @@ function notify-failed-jobs() {
     return 0
   fi
 
-  echo "::warning title=Failed jobs not found::The GitHub API did not list the failed jobs, so the message shows their IDs"
+  print-diagnostic warning "Failed jobs not found: The GitHub API did not list the failed jobs, so the message shows their IDs" || return "$?"
   failed_jobs_out="$(
     jq -c '[to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | {name: .key, url: null}]' \
       <<< "$needs"
@@ -205,7 +209,7 @@ function notify-previous-runs() {
     return 0
   fi
 
-  echo "::warning title=Previous runs not found::The GitHub CLI could not list the previous runs of $workflow_file"
+  print-diagnostic warning "Previous runs not found: The GitHub CLI could not list the previous runs of $workflow_file" || return "$?"
   runs_out=null
 
   return 0
@@ -228,7 +232,7 @@ function notify-broken-since() {
   if [[ "$previous" -gt 0 ]] &&
     { ! response="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$previous")" ||
       ! attempt="$(jq -c '[{conclusion, number: .run_number, url: .html_url, createdAt: .created_at}]' <<< "$response")"; }; then
-    echo "::warning title=Previous attempt not found::The GitHub API did not return attempt $previous of this run, so its result is not checked"
+    print-diagnostic warning "Previous attempt not found: The GitHub API did not return attempt $previous of this run, so its result is not checked" || return "$?"
     attempt='[]'
   fi
   now="$(date -u +%s)" || return "$?"
@@ -262,7 +266,7 @@ function notify-commit() {
     return 0
   fi
 
-  echo "::warning title=Commit not found::The GitHub API did not return commit $ref, so the message shows the ref only"
+  print-diagnostic warning "Commit not found: The GitHub API did not return commit $ref, so the message shows the ref only" || return "$?"
   commit_out="$(jq -n -c \
     --arg ref "$ref" \
     --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$ref" \
@@ -272,14 +276,15 @@ function notify-commit() {
 }
 
 # Write the status, message and commit to GITHUB_OUTPUT, the message to the
-# step summary and the log, and warn when the webhook secret is not set.
+# step summary and the log, and warn about missing webhook secrets.
 # Arguments:
 #   $1=[status, 'failure', 'recovered' or 'success']
 #   $2=[message, the JSON from notify-pipeline-status.jq]
 #   $3=[commit SHA or ref the message is about]
 function notify-write-outputs() {
 
-  local status="$1" message="$2" commit="$3" title colour text facts link link_title summary webhook=false
+  local status="$1" message="$2" commit="$3" title colour text facts link link_title summary
+  local alerts=false updates=false webhook=false destination=''
   local delimiter="NOTIFY_PIPELINE_STATUS_${SRANDOM}${SRANDOM}"
   title="$(jq -r .title <<< "$message")" || return "$?"
   colour="$(jq -r .colour <<< "$message")" || return "$?"
@@ -288,7 +293,16 @@ function notify-write-outputs() {
   link="$(jq -r .link <<< "$message")" || return "$?"
   link_title="$(jq -r .link_title <<< "$message")" || return "$?"
   summary="$(jq -r .summary <<< "$message")" || return "$?"
-  is-arg-true "${WEBHOOK_CONFIGURED:-false}" && webhook=true
+  is-arg-true "${ALERTS_WEBHOOK_CONFIGURED:-false}" && alerts=true
+  is-arg-true "${UPDATES_WEBHOOK_CONFIGURED:-false}" && updates=true
+  if [[ "$status" == success && "$updates" == true ]]; then
+    destination=updates
+  elif [[ "$alerts" == true ]]; then
+    destination=alerts
+  elif [[ "$updates" == true ]]; then
+    destination=updates
+  fi
+  [[ -z "$destination" ]] || webhook=true
 
   {
     printf 'status=%s\n' "$status"
@@ -299,12 +313,15 @@ function notify-write-outputs() {
     printf 'link=%s\n' "$link"
     printf 'link_title=%s\n' "$link_title"
     printf 'commit=%s\n' "$commit"
+    printf 'destination=%s\n' "$destination"
     printf 'webhook_configured=%s\n' "$webhook"
   } >> "$GITHUB_OUTPUT"
   printf '%s\n' "$summary" >> "$GITHUB_STEP_SUMMARY"
   printf '%s\n\n%s\n\n%s\n' "$title" "$text" "$facts"
   if [[ "$webhook" == false ]]; then
-    echo "::warning title=Team not notified::Set the TEAMS_NOTIFICATION_WEBHOOK_URL secret to send pipeline notifications to Microsoft Teams"
+    print-diagnostic warning "Team not notified: set TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL or TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL to send pipeline notifications to Microsoft Teams" || return "$?"
+  elif [[ "$alerts" == false ]]; then
+    print-diagnostic warning "Only TEAMS_NOTIFICATION_UPDATES_WEBHOOK_URL is set, so alerts may reach a muted channel. Set TEAMS_NOTIFICATION_ALERTS_WEBHOOK_URL to route alerts separately" || return "$?"
   fi
 
   return 0
