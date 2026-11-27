@@ -17,6 +17,7 @@
     - [Testing your image](#testing-your-image)
   - [Conventions 📏](#conventions-)
     - [Versioning](#versioning)
+      - [Root VERSION and releases](#root-version-and-releases)
     - [Base image pins](#base-image-pins)
     - [Container runtime and Podman](#container-runtime-and-podman)
     - [Variables](#variables)
@@ -623,6 +624,22 @@ approach is useful for projects with multiple deployments per day.
 > `${yyyy}${mm}${dd}-${hash}` for projects with a cadence of multiple
 > deployments per day. This is compatible with the
 > [Calendar Versioning / CalVer](https://calver.org/) convention.
+
+#### Root VERSION and releases
+
+The root [`VERSION`](../../../VERSION) file is not an image `VERSION` file. The
+release workflow owns it and writes the semantic version of each release to it,
+as [Publish releases](Publish_releases.md) describes. Do not edit it by hand.
+Image `VERSION` files keep their own static values or patterns.
+
+The pull-request and deploy workflows read the root `VERSION` directly from
+their checkout. Metadata fails if the file is missing or does not contain a
+stable semantic version. This is the checked-out repository version, not a
+prediction of the next release. Generated image `.version` files are not used
+for repository metadata.
+
+For the optional Nexus publication steps and their requirements, see
+[Publish a Docker image to Nexus](Publish_releases.md#publish-a-docker-image-to-nexus).
 
 ### Base image pins
 

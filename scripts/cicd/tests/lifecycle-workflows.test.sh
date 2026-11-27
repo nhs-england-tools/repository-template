@@ -16,23 +16,286 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../../tests/test.lib.sh"
 
+readonly REMOVE_WHITESPACE='s/[[:space:]]//g'
+
 # Run every lifecycle workflow test.
 function main() {
 
   cd "$(git rev-parse --show-toplevel)"
 
   test-run-suite \
+    test-repository-version-script-prints-the-version \
+    test-repository-version-script-rejects-invalid-versions \
+    test-metadata-reads-the-repository-version-without-generating-files \
+    test-metadata-ignores-stale-image-versions \
+    test-metadata-rejects-missing-or-invalid-repository-versions \
     test-build-workflow-runs-project-build \
     test-publish-workflow-runs-project-publish \
     test-deploy-workflow-runs-project-deploy \
-    test-lifecycle-workflows-propagate-target-failures \
-    test-publish-metadata-sets-a-unique-dated-version \
-    test-publish-metadata-fails-without-a-version-file
+    test-deploy-rejects-unprotected-tags \
+    test-deploy-runs-the-commit-the-tag-resolves-to \
+    test-publish-credentials-include-fallbacks \
+    test-publish-plan-uses-one-authenticated-dry-run \
+    test-publish-release-reports-the-semantic-release-tag \
+    test-publish-plan-blocks-artefacts-on-check-failures \
+    test-lifecycle-workflows-propagate-target-failures
 
   return 0
 }
 
 # ==============================================================================
+
+function test-repository-version-script-prints-the-version() {
+
+  # Arrange
+  metadata-prepare
+  printf '%s\n' 1.2.3 > VERSION
+  # Act
+  test-capture ./scripts/cicd/read-repository-version.sh
+  # Assert
+  assert-equal 0 "$TEST_STATUS" "version script: $TEST_STDERR"
+  assert-equal 1.2.3 "$TEST_STDOUT" 'repository version'
+  assert-equal '' "$TEST_STDERR" 'no diagnostics'
+
+  return 0
+}
+
+function test-repository-version-script-rejects-invalid-versions() {
+
+  # Arrange
+  metadata-prepare
+  local version
+  for version in missing '' unknown 01.2.3 $'1.2.3\n9.9.9'; do
+    if [[ "$version" == missing ]]; then
+      rm -f VERSION
+    else
+      printf '%s\n' "$version" > VERSION
+    fi
+    # Act
+    test-capture env GITHUB_ACTIONS=true ./scripts/cicd/read-repository-version.sh
+    # Assert
+    assert-equal 1 "$TEST_STATUS" 'invalid VERSION'
+    assert-equal '' "$TEST_STDOUT" 'no version returned'
+    assert-contains "$TEST_STDERR" '::error::'
+    assert-contains "$TEST_STDERR" 'VERSION'
+  done
+
+  return 0
+}
+
+function test-metadata-reads-the-repository-version-without-generating-files() {
+
+  # Arrange
+  metadata-prepare
+  local workflow version
+  for workflow in cicd-1-pull-request.yaml cicd-3-deploy.yaml; do
+    for version in 0.0.0 1.2.3; do
+      printf '%s\n' "$version" > VERSION
+      # Act
+      metadata-run "$workflow"
+      # Assert
+      assert-equal 0 "$TEST_STATUS" "$workflow metadata: $TEST_STDERR"
+      assert-equal "version=$version" \
+        "$(sed -n '/^version=/p' "$TEST_TMP/output")" 'repository version output'
+      assert-file-not-exists .version
+    done
+  done
+
+  return 0
+}
+
+function test-metadata-ignores-stale-image-versions() {
+
+  # Arrange
+  metadata-prepare
+  printf '%s\n' 1.2.3 > VERSION
+  printf '%s\n' 9.9.9 > .version
+  local workflow
+  for workflow in cicd-1-pull-request.yaml cicd-3-deploy.yaml; do
+    # Act
+    metadata-run "$workflow"
+    # Assert
+    assert-equal 0 "$TEST_STATUS" "$workflow metadata: $TEST_STDERR"
+    assert-equal 'version=1.2.3' \
+      "$(sed -n '/^version=/p' "$TEST_TMP/output")" 'repository version output'
+    assert-equal 9.9.9 "$(cat .version)" 'image version is left untouched'
+  done
+
+  return 0
+}
+
+function test-metadata-rejects-missing-or-invalid-repository-versions() {
+
+  # Arrange
+  metadata-prepare
+  printf '%s\n' 9.9.9 > .version
+  local workflow version
+  for workflow in cicd-1-pull-request.yaml cicd-3-deploy.yaml; do
+    for version in missing '' unknown 01.2.3 $'1.2.3\n9.9.9'; do
+      if [[ "$version" == missing ]]; then
+        rm -f VERSION
+      else
+        printf '%s\n' "$version" > VERSION
+      fi
+      # Act
+      metadata-run "$workflow"
+      # Assert
+      assert-equal 1 "$TEST_STATUS" "$workflow rejects invalid VERSION"
+      assert-equal '' "$(sed -n '/^version=/p' "$TEST_TMP/output")" \
+        'invalid version is not exported'
+      assert-contains "$TEST_STDERR" 'VERSION'
+    done
+  done
+
+  return 0
+}
+
+# shellcheck disable=SC2016 # GitHub expressions, not shell ones
+function test-publish-plan-uses-one-authenticated-dry-run() {
+
+  # Arrange
+  local workflow=.github/workflows/cicd-2-publish.yaml
+  # Act
+  local token_condition permissions dry_run token version due
+  token_condition="$(yq -r '.jobs.plan.steps[] | select(.id == "app-token") | .if // ""' "$workflow")"
+  permissions="$(yq -r '.jobs.plan.steps[] | select(.id == "app-token") | .with
+    | to_entries[] | select(.key | test("^permission-")) | .key + "=" + .value' "$workflow")"
+  dry_run="$(yq -r '.jobs.plan.steps[] | select(.id == "verify") | .with.dry_run' "$workflow")"
+  token="$(yq -r '.jobs.plan.steps[] | select(.id == "verify") | .env.GITHUB_TOKEN' "$workflow")"
+  version="$(yq -r '.jobs.plan.outputs.version' "$workflow")"
+  due="$(yq -r '.jobs.plan.outputs.release' "$workflow")"
+  # Assert
+  assert-equal '' "$token_condition" 'token is available before the dry run'
+  assert-equal 'permission-contents=write' "$permissions" 'dry run proves push access only'
+  assert-equal true "$dry_run" 'planning is a dry run'
+  assert-equal '${{ steps.app-token.outputs.token }}' "$token" 'dry run uses the App token'
+  assert-equal '${{ steps.verify.outputs.new_release_version }}' "$version" 'artefacts use the dry-run version'
+  assert-equal '${{ steps.verify.outputs.new_release_published }}' "$due" 'only planned releases publish'
+
+  return 0
+}
+
+# shellcheck disable=SC2016 # GitHub expressions, not shell ones
+function test-publish-release-reports-the-semantic-release-tag() {
+
+  # Arrange
+  test-isolate-path yq
+  local workflow=.github/workflows/cicd-2-publish.yaml plan release
+  # Act
+  plan="$(yq -o=json -I=0 '.jobs.plan.steps[] | select(.id == "verify") | [.uses, .with.semantic_version, .with.extra_plugins]' "$workflow")"
+  release="$(yq -o=json -I=0 '.jobs.release.steps[] | select(.id == "semantic-release") | [.uses, .with.semantic_version, .with.extra_plugins]' "$workflow")"
+  # Assert
+  assert-equal "$plan" "$release" 'plan and release run the same semantic-release'
+  assert-equal '${{ steps.semantic-release.outputs.new_release_git_tag }}' \
+    "$(yq -r '.jobs.release.outputs.tag' "$workflow")" 'notification uses the released tag'
+  assert-equal '${{ steps.semantic-release.outputs.new_release_version }}' \
+    "$(yq -r '.jobs.release.outputs.version' "$workflow")" 'notification uses the released version'
+
+  return 0
+}
+
+function test-deploy-rejects-unprotected-tags() {
+
+  # Arrange
+  local commands tag
+  commands="$(yq -r '.jobs.metadata.steps[] | select(.id == "tag") | .run' \
+    .github/workflows/cicd-3-deploy.yaml)"
+  for tag in candidate v1 v1.2 v1.2.3-rc.1 v01; do
+    # Act
+    test-capture env TAG="$tag" GITHUB_OUTPUT="$TEST_TMP/output" bash -e -c "$commands"
+    # Assert
+    assert-equal 1 "$TEST_STATUS" "reject $tag"
+  done
+  for tag in v1.2.3 v0.2.3; do
+    # Act
+    test-capture env TAG="$tag" GITHUB_OUTPUT="$TEST_TMP/output" bash -e -c "$commands"
+    # Assert
+    assert-equal 0 "$TEST_STATUS" "accept $tag"
+  done
+
+  return 0
+}
+
+# shellcheck disable=SC2016 # GitHub expressions, not shell ones
+function test-deploy-runs-the-commit-the-tag-resolves-to() {
+
+  # Arrange
+  test-isolate-path yq
+  local workflow=.github/workflows/cicd-3-deploy.yaml metadata deploy
+  # Act
+  metadata="$(yq -r '.jobs.metadata.steps[] | select(.name == "📥 Checkout code") | .with.ref' "$workflow")"
+  deploy="$(yq -r '.jobs.deploy.steps[] | select(.name == "📥 Checkout code") | .with.ref' "$workflow")"
+  # Assert
+  assert-equal 'refs/tags/${{ steps.tag.outputs.tag }}' "$metadata" 'tag checkout'
+  assert-equal '${{ steps.variables.outputs.commit }}' \
+    "$(yq -r '.jobs.metadata.outputs.commit' "$workflow")" 'resolved commit output'
+  assert-equal '${{ needs.metadata.outputs.commit }}' "$deploy" 'deployed commit'
+  assert-equal 'read' "$(yq -r '.jobs.metadata.permissions.contents' "$workflow")" 'read-only permissions'
+
+  return 0
+}
+
+
+# shellcheck disable=SC2016 # GitHub expressions, not shell ones
+function test-publish-credentials-include-fallbacks() {
+
+  # Arrange
+  test-isolate-path yq
+  local workflow=.github/workflows/cicd-2-publish.yaml input context setting plan release signing identity
+  local token_query='.jobs[strenv(JOB)].steps[] | select(.id == "app-token") | .with[strenv(INPUT)]'
+  local signing_query='.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .env[strenv(INPUT)]'
+  while read -r input context setting; do
+    # Act
+    if [[ "$input" == app-id || "$input" == private-key ]]; then
+      plan="$(JOB=plan INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
+      release="$(JOB=release INPUT="$input" yq -r "$token_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
+      assert-equal "$release" "$plan" "plan and release use the same $input"
+    else
+      release="$(INPUT="$input" yq -r "$signing_query" "$workflow" | sed "$REMOVE_WHITESPACE")"
+    fi
+    # Assert
+    assert-equal "\${{$context.$setting||$context.NHS_$setting}}" "$release" "$input uses an NHS fallback"
+  done <<'INPUTS'
+app-id vars GH_VERSIONING_RELEASE_APP_ID
+private-key secrets GH_VERSIONING_RELEASE_APP_PRIVATE_KEY
+GPG_PRIVATE_KEY secrets GIT_SIGNING_BOT_GPG_PRIVATE_KEY
+GPG_PASSPHRASE secrets GIT_SIGNING_BOT_GPG_PASSPHRASE
+BOT_NAME vars GIT_SIGNING_BOT_NAME
+BOT_EMAIL vars GIT_SIGNING_BOT_EMAIL
+INPUTS
+  # Act
+  signing="$(yq -r '.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .env
+    | [.BOT_NAME, .BOT_NAME, .BOT_EMAIL, .BOT_EMAIL] | .[]' "$workflow" | sed "$REMOVE_WHITESPACE")"
+  identity="$(yq -r '.jobs.release.steps[] | select(.id == "semantic-release") | .env
+    | [.GIT_AUTHOR_NAME, .GIT_COMMITTER_NAME, .GIT_AUTHOR_EMAIL, .GIT_COMMITTER_EMAIL] | .[]' "$workflow" | sed "$REMOVE_WHITESPACE")"
+  # Assert
+  assert-equal "$signing" "$identity" 'release uses the signing bot identity'
+  assert-equal '${{ steps.app-token.outputs.token }}' \
+    "$(yq -r '.jobs.release.steps[] | select(.id == "semantic-release") | .env.GITHUB_TOKEN' "$workflow")" 'release uses the App token'
+  assert-equal './scripts/cicd/import-signing-key.sh' \
+    "$(yq -r '.jobs.release.steps[] | select(.name == "🔑 Import the signing key") | .run' "$workflow")" 'release imports the signing key'
+
+  return 0
+}
+
+# shellcheck disable=SC2016 # GitHub expressions, not shell ones
+function test-publish-plan-blocks-artefacts-on-check-failures() {
+
+  # Arrange
+  test-isolate-path yq
+  local workflow=.github/workflows/cicd-2-publish.yaml token verify
+  # Act
+  token="$(yq -o=json -I=0 '.jobs.plan.steps[] | select(.id == "app-token")' "$workflow")"
+  verify="$(yq -o=json -I=0 '.jobs.plan.steps[] | select(.id == "verify")' "$workflow")"
+  # Assert
+  assert-equal 'false' "$(yq -r '.continue-on-error // false' <<< "$token")" 'token failure fails the plan'
+  assert-equal 'false' "$(yq -r '.continue-on-error // false' <<< "$verify")" 'dry-run failure fails the plan'
+  assert-equal 'false' "$(yq -r '.jobs.plan.continue-on-error // false' "$workflow")" 'plan failure stops dependent jobs'
+  assert-equal 'plan' "$(yq -r '.jobs.publish-artefacts.needs[] | select(. == "plan")' "$workflow")" 'publication needs plan'
+  assert-equal "needs.plan.outputs.release == 'true'" "$(yq -r '.jobs.publish-artefacts.if' "$workflow")" 'publication requires release'
+
+  return 0
+}
 
 function test-build-workflow-runs-project-build() {
 
@@ -48,7 +311,7 @@ function test-build-workflow-runs-project-build() {
 function test-publish-workflow-runs-project-publish() {
 
   # Act
-  lifecycle-run cicd-2-publish.yaml publish publish
+  lifecycle-run cicd-2-publish.yaml publish-artefacts publish
   # Assert
   assert-equal 0 "$TEST_STATUS" "publish exit status: $TEST_STDERR"
   assert-equal publish "$(cat "$TEST_TMP/result")" "project publish ran"
@@ -78,43 +341,16 @@ function test-lifecycle-workflows-propagate-target-failures() {
     assert-equal "" "$(cat "$TEST_TMP/result")" "$target did not complete"
   done <<'CASES'
 stage-3-build.yaml artefact-1 build
-cicd-2-publish.yaml publish publish
+cicd-2-publish.yaml publish-artefacts publish
 cicd-3-deploy.yaml deploy deploy
 CASES
 
   return 0
 }
 
-function test-publish-metadata-sets-a-unique-dated-version() {
-
-  # Arrange
-  metadata-prepare
-  cp "$TEST_REPO_ROOT/VERSION" VERSION
-  # Act
-  metadata-run cicd-2-publish.yaml
-  # Assert
-  assert-equal 0 "$TEST_STATUS" "publish metadata: $TEST_STDERR"
-  assert-matches "$(grep '^version=' "$TEST_TMP/output")" '^version=[0-9]{14}$' "version to the second"
-
-  return 0
-}
-
-function test-publish-metadata-fails-without-a-version-file() {
-
-  # Arrange
-  metadata-prepare
-  rm -f VERSION
-  # Act
-  metadata-run cicd-2-publish.yaml
-  # Assert
-  assert-equal 1 "$TEST_STATUS" "publish metadata without VERSION"
-  assert-equal "" "$(awk '/^version=/' "$TEST_TMP/output")" "version output"
-
-  return 0
-}
-
 # ==============================================================================
 
+# Prepare a repository checkout for the real metadata command blocks.
 function metadata-prepare() {
 
   test-isolate-path yq make

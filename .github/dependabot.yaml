@@ -4,12 +4,20 @@ updates:
   - package-ecosystem: "docker"
     directories:
       - "**/*"
+    commit-message:
+      prefix: "fix"
+      include: "scope"
     schedule:
       interval: "daily"
     cooldown:
       default-days: 7
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
     schedule:
       interval: "daily"
     cooldown:
@@ -19,6 +27,10 @@ updates:
       - "**/*"
     exclude-paths:
       - ".mise/**" # mise owns its lockfile sidecars
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
+      include: "scope"
     schedule:
       interval: "daily"
     cooldown:
@@ -28,6 +40,10 @@ updates:
       - "**/*"
     exclude-paths:
       - ".mise/**" # mise owns its lockfile sidecars
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
+      include: "scope"
     schedule:
       interval: "daily"
     cooldown:

@@ -12,10 +12,13 @@
     - [Configure Git for SSH](#configure-git-for-ssh)
     - [Add the SSH signing key to GitHub](#add-the-ssh-signing-key-to-github)
   - [Verify signing ✅](#verify-signing-)
+  - [Signed commits on main 🔏](#signed-commits-on-main-)
 
-This template does not configure commit signing or manage signing keys. Git
-signs commits locally, and GitHub verifies signatures made with a key on your
-account. Choose GPG or SSH. See GitHub's
+This guide covers signing your own commits. The template does not configure
+signing on your workstation or manage your keys. Git signs commits locally, and
+GitHub verifies signatures made with a key on your account. Choose GPG or SSH.
+For how commits on `main` are signed, see
+[Signed commits on main](#signed-commits-on-main-). See GitHub's
 [commit signature documentation](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification)
 for account-specific requirements.
 
@@ -270,3 +273,23 @@ GPG signature is **Unverified**, check that the uploaded public key, the key's
 email identity and `git config user.email` agree with your verified GitHub
 email. For other failures, see GitHub's
 [signature troubleshooting](https://docs.github.com/en/authentication/troubleshooting-commit-signature-verification/checking-your-commit-and-tag-signature-verification-status).
+
+## Signed commits on main 🔏
+
+The template recommends requiring signed commits on `main`. For the ruleset
+configuration, see [Publish releases](Publish_releases.md#rulesets).
+
+Two kinds of commit reach `main`:
+
+- **Squash merges.** GitHub signs the squash commit it creates when you merge a
+  pull request in the web interface. That does not exempt your branch commits.
+  GitHub checks a test merge that includes the head branch commits, so unsigned
+  branch commits can block the merge. Sign every commit on your branch. If an
+  unsigned commit blocks a merge, rewrite it with a signature and force push the
+  branch. Do not add a bypass to the signed commits ruleset. See GitHub's
+  [require signed commits](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-signed-commits)
+  rule. Pull requests from bots are checked the same way. If a bot cannot sign
+  its commits, escalate to a maintainer.
+- **Release commits.** See
+  [Publish releases](Publish_releases.md#signing-key-of-the-release-bot) for the
+  release bot's signing key and its rotation.

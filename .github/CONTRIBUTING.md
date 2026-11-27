@@ -69,6 +69,22 @@ as unit tests, to this target. Keep slower test tiers separate. Extend the
 Makefile and CI workflow to run the project's build, full test suite, type
 checks, security checks, and other required quality gates.
 
+## Name your pull request 🏷️
+
+The title of the pull request becomes the squash commit on `main` and
+contributes to the release. Use
+[Conventional Commits](https://www.conventionalcommits.org/) in the form
+`type(optional scope): description`. These examples assume an existing release
+and no other unreleased commits. The first release is `1.0.0`:
+
+- `feat(api): add patient search` creates a minor release.
+- `fix: handle an empty NHS number` creates a patch release.
+- `docs: explain the release flow` creates no release.
+
+Add `!` before the colon for a breaking change. The
+[quick reference](../docs/guides/template/Publish_releases.md#quick-reference-for-contributors-)
+lists every type and explains the title check.
+
 ## Open a pull request 🔀
 
 CI runs on pull requests, the merge queue and pushes to `main`, not on a pushed
@@ -76,6 +92,9 @@ branch alone. Open a draft pull request to see CI results early.
 
 Use the [pull request template](PULL_REQUEST_TEMPLATE.md) and:
 
+- Sign every commit on your branch. GitHub checks branch commits against the
+  signed commits rule, so an unsigned commit can block the squash merge. See
+  [Sign Git commits](../docs/guides/template/Sign_Git_commits.md).
 - Explain what changed and why. Link the related issue or decision where
   relevant.
 - List the commands you ran and their results. If a check could not run, say
@@ -119,28 +138,5 @@ follow
 open the setup issue in the new repository and complete its checklist in an
 initial setup pull request. Ask a project maintainer and the relevant security
 or policy owner to review the changes before closing the issue and accepting
-contributions. Maintainers should:
-
-- Replace the `nhs-england-tools/repository-template` URLs with the adopted
-  repository's URLs. GitHub requires absolute URLs in the Code of Conduct links
-  of the [issue forms](ISSUE_TEMPLATE/) and the support link in the
-  [README](../README.md). Also review the remaining support contacts.
-- Set a monitored private contact for conduct concerns in the
-  [Code of Conduct](CODE_OF_CONDUCT.md), and confirm the security-reporting
-  route in [SECURITY.md](SECURITY.md).
-- Configure [CODEOWNERS](CODEOWNERS) to cover every file, with a future review
-  date and at least one visible team from the repository's organisation. Those
-  teams need at least two members between them, and each owner needs write
-  access.
-- Enable the applicable GitHub security settings and protect the default branch
-  with code owner approval and required CI checks, as the setup guide describes.
-- Document the project's development setup, test commands, review requirements,
-  and release process.
-- Record applicable information governance, accessibility, security, and
-  clinical safety requirements in the project documentation.
-- Implement the recipes for every TODO-marked target in the
-  [Makefile](../Makefile), keeping the target names intact. Extend `format`,
-  `lint` and `test` with the project's formatters, checks and fast tests while
-  keeping the existing formatting, checks and Bash tests.
-- Resolve documentation TODOs and verify that links and contact routes point to
-  the adopted project.
+contributions. Tailor this guide to the project's setup, tests, review rules and
+release process as described in the setup guide.

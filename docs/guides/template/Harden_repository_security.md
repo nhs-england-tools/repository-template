@@ -55,23 +55,34 @@ authentication, data handling, network exposure and deployment controls.
 
 Every [workflow](../../../.github/workflows/) sets `permissions: {}`, so each
 job starts with no `GITHUB_TOKEN` permissions and declares the ones it needs.
-Most jobs need only `contents: read`. The `publish` job holds the only write
-permission, `contents: write`, which `gh release create` needs. It does not
-check out the repository, so no repository code runs with that token.
+Most jobs need only `contents: read`.
+
+The `🏷️ Check pull request title` job has only `contents: read`.
+[security-readiness.yaml](../../../scripts/config/security-readiness.yaml)
+approves no job-level `GITHUB_TOKEN` write grants.
 
 ### Publish and deploy
 
-[cicd-2-publish.yaml](../../../.github/workflows/cicd-2-publish.yaml) runs
-`gh release create` with `--repo "$GITHUB_REPOSITORY"`, so the publish job needs
-no checkout. [cicd-3-deploy.yaml](../../../.github/workflows/cicd-3-deploy.yaml)
-requires a `tag` input with no default. It rejects `latest`, checks the value
-with `git check-ref-format` and checks out `refs/tags/<tag>` instead of the
-default branch. A valid ref name does not prove that the tag exists or that it
-cannot move. Protect release tags and restrict who can run the deploy workflow
-in the repository settings. Only one deployment runs at a time, and a running
-deployment is never cancelled. At most one more waits behind it. When another
-deployment starts, GitHub cancels the one that is waiting and queues the new
-one.
+[cicd-2-publish.yaml](../../../.github/workflows/cicd-2-publish.yaml) releases
+with a short-lived token of the release GitHub App, not with `GITHUB_TOKEN`.
+Every publish job declares only read permissions. The App token is created only
+in the plan and release jobs, which run on pushes to `main` and never run pull
+request code. The plan job uses it for an authenticated dry run on every push.
+The App
+bypasses the rulesets on `main` and `v*` tags so it can push the signed release
+commit and tags. See [Publish releases](Publish_releases.md#release-app) for its
+permissions.
+
+[cicd-3-deploy.yaml](../../../.github/workflows/cicd-3-deploy.yaml) requires a
+`tag` input with no default. It rejects `latest`, checks the value with
+`git check-ref-format` and checks out `refs/tags/<tag>` instead of the default
+branch. A valid ref name does not prove that the tag exists or that it cannot
+move. Add a ruleset on `v*` tags that restricts creations, updates and
+deletions, with only the release App in its bypass list. Restrict who can run
+the deploy workflow in the repository settings. Only one deployment runs at a
+time, and a running deployment is never cancelled. At most one more waits behind
+it. When another deployment starts, GitHub cancels the one that is waiting and
+queues the new one.
 
 The build, publish, deploy and acceptance steps are template placeholders.
 Implement and review them before relying on them.
@@ -310,6 +321,12 @@ approval and digest-refresh steps.
 npm and uv updates after a seven-day cooldown. It does not read `mise.toml`, so
 tool and image pins are refreshed by hand.
 
+The [publish workflow](../../../.github/workflows/cicd-2-publish.yaml) pins
+semantic-release and its plugins to exact versions, but the semantic-release
+action installs them with npm at run time. Their transitive dependencies resolve
+afresh on every run, with no lockfile, integrity check or cooldown, and they run
+with the release App token. Dependabot cannot update these pins.
+
 [docker.lib.sh](../../../scripts/docker/docker.lib.sh) stops with an error when
 a helper image has no valid digest pin, instead of falling back to `latest`. It
 pulls the pinned digest when the image is missing locally, and the wrappers run
@@ -324,11 +341,9 @@ exact version from npm at run time without checking it against `mise.lock`.
 ## Tool containers 🐳
 
 Container-capable checks use their pinned Docker images by default, even when a
-native tool is installed. `FORCE_USE_DOCKER=false` opts out when the native tool
-is available. This is not recommended because native tools have the user's or
-runner's access to files and the network. The pipeline-contract and
-security-readiness checks always run natively. Security readiness warns,
-without failing, when the opt-out is set.
+native tool is installed. See
+[Use native tools or Docker](Run_and_configure_quality_checks.md#use-native-tools-or-docker-)
+for configuration and the checks that always run natively.
 
 The Gitleaks, EditorConfig Checker, markdownlint, Lychee, ShellCheck and
 Hadolint containers run with `--network none` and mount the checkout read-only.
@@ -361,14 +376,9 @@ pipeline-contract and security-readiness jobs run natively with the `yq` and
 
 ### Use the containers on a workstation
 
-Container mode is the default for supported checks on your machine. A team can
-opt out for one command with `FORCE_USE_DOCKER=false make lint`, or persist the
-setting in its shell profile. For CI composite actions, change the relevant
-`FORCE_USE_DOCKER` setting in `.github/actions/<check>/action.yaml` to `"false"`
-and ensure the native tool is available on the runner. This is not recommended.
 Git hooks started by an editor see shell settings only when the editor inherits
-that environment. Docker must be running. The default platform is `linux/amd64`,
-so Apple silicon runs those images under emulation. See
+that environment. The default platform is `linux/amd64`, so Apple silicon runs
+those images under emulation. See
 [Platform architecture](Build_Docker_images.md#platform-architecture).
 
 ## Making a security-sensitive change 🚦

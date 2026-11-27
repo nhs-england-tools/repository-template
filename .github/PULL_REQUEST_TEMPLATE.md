@@ -1,6 +1,12 @@
 <!-- markdownlint-disable-file first-line-heading -->
 
 <!--
+Title: use Conventional Commits, for example "feat(api): add patient search" or
+"fix: handle an empty NHS number". The title type decides the release. See
+docs/guides/template/Publish_releases.md#name-your-pull-request.
+-->
+
+<!--
 Write 1-3 sentences that stand alone in notifications and history. State what
 changed and the value or problem it addresses. Keep this short. The sections
 below provide the supporting detail.
@@ -56,14 +62,13 @@ not apply rather than filling them with boilerplate.
 ## Type of changes 🏷️
 
 <!--
-What types of changes does your code introduce? Put an `x` in all the boxes that
-apply.
+The pull request title decides the type of change and the release, so there is
+no checklist here. feat creates a minor release, and fix, perf, refactor and
+revert create a patch release. Other types create no release. For a breaking
+change, add "!" before the colon in the title, or explain it on its own line
+that begins with the words BREAKING CHANGE and a colon. This description becomes
+the body of the squash commit, and semantic-release reads it after the merge.
 -->
-
-- [ ] Refactoring (non-breaking change)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would change existing functionality)
-- [ ] Bug fix (non-breaking change which fixes an issue)
 
 ## Checklist 📋
 

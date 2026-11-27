@@ -1,0 +1,35 @@
+name: "🏷️ Pull request title check"
+
+# Check the pull request title. The job name is fixed so a ruleset can require
+# it. See docs/guides/template/Publish_releases.md. A merge queue needs a
+# 'merge_group' trigger before this check can be required for it.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check-title:
+    name: "🏷️ Check pull request title"
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    timeout-minutes: 2
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/cicd
+          persist-credentials: false
+      - name: "🏷️ Check the title follows Conventional Commits"
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: ./scripts/cicd/check-pull-request-title.sh
